@@ -68,7 +68,7 @@ model.layers.0.mlp.down_proj.weight
 
 ## Marco 2 - Treino Real com Autograd
 
-Status: **implementado, pendente de execucao com PyTorch/Transformers no ambiente atual**.
+Status: **concluido**.
 
 Este marco adiciona o caminho `hf_saint_autograd_smoke`, que usa PyTorch
 autograd para treinar deltas SAINT sobre matrizes extraidas de um checkpoint
@@ -95,18 +95,10 @@ Hugging Face local.
 No ambiente atual:
 
 ```text
-torch: ausente
-transformers: ausente
+torch: 2.11.0+cu128
+transformers: 5.8.1
+cuda: NVIDIA GeForce RTX 4090
 ```
-
-Por isso, o teste valida o contrato de dependencia. Em um ambiente com PyTorch,
-o mesmo teste executa:
-
-```text
-train -> checkpoint -> merge
-```
-
-e verifica se a loss final nao piora em relacao a `initial_loss`.
 
 ### Limites
 
@@ -114,8 +106,6 @@ e verifica se a loss final nao piora em relacao a `initial_loss`.
 - ainda nao executa `model.forward` real de `AutoModelForCausalLM`;
 - ainda nao mede perplexity com tokenizer/dataset real;
 - ainda nao compara contra LoRA/QLoRA.
-
-## Proximo Marco
 
 ## Marco 3 - Forward Real Transformers
 
@@ -152,12 +142,60 @@ modelo local -> tokenizer local -> forward real -> treino SAINT -> checkpoint ->
 O teste cria um GPT-2 minimo local com tokenizer `WordLevel`, sem baixar nada da
 internet.
 
+## Marco 4 - Comparacao com Baselines HF
+
+Status: **concluido**.
+
+Este marco compara SAINT contra full fine-tuning pequeno no mesmo modelo GPT-2
+minimo local, repetindo seeds e medindo throughput, memoria CUDA e checkpoint.
+
+### Entregas
+
+- modulo `saint/adapters/huggingface_benchmark.py`;
+- benchmark `benchmark_hf_saint_vs_full`;
+- comparacao `hf_saint_forward_smoke` vs `hf_full_finetune`;
+- repeticao com seeds `31` e `32`;
+- medicao de `tokens_per_s`;
+- medicao de `cuda_peak_bytes`;
+- contagem de parametros treinaveis;
+- checkpoint e merge para SAINT;
+- teste automatizado sem rede.
+
+### Resultado CUDA
+
+Configuracao:
+
+```text
+modelo: GPT-2 minimo local
+device: cuda
+seeds: 31, 32
+steps: 1
+parameter_budget SAINT: 8
+```
+
+Resultado:
+
+| metodo | seed | parametros | loss inicial | loss final | delta loss | tokens/s | pico CUDA |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| SAINT | 31 | 8 | 2.792639 | 2.792619 | -0.000021 | 393.51 | 18230784 |
+| full | 31 | 3824 | 2.790193 | 2.749064 | -0.041129 | 2915.51 | 18239488 |
+| SAINT | 32 | 8 | 2.792639 | 2.792619 | -0.000021 | 5873.83 | 18230784 |
+| full | 32 | 3824 | 2.767291 | 2.769696 | 0.002405 | 4872.50 | 18239488 |
+
+Leitura:
+
+- SAINT treinou apenas 8 parametros e reduziu pouco a loss;
+- full fine-tuning teve mais capacidade, usando 3824 parametros;
+- o checkpoint/merge SAINT passou nas duas seeds;
+- a memoria CUDA foi parecida nesse modelo minimo porque o peso base domina o
+  custo e o modelo e muito pequeno.
+
 ## Proximo Marco
 
-Marco 4 deve comparar SAINT contra baselines no mesmo modelo:
+Marco 5 deve melhorar a competicao contra baselines:
 
-- comparar contra LoRA ou full fine-tuning pequeno;
-- repetir com seeds diferentes;
-- medir memoria CUDA;
-- medir tokens/s;
-- registrar checkpoint e merge avaliavel.
+- adicionar baseline LoRA no forward real;
+- aumentar steps e dataset curto;
+- testar modelo pequeno real local, nao apenas GPT-2 minimo sintetico;
+- medir qualidade apos `resume`;
+- medir ganho por parametro treinavel.

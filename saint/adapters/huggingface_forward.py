@@ -123,10 +123,13 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
     torch, functional_call, AutoModelForCausalLM, AutoTokenizer = _require_deps()
     start = perf_counter()
     metadata = _metadata(config)
+    torch.manual_seed(int(config.seed))
     source = metadata.get("model_name_or_path")
     if not source:
         raise ValueError("hf_saint_forward_smoke requires metadata.model_name_or_path")
     device = _device(torch, metadata)
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
     model = AutoModelForCausalLM.from_pretrained(str(source), local_files_only=True).to(device)
     tokenizer = AutoTokenizer.from_pretrained(str(source), local_files_only=True)
     from saint.adapters.huggingface import make_task
@@ -150,13 +153,22 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
     )
     optimizer = torch.optim.AdamW(list(deltas.values()), lr=float(metadata.get("learning_rate", 1e-3)))
     initial_loss = float(_loss(functional_call, model, _merged_params(model, deltas, masks), input_ids, attention_mask).detach().cpu().item())
-    for _ in range(max(1, int(config.steps))):
+    steps = max(1, int(config.steps))
+    train_start = perf_counter()
+    for _ in range(steps):
         optimizer.zero_grad()
         loss = _loss(functional_call, model, _merged_params(model, deltas, masks), input_ids, attention_mask)
         loss.backward()
         optimizer.step()
+    train_elapsed = max(perf_counter() - train_start, 1e-9)
     final_loss = float(_loss(functional_call, model, _merged_params(model, deltas, masks), input_ids, attention_mask).detach().cpu().item())
     parameter_count = int(sum(mask.sum().item() for mask in masks.values()))
+    tokens_seen = int(input_ids.numel()) * steps
+    cuda_peak = (
+        int(torch.cuda.max_memory_allocated(device))
+        if device.type == "cuda"
+        else 0
+    )
     return MiniTransformerResult(
         name="hf_saint_forward_smoke",
         train_loss=final_loss,
@@ -172,6 +184,9 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
             "device": str(device),
             "initial_loss": initial_loss,
             "perplexity": exp(min(final_loss, 20.0)),
+            "tokens_per_s": tokens_seen / train_elapsed,
+            "tokens_seen": tokens_seen,
+            "cuda_peak_bytes": cuda_peak,
             "target_matrices": names,
             "marco": "fase_13_marco_3",
         },

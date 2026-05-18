@@ -29,7 +29,7 @@ recomposicao final
 ```text
 Fase atual: Fase 13 - Modelos Hugging Face Pequenos
 Fase anterior: Fase 12 concluida
-Proximo marco: Fase 13 Marco 4 - Comparacao com Baselines HF
+Proximo marco: Fase 13 Marco 5 - LoRA e Modelo HF Real Local
 ```
 
 Resumo do estado:
@@ -1502,11 +1502,9 @@ mas ainda nao mede perplexity real nem executa autograd em transformers.
 
 SAINT deve mostrar vantagem ou comportamento complementar a LoRA em pelo menos um tipo de tarefa.
 
-### Proximo Marco
-
 ### Marco 2 - Treino Real com Autograd
 
-Status: **implementado, pendente de execucao com PyTorch/Transformers no ambiente atual**.
+Status: **concluido**.
 
 Entregas:
 
@@ -1525,11 +1523,8 @@ Entregas:
 Observacao:
 
 ```text
-ambiente atual: torch ausente, transformers ausente
+ambiente atual: torch 2.11.0+cu128, transformers 5.8.1, CUDA RTX 4090
 ```
-
-O caminho foi implementado, mas a execucao real de autograd precisa de ambiente
-com PyTorch instalado.
 
 ### Marco 3 - Forward Real Transformers
 
@@ -1557,15 +1552,38 @@ Fluxo validado:
 modelo local -> tokenizer local -> forward real -> treino SAINT -> checkpoint -> merge
 ```
 
+### Marco 4 - Comparacao com Baselines HF
+
+Status: **concluido**.
+
+Entregas:
+
+- modulo `saint/adapters/huggingface_benchmark.py`;
+- benchmark `benchmark_hf_saint_vs_full`;
+- comparacao SAINT vs full fine-tuning pequeno;
+- seeds `31` e `32`;
+- medicao de `tokens_per_s`;
+- medicao de `cuda_peak_bytes`;
+- checkpoint e merge avaliavel para SAINT.
+
+Resultado CUDA:
+
+| metodo | seed | parametros | loss inicial | loss final | delta loss | tokens/s | pico CUDA |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| SAINT | 31 | 8 | 2.792639 | 2.792619 | -0.000021 | 393.51 | 18230784 |
+| full | 31 | 3824 | 2.790193 | 2.749064 | -0.041129 | 2915.51 | 18239488 |
+| SAINT | 32 | 8 | 2.792639 | 2.792619 | -0.000021 | 5873.83 | 18230784 |
+| full | 32 | 3824 | 2.767291 | 2.769696 | 0.002405 | 4872.50 | 18239488 |
+
 ### Proximo Marco
 
-Marco 4 - Comparacao com Baselines HF:
+Marco 5 - LoRA e Modelo HF Real Local:
 
-- comparar contra LoRA ou full fine-tuning pequeno;
-- repetir com seeds diferentes;
-- medir memoria CUDA;
-- medir tokens/s;
-- salvar, retomar e fundir checkpoint avaliavel.
+- adicionar baseline LoRA no forward real;
+- testar modelo pequeno real local;
+- aumentar dataset curto;
+- medir qualidade apos `resume`;
+- medir ganho por parametro treinavel.
 
 ## Fase 14 - Escala 3B
 

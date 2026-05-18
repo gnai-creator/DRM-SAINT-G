@@ -5,6 +5,7 @@ import importlib.util
 
 from saint.checkpoints import write_json
 from saint.config import RuntimeConfig
+from saint.adapters.huggingface_benchmark import benchmark_hf_saint_vs_full
 from saint.runtime import inspect_runtime, merge_runtime, resume_runtime, train_runtime
 
 
@@ -203,7 +204,41 @@ class HuggingFacePhase13Tests(unittest.TestCase):
                 result["train_loss"],
                 result["metadata"]["initial_loss"],
             )
+            self.assertIn("tokens_per_s", result["metadata"])
+            self.assertIn("cuda_peak_bytes", result["metadata"])
             self.assertTrue(merged["shape_validation"])
+
+    def test_huggingface_baseline_comparison_smoke(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            model_dir = Path(tmp) / "tiny_model"
+            run_dir = Path(tmp) / "bench"
+            if not _write_tiny_hf_model(model_dir):
+                self.skipTest("transformers is not installed")
+
+            result = benchmark_hf_saint_vs_full(
+                model_dir,
+                run_dir,
+                seeds=(31, 32),
+                steps=1,
+                parameter_budget=8,
+                device="cpu",
+            )
+            rows = result["rows"]
+            saint_rows = [
+                row for row in rows
+                if row["method"] == "hf_saint_forward_smoke"
+            ]
+            full_rows = [
+                row for row in rows
+                if row["method"] == "hf_full_finetune"
+            ]
+
+            self.assertEqual(result["seeds"], [31, 32])
+            self.assertEqual(len(saint_rows), 2)
+            self.assertEqual(len(full_rows), 2)
+            self.assertTrue(all(row["checkpoint_merge"] for row in saint_rows))
+            self.assertTrue(all(row["tokens_per_s"] > 0.0 for row in rows))
+            self.assertTrue(all("cuda_peak_bytes" in row for row in rows))
 
 
 if __name__ == "__main__":
