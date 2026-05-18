@@ -50,6 +50,7 @@ def _config(args) -> RuntimeConfig:
         "max_length": args.max_length,
         "batch_size": args.batch_size,
         "learning_rate": args.learning_rate,
+        "lr_decay": args.lr_decay,
         "routing_method": args.routing_method,
         "routing_max_length": args.routing_max_length,
         "routing_batch_size": args.routing_batch_size,
@@ -115,6 +116,7 @@ def main() -> None:
     parser.add_argument("--train-texts", type=int, default=1)
     parser.add_argument("--max-length", type=int, default=4)
     parser.add_argument("--learning-rate", type=float, default=0.001)
+    parser.add_argument("--lr-decay", type=float, default=1.0)
     parser.add_argument("--routing-method", default="activation")
     parser.add_argument("--routing-max-length", type=int, default=4)
     parser.add_argument("--routing-batch-size", type=int, default=1)

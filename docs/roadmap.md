@@ -29,7 +29,7 @@ recomposicao final
 ```text
 Fase atual: Fase 15 - Escala 14B
 Fase anterior: Fase 14 concluida com ressalvas
-Proximo marco: Fase 15 Marco 6 - Robustez de Qualidade 14B
+Proximo marco: Fase 15 Marco 7 - Generalizacao 14B
 ```
 
 Resumo do estado:
@@ -2524,6 +2524,64 @@ Veredito:
 ```text
 Marco 5 passou: SAINT 14B reduziu loss e avaliacao posterior ficou abaixo de 23 GB.
 ```
+
+### Marco 6 - Robustez de Qualidade 14B
+
+Status: **concluido com ressalva de validacao**.
+
+Mudancas:
+
+- `lr_decay` no treino SAINT in-place;
+- LoRA rank 1 com `B` nao-zero;
+- avaliacao posterior com base e merged via `--include-base`;
+- testados seeds 31/32/33, camadas 0/1/2, scheduler e `v_proj + o_proj`.
+
+Seeds em `layer0.v_proj`, budget 8192:
+
+| seed | SAINT loss delta | LoRA loss delta |
+|---:|---:|---:|
+| 31 | -0.298339 | +0.012675 |
+| 32 | -0.298339 | -0.002483 |
+| 33 | -0.298339 | -0.028358 |
+
+Camadas em `v_proj`, seed 31:
+
+| camada | SAINT loss delta | ganho/param |
+|---:|---:|---:|
+| 0 | -0.298339 | 3.6418e-05 |
+| 1 | -0.542579 | 6.6233e-05 |
+| 2 | -0.748944 | 9.1424e-05 |
+
+Outros resultados:
+
+| teste | SAINT loss delta | LoRA loss delta |
+|---|---:|---:|
+| `v_proj`, steps 8, `lr_decay=0.8` | -0.313544 | -0.000988 |
+| `v_proj + o_proj`, layer 0 | -0.045656 | -0.003168 |
+
+Validacao com 4 exemplos:
+
+| metrica | valor |
+|---|---:|
+| base_validation_loss | 6.882289 |
+| merged_validation_loss | 6.892014 |
+| validation_loss_delta | +0.009724 |
+| merge load CUDA GB | 20.261 |
+| merge eval CUDA GB | 12.500 |
+
+Veredito:
+
+```text
+SAINT ficou robusto em train loss, mas a validacao ainda nao melhorou.
+```
+
+Proximo marco:
+
+- selecionar blocos por mini-validacao;
+- usar mais de um texto de treino;
+- medir validacao durante treino sem recarregar modelo;
+- comparar LoRA rank 1/2 com o mesmo numero de textos;
+- adicionar early stopping por validation loss.
 
 ## Fase 16 - Escala 70B
 

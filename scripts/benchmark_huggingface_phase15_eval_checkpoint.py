@@ -33,6 +33,17 @@ def run(args) -> dict[str, Any]:
     payload = require_sparse_delta_payload(checkpoint, run_dir)
     texts = load_text_corpus(args.corpus)
     _, validation_texts = split_texts(texts)
+    base = None
+    if args.include_base:
+        base = _evaluate_sparse_delta(
+            args.model,
+            {"format": "saint_sparse_delta", "shapes": {}, "values": {}},
+            validation_texts=validation_texts[: max(1, args.validation_texts)],
+            device_name=args.device,
+            max_length=args.max_length,
+            model_dtype=args.model_dtype,
+            hf_load_metadata=_hf_metadata(args),
+        )
     result = _evaluate_sparse_delta(
         args.model,
         payload,
@@ -49,6 +60,11 @@ def run(args) -> dict[str, Any]:
             "parameter_count": checkpoint.get("parameter_count"),
         }
     )
+    if base is not None:
+        result["base_validation_loss"] = base["merged_validation_loss"]
+        result["validation_loss_delta"] = (
+            result["merged_validation_loss"] - base["merged_validation_loss"]
+        )
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(dumps(result, indent=2), encoding="utf-8")
@@ -68,6 +84,7 @@ def main() -> None:
     parser.add_argument("--hf-device-map", default="auto")
     parser.add_argument("--hf-max-memory", default=None)
     parser.add_argument("--hf-offload-folder", default=None)
+    parser.add_argument("--include-base", action="store_true")
     args = parser.parse_args()
     print(dumps(run(args), indent=2))
 

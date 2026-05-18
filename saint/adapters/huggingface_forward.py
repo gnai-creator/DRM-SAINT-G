@@ -204,12 +204,13 @@ def _train_inplace_sparse(
     *,
     steps: int,
     learning_rate: float,
+    lr_decay: float,
 ) -> float:
     named = dict(model.named_parameters())
     last_loss = 0.0
     for name in coordinates:
         named[name].requires_grad_(True)
-    for _ in range(steps):
+    for step in range(steps):
         _zero_target_grads(named, coordinates)
         for batch_ids, batch_mask in train_batches:
             _inplace_delta(torch, named, deltas, coordinates, sign=1.0)
@@ -220,11 +221,12 @@ def _train_inplace_sparse(
             finally:
                 _inplace_delta(torch, named, deltas, coordinates, sign=-1.0)
         with torch.no_grad():
+            step_lr = learning_rate * (lr_decay ** step)
             for name, delta in deltas.items():
                 rows, cols = coordinates[name]
                 grad = named[name].grad
                 if grad is not None:
-                    delta.sub_(learning_rate * grad[rows, cols].to(delta.dtype))
+                    delta.sub_(step_lr * grad[rows, cols].to(delta.dtype))
         _zero_target_grads(named, coordinates)
     for name in coordinates:
         named[name].requires_grad_(False)
@@ -332,6 +334,7 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
     _check_cuda_budget(torch, device, metadata, "routing")
     _clear_cuda(torch, device)
     learning_rate = float(metadata.get("learning_rate", 1e-3))
+    lr_decay = float(metadata.get("lr_decay", 1.0))
     named = dict(model.named_parameters())
     initial_loss = 0.0
     measure_train_only_loss = bool(metadata.get("measure_train_only_loss", False))
@@ -370,6 +373,7 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
             train_batches,
             steps=steps,
             learning_rate=learning_rate,
+            lr_decay=lr_decay,
         )
     else:
         for _ in range(steps):
@@ -466,6 +470,7 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
             "target_matrices": names,
             "train_only": train_only,
             "gradient_checkpointing": bool(metadata.get("gradient_checkpointing", False)),
+            "lr_decay": lr_decay,
             "marco": str(metadata.get("marco", "fase_13_marco_3")),
         },
     )

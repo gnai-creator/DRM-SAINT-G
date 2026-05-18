@@ -89,6 +89,7 @@ def _saint_args(args, *, budget: int, max_memory: str) -> SimpleNamespace:
         train_texts=args.train_texts,
         max_length=args.max_length,
         learning_rate=args.learning_rate,
+        lr_decay=args.lr_decay,
         routing_method=args.routing_method,
         routing_max_length=args.routing_max_length,
         routing_batch_size=args.routing_batch_size,
@@ -132,6 +133,8 @@ def _run_saint_subprocess(args, *, budget: int, max_memory: str) -> dict[str, An
         str(values.max_length),
         "--learning-rate",
         str(values.learning_rate),
+        "--lr-decay",
+        str(values.lr_decay),
         "--routing-method",
         values.routing_method,
         "--routing-max-length",
@@ -224,7 +227,9 @@ def _lora_rank1(args) -> dict[str, Any]:
     rows, cols = weight.shape
     dtype = model_dtype(torch, args.model_dtype) or weight.dtype
     a = (torch.randn(rows, 1, device=weight.device, dtype=dtype) * 0.01).requires_grad_()
-    b = torch.zeros(1, cols, device=weight.device, dtype=dtype, requires_grad=True)
+    b = (
+        torch.randn(1, cols, device=weight.device, dtype=dtype) * args.lora_b_init_scale
+    ).requires_grad_()
     optimizer = torch.optim.AdamW([a, b], lr=args.lora_learning_rate)
     model.train()
     from time import perf_counter
@@ -345,6 +350,7 @@ def main() -> None:
     parser.add_argument("--train-texts", type=int, default=1)
     parser.add_argument("--max-length", type=int, default=4)
     parser.add_argument("--learning-rate", type=float, default=0.001)
+    parser.add_argument("--lr-decay", type=float, default=1.0)
     parser.add_argument("--routing-method", default="activation")
     parser.add_argument("--routing-max-length", type=int, default=4)
     parser.add_argument("--routing-batch-size", type=int, default=1)
@@ -355,6 +361,7 @@ def main() -> None:
     parser.add_argument("--hf-device-map", default="auto")
     parser.add_argument("--lora-max-memory", default="0=14GiB,cpu=64GiB")
     parser.add_argument("--lora-learning-rate", type=float, default=0.001)
+    parser.add_argument("--lora-b-init-scale", type=float, default=0.0)
     args = parser.parse_args()
     print(dumps(run(args), indent=2))
 

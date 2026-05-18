@@ -656,3 +656,179 @@ Marco 6 deve tornar a qualidade menos acidental:
 - comparar LoRA rank 1 com inicializacao B nao-zero ou update in-place mais fiel;
 - testar combinacao de targets `v_proj + o_proj`;
 - medir validacao antes/depois no mesmo corpus com mais exemplos.
+
+## Marco 6 - Robustez de Qualidade 14B
+
+Status: **concluido com ressalva de validacao**.
+
+### Mudancas
+
+- adicionado `lr_decay` ao treino SAINT in-place;
+- `scripts/benchmark_huggingface_phase15_train_only.py` aceita
+  `--lr-decay`;
+- LoRA rank 1 agora pode inicializar `B` com valor nao-zero via
+  `--lora-b-init-scale`;
+- a avaliacao posterior pode medir base e merged no mesmo corpus com
+  `--include-base`;
+- Marco 6 testou:
+  - seeds 31, 32 e 33;
+  - camadas 0, 1 e 2;
+  - `v_proj`;
+  - `v_proj + o_proj`;
+  - steps 8 com scheduler.
+
+### Seeds
+
+Config:
+
+```text
+target: model.layers.0.self_attn.v_proj.weight
+budget: 8192
+steps: 4
+max_length: 8
+learning_rate: 0.005
+max_memory: 0=12GiB,cpu=64GiB
+```
+
+| seed | SAINT loss delta | SAINT ganho/param | LoRA loss delta | LoRA ganho/param |
+|---:|---:|---:|---:|---:|
+| 31 | -0.298339 | 3.6418e-05 | +0.012675 | 0.0000 |
+| 32 | -0.298339 | 3.6418e-05 | -0.002483 | 4.0419e-07 |
+| 33 | -0.298339 | 3.6418e-05 | -0.028358 | 4.6155e-06 |
+
+Leitura:
+
+```text
+SAINT foi estavel nos seeds testados; LoRA com B nao-zero melhorou em alguns
+seeds, mas ficou abaixo de SAINT no ganho por parametro.
+```
+
+### Camadas
+
+Config:
+
+```text
+target: model.layers.{0,1,2}.self_attn.v_proj.weight
+budget: 8192
+steps: 4
+max_length: 8
+learning_rate: 0.005
+seed: 31
+```
+
+| camada | SAINT final loss | loss delta | ganho/param | train CUDA GB |
+|---:|---:|---:|---:|---:|
+| 0 | 6.646648 | -0.298339 | 3.6418e-05 | 15.779 |
+| 1 | 6.402409 | -0.542579 | 6.6233e-05 | 15.779 |
+| 2 | 6.196043 | -0.748944 | 9.1424e-05 | 15.779 |
+
+Leitura:
+
+```text
+o efeito nao ficou restrito a camada 0; neste smoke, camada 2 foi melhor.
+```
+
+### Scheduler
+
+Config:
+
+```text
+target: model.layers.0.self_attn.v_proj.weight
+budget: 8192
+steps: 8
+learning_rate: 0.005
+lr_decay: 0.8
+```
+
+Resultado:
+
+| metodo | final loss | loss delta | ganho/param | train_s |
+|---|---:|---:|---:|---:|
+| SAINT | 6.631443 | -0.313544 | 3.8274e-05 | 30.005 |
+| LoRA rank 1 | 6.943999 | -0.000988 | 1.6081e-07 | 30.691 |
+
+Leitura:
+
+```text
+decaimento de LR corrigiu a piora vista antes com steps 8 sem scheduler.
+```
+
+### Combinacao de Targets
+
+Config:
+
+```text
+targets:
+  - model.layers.0.self_attn.v_proj.weight
+  - model.layers.0.self_attn.o_proj.weight
+budget: 16384
+steps: 4
+learning_rate: 0.005
+```
+
+Resultado:
+
+| metodo | final loss | loss delta | ganho/param |
+|---|---:|---:|---:|
+| SAINT `v_proj + o_proj` | 6.899331 | -0.045656 | 2.7866e-06 |
+| LoRA rank 1 | 6.941819 | -0.003168 | 5.1564e-07 |
+
+Leitura:
+
+```text
+combinar v_proj + o_proj nao superou treinar apenas v_proj neste teste.
+```
+
+### Validacao Com Mais Exemplos
+
+Checkpoint:
+
+```text
+runs/phase15_marco6_vproj_layer2/saint_b8192_0_12GiB_cpu_64GiB
+```
+
+Config:
+
+```text
+validation_texts: 4
+max_length: 8
+max_memory: 0=12GiB,cpu=64GiB
+include_base: true
+```
+
+Resultado:
+
+| metrica | valor |
+|---|---:|
+| base_validation_loss | 6.882289 |
+| merged_validation_loss | 6.892014 |
+| validation_loss_delta | +0.009724 |
+| merge load CUDA GB | 20.261 |
+| merge eval CUDA GB | 12.500 |
+
+Leitura:
+
+```text
+validacao ficou abaixo de 23 GB, mas piorou levemente. O ganho de train loss
+ainda nao garante generalizacao.
+```
+
+### Veredito
+
+```text
+Marco 6 passou para robustez de treino, mas nao fecha qualidade geral.
+```
+
+SAINT mostrou ganho consistente em train loss por seed/camada e venceu LoRA
+rank 1 nos testes curtos. A validacao com mais exemplos ainda precisa melhorar.
+
+## Proximo Marco
+
+Marco 7 deve focar generalizacao:
+
+- selecionar blocos por mini-validacao, nao apenas por ativacao;
+- usar mais de um texto de treino no `train_only`;
+- medir validacao durante o treino sem recarregar modelo;
+- testar targets em camadas 2 e 3 com validacao como criterio;
+- comparar contra LoRA rank 1/2 com o mesmo numero de textos;
+- adicionar early stopping por validation loss.
