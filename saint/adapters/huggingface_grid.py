@@ -129,6 +129,8 @@ def run_hf_phase13_grid(
     max_cuda_gb: float | None = None,
     saint_delta_application: str = "functional",
     hf_load_metadata: dict[str, Any] | None = None,
+    saint_target_names: tuple[str, ...] = (),
+    saint_target_device: str | None = None,
     prompts: tuple[str, ...] = ("SAINT", "Checkpoint", "LoRA"),
 ) -> dict[str, Any]:
     root = Path(run_dir)
@@ -167,6 +169,8 @@ def run_hf_phase13_grid(
                 max_cuda_gb=max_cuda_gb,
                 delta_application=saint_delta_application,
                 hf_load_metadata=hf_load_metadata,
+                target_names=saint_target_names,
+                target_device=saint_target_device,
             )
             delta_payload = row.pop("merged_delta_payload")
             run_path = combo / f"saint_budget_{budget}_seed_{seed}"

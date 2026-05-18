@@ -29,7 +29,7 @@ recomposicao final
 ```text
 Fase atual: Fase 15 - Escala 14B
 Fase anterior: Fase 14 concluida com ressalvas
-Proximo marco: Fase 15 Marco 1 - Ponte 14B Controlada
+Proximo marco: Fase 15 Marco 3 - Reducao de Pico de Memoria
 ```
 
 Resumo do estado:
@@ -51,7 +51,8 @@ Resumo do estado:
 | 12 | Validacao de Escala de Checkpoint | Concluida |
 | 13 | Modelos Hugging Face Pequenos | Concluida com ressalvas |
 | 14 | Escala 3B | Concluida com ressalvas |
-| 15+ | Modelos reais e escala | Pendente |
+| 15 | Escala 14B | Em andamento |
+| 16+ | Modelos reais e escala maior | Pendente |
 
 ## Fase 0 - Fundacao Conceitual
 
@@ -2327,11 +2328,63 @@ Veredito:
 
 Proximo marco:
 
-- limitar treino a uma unica matriz em camada residente na GPU;
-- evitar tocar camadas offloadadas durante treino;
-- testar delta somente em `model.layers.0.self_attn.q_proj.weight`;
-- medir custo com diferentes `max_memory`;
-- so comparar LoRA 14B depois de SAINT completar um step abaixo de 5 minutos.
+- reduzir pico de memoria antes de tentar qualidade;
+- evitar segunda carga completa no caminho 14B;
+- criar modo `train-only` sem base eval, merge eval e generation;
+- medir load, routing, train e checkpoint separadamente.
+
+### Marco 2 - Alvo Unico em Camada Residente
+
+Status: **concluido como diagnostico, ainda sem treino viavel**.
+
+Mudancas:
+
+- `target_names` explicito para SAINT HF;
+- filtro `target_device` para evitar matrizes offloadadas;
+- CLI multiseed com:
+  - `--saint-target-names`;
+  - `--saint-target-device`;
+- novo probe `scripts/benchmark_huggingface_phase15_target_probe.py`.
+
+Probe:
+
+| matriz | device | shape |
+|---|---|---:|
+| `model.layers.0.self_attn.q_proj.weight` | `cuda:0` | 5120x5120 |
+| `model.layers.33.self_attn.q_proj.weight` | `meta`/CPU offload | 5120x5120 |
+
+Smoke relativo:
+
+| modelo/config | load_s | forward_s | forward CUDA GB |
+|---|---:|---:|---:|
+| Qwen2.5-3B sem offload | 15.242 | 0.339 | 5.874 |
+| Qwen2.5-14B `0=18GiB,cpu=64GiB` | 33.053 | 1.353 | 17.783 |
+| Qwen2.5-14B `0=22GiB,cpu=64GiB` | 23.044 | 1.098 | 21.885 |
+
+Tentativa SAINT limitada:
+
+```text
+target: model.layers.0.self_attn.q_proj.weight
+budget: 1024
+steps: 1
+resultado: CUDA budget exceeded during train: 29.856 GB
+```
+
+Veredito:
+
+```text
+selecionar uma matriz residente funciona;
+o caminho de treino/validacao ainda gera pico de memoria alto demais.
+```
+
+Proximo marco:
+
+- evitar segunda carga completa no grid/validacao 14B;
+- permitir modo `train-only` sem base eval, merge eval e generation;
+- fazer checkpoint do delta sem recarregar o modelo;
+- separar script 14B de treino minimo do grid multiseed;
+- testar backward curto sem avaliacao final;
+- manter LoRA 14B adiado ate SAINT completar um step abaixo de 5 minutos.
 
 ## Fase 16 - Escala 70B
 

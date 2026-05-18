@@ -214,6 +214,8 @@ def _saint_validation_row(
     max_cuda_gb: float | None = None,
     delta_application: str = "functional",
     hf_load_metadata: dict[str, Any] | None = None,
+    target_names: tuple[str, ...] = (),
+    target_device: str | None = None,
 ) -> dict[str, Any]:
     from saint.runtime import resume_runtime, train_runtime
 
@@ -243,6 +245,8 @@ def _saint_validation_row(
             "model_dtype": model_dtype,
             "max_cuda_gb": max_cuda_gb,
             "delta_application": delta_application,
+            "target_names": list(target_names),
+            "target_device": target_device,
             **(hf_load_metadata or {}),
         },
     )

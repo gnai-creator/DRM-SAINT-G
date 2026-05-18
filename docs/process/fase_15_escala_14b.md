@@ -146,3 +146,115 @@ Marco 2 deve reduzir o custo antes de tentar treino novamente:
 - medir forward com `max_memory` menor e maior;
 - comparar smoke 14B contra Qwen2.5-3B para custo relativo;
 - so tentar LoRA 14B depois que SAINT fizer um step completo abaixo de 5 minutos.
+
+## Marco 2 - Alvo Unico em Camada Residente
+
+Status: **concluido como diagnostico, ainda sem treino viavel**.
+
+### Mudancas
+
+- `saint.adapters.huggingface_forward` aceita `target_names` explicito;
+- o runtime SAINT aceita filtrar matriz alvo por `target_device`;
+- o benchmark multiseed aceita:
+  - `--saint-target-names`;
+  - `--saint-target-device`;
+- novo probe `scripts/benchmark_huggingface_phase15_target_probe.py` lista
+  dispositivo, shape e tamanho das matrizes alvo.
+
+### Probe de Alvos
+
+Comando:
+
+```bash
+python scripts/benchmark_huggingface_phase15_target_probe.py \
+  --model models/Qwen2.5-14B \
+  --out runs/phase15_marco2_target_probe_14b.json \
+  --device cuda \
+  --model-dtype bfloat16 \
+  --hf-device-map auto \
+  --hf-max-memory "0=20GiB,cpu=64GiB" \
+  --hf-offload-folder runs/phase15_marco2_offload \
+  --target-names model.layers.0.self_attn.q_proj.weight,model.layers.33.self_attn.q_proj.weight
+```
+
+Resultado:
+
+| matriz | device | shape | numel |
+|---|---|---:|---:|
+| `model.layers.0.self_attn.q_proj.weight` | `cuda:0` | 5120x5120 | 26214400 |
+| `model.layers.33.self_attn.q_proj.weight` | `meta`/CPU offload | 5120x5120 | 26214400 |
+
+Conclusao:
+
+```text
+camadas baixas podem ser escolhidas como alvo residente em GPU;
+camadas altas ficam offloadadas e nao devem ser usadas no primeiro treino 14B.
+```
+
+### Smoke por Memoria
+
+| modelo/config | load_s | forward_s | load CUDA GB | forward CUDA GB |
+|---|---:|---:|---:|---:|
+| Qwen2.5-3B sem offload | 15.242 | 0.339 | 5.854 | 5.874 |
+| Qwen2.5-14B `0=18GiB,cpu=64GiB` | 33.053 | 1.353 | 16.579 | 17.783 |
+| Qwen2.5-14B `0=20GiB,cpu=64GiB` | 26.964 | 1.653 | 18.634 | 19.834 |
+| Qwen2.5-14B `0=22GiB,cpu=64GiB` | 23.044 | 1.098 | 20.685 | 21.885 |
+
+Observacao:
+
+```text
+mais VRAM para o device_map reduz latencia de forward, mas aproxima o pico do
+limite pratico da RTX 4090.
+```
+
+### Tentativa SAINT Limitada
+
+Configuracao:
+
+```text
+target_names: model.layers.0.self_attn.q_proj.weight
+target_device: cuda
+delta_application: inplace
+routing_method: activation
+budget: 1024
+steps: 1
+batch_size: 1
+routing_max_length: 4
+max_memory: 0=18GiB,cpu=64GiB
+max_cuda_gb: 23
+```
+
+Resultado:
+
+```text
+RuntimeError: CUDA budget exceeded during train: 29.856 GB
+```
+
+Leitura:
+
+- a selecao por matriz alvo funcionou;
+- a camada 0 `q_proj` estava residente em GPU;
+- o caminho de validacao/treino ainda cria pico alto demais antes do step;
+- LoRA 14B continua adiado, porque SAINT ainda nao completou um step abaixo de
+  5 minutos.
+
+### Veredito
+
+```text
+Marco 2 reduziu o escopo corretamente, mas 14B ainda nao esta pronto para treino.
+```
+
+O bloqueio agora e mais especifico: nao e escolher a matriz errada, e sim o
+pico de memoria/custo do caminho de treino HF com offload.
+
+## Proximo Marco
+
+Marco 3 deve atacar o pico de memoria antes de tentar qualidade:
+
+- evitar segunda carga completa no grid/validacao 14B;
+- permitir modo `train-only` sem base eval, merge eval e generation;
+- fazer checkpoint do delta sem recarregar o modelo;
+- separar script 14B de treino minimo do grid multiseed;
+- testar backward somente com uma janela curta e sem avaliacao final;
+- medir memoria em subetapas: load, routing, train, checkpoint;
+- so reativar LoRA 14B depois de um step SAINT completo abaixo de 5 minutos.

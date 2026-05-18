@@ -98,24 +98,36 @@ def _load_batches(
 
 
 def _target_names(model, metadata: dict[str, Any]) -> list[str]:
-    default_keywords = [
-        "c_attn.weight",
-        "c_proj.weight",
-        "q_proj.weight",
-        "v_proj.weight",
-        "o_proj.weight",
-        "gate_proj.weight",
-        "up_proj.weight",
-        "down_proj.weight",
-        "lm_head.weight",
-    ]
-    keywords = tuple(metadata.get("target_keywords", default_keywords))
-    candidates = [
-        name
-        for name, param in model.named_parameters()
-        if param.ndim == 2 and any(keyword in name for keyword in keywords)
-    ]
-    return candidates[: max(1, int(metadata.get("max_trainable_matrices", 2)))]
+    explicit = metadata.get("target_names")
+    params = dict(model.named_parameters())
+    if isinstance(explicit, list) and explicit:
+        names = [str(name) for name in explicit if str(name) in params]
+    else:
+        default_keywords = [
+            "c_attn.weight",
+            "c_proj.weight",
+            "q_proj.weight",
+            "v_proj.weight",
+            "o_proj.weight",
+            "gate_proj.weight",
+            "up_proj.weight",
+            "down_proj.weight",
+            "lm_head.weight",
+        ]
+        keywords = tuple(metadata.get("target_keywords", default_keywords))
+        names = [
+            name
+            for name, param in params.items()
+            if param.ndim == 2 and any(keyword in name for keyword in keywords)
+        ]
+    target_device = str(metadata.get("target_device") or "").lower()
+    if target_device:
+        names = [
+            name
+            for name in names
+            if str(params[name].device).lower().startswith(target_device)
+        ]
+    return names[: max(1, int(metadata.get("max_trainable_matrices", 2)))]
 
 
 def _loss(functional_call, model, params, input_ids, attention_mask):
