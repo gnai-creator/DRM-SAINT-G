@@ -1,6 +1,7 @@
 """Checkpoint management for SAINT runtime."""
 
 from saint.checkpoints.manager import (
+    MANIFEST_FORMAT_VERSION,
     checkpoint_payload,
     migrate_checkpoint_manifest,
     read_json,
@@ -23,6 +24,7 @@ __all__ = [
     "benchmark_large_shards",
     "benchmark_dtype_io",
     "benchmark_partial_shard_read",
+    "MANIFEST_FORMAT_VERSION",
     "checkpoint_payload",
     "migrate_checkpoint_manifest",
     "read_json",

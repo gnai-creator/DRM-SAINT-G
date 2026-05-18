@@ -2,7 +2,12 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from saint.checkpoints import write_json
+from saint.checkpoints import (
+    MANIFEST_FORMAT_VERSION,
+    read_json,
+    validate_checkpoint_bundle,
+    write_json,
+)
 from saint.cli import main as cli_main
 from saint.config import RuntimeConfig, config_from_dict, load_config, save_config
 from saint.memory import estimate_runtime_memory
@@ -96,7 +101,7 @@ class RuntimePhase7Tests(unittest.TestCase):
             self.assertEqual(len(inspected["matrices"]), 2)
             self.assertTrue(result["has_delta_payload"])
             self.assertEqual(result["format"], "saint_checkpoint")
-            self.assertEqual(result["format_version"], 1)
+            self.assertEqual(result["format_version"], MANIFEST_FORMAT_VERSION)
             self.assertNotIn("delta_payload", result)
             self.assertTrue((run_dir / "deltas.saintbin").exists())
             self.assertTrue((run_dir / "optimizer.saintopt").exists())
@@ -119,6 +124,7 @@ class RuntimePhase7Tests(unittest.TestCase):
             self.assertEqual(result["experiment_name"], config.experiment_name)
             self.assertTrue(result["has_delta_payload"])
             self.assertEqual(result["format"], "saint_checkpoint")
+            self.assertEqual(result["format_version"], MANIFEST_FORMAT_VERSION)
             self.assertNotIn("delta_payload", result)
             self.assertTrue((Path(config.output_dir) / "checkpoint.json").exists())
             self.assertTrue((Path(config.output_dir) / "deltas.saintbin").exists())
@@ -139,6 +145,39 @@ class RuntimePhase7Tests(unittest.TestCase):
 
             with self.assertRaises(ValueError):
                 resume_runtime(config.output_dir)
+
+    def test_checkpoint_manifest_v1_migrates_to_current_version(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = RuntimeConfig(output_dir=str(Path(tmp) / "run"), steps=1, parameter_budget=24)
+
+            train_runtime(config)
+            checkpoint_path = Path(config.output_dir) / "checkpoint.json"
+            checkpoint = read_json(checkpoint_path)
+            checkpoint["format_version"] = 1
+            checkpoint.pop("compatibility", None)
+            write_json(checkpoint_path, checkpoint)
+
+            migrated = validate_checkpoint_bundle(config.output_dir)
+
+            self.assertEqual(migrated["format_version"], MANIFEST_FORMAT_VERSION)
+            self.assertEqual(migrated["migrated_from"]["format_version"], 1)
+            self.assertEqual(
+                migrated["compatibility"]["payload_format_version"],
+                1,
+            )
+
+    def test_checkpoint_manifest_future_version_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = RuntimeConfig(output_dir=str(Path(tmp) / "run"), steps=1, parameter_budget=24)
+
+            train_runtime(config)
+            checkpoint_path = Path(config.output_dir) / "checkpoint.json"
+            checkpoint = read_json(checkpoint_path)
+            checkpoint["format_version"] = MANIFEST_FORMAT_VERSION + 100
+            write_json(checkpoint_path, checkpoint)
+
+            with self.assertRaises(ValueError):
+                validate_checkpoint_bundle(config.output_dir)
 
     def test_sharded_dtype_checkpoint_merges(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -7,13 +7,16 @@ from pathlib import Path
 from typing import Any
 
 from saint.checkpoints.robust import (
-    FORMAT_VERSION,
+    FORMAT_VERSION as PAYLOAD_FORMAT_VERSION,
     read_matrix_payload_entry,
     read_state_payload,
     sha256_file,
     write_matrix_payload,
     write_state_payload,
 )
+
+MANIFEST_FORMAT_VERSION = 2
+MIN_READER_VERSION = 1
 
 
 def write_json(path: str | Path, payload: dict[str, Any]) -> None:
@@ -80,7 +83,12 @@ def write_checkpoint_bundle(run_dir: str | Path, payload: dict[str, Any]) -> dic
     }
     files.append(write_state_payload(target / "optimizer.saintopt", state_payload))
     manifest["format"] = "saint_checkpoint"
-    manifest["format_version"] = FORMAT_VERSION
+    manifest["format_version"] = MANIFEST_FORMAT_VERSION
+    manifest["compatibility"] = {
+        "min_reader_version": MIN_READER_VERSION,
+        "payload_format_version": PAYLOAD_FORMAT_VERSION,
+        "writer_version": MANIFEST_FORMAT_VERSION,
+    }
     manifest["files"] = files
     write_json(target / "checkpoint.json", manifest)
     return manifest
@@ -158,13 +166,31 @@ def validate_checkpoint_bundle(
 
 def migrate_checkpoint_manifest(checkpoint: dict[str, Any]) -> dict[str, Any]:
     version = int(checkpoint.get("format_version", -1))
-    if version == FORMAT_VERSION:
+    if version == MANIFEST_FORMAT_VERSION:
         return checkpoint
+    if version == 1:
+        migrated = dict(checkpoint)
+        migrated["format_version"] = MANIFEST_FORMAT_VERSION
+        migrated["compatibility"] = {
+            "min_reader_version": MIN_READER_VERSION,
+            "payload_format_version": PAYLOAD_FORMAT_VERSION,
+            "writer_version": 1,
+        }
+        migrated["migrated_from"] = {
+            "format_version": 1,
+            "migration": "manifest_v1_to_v2",
+        }
+        return migrated
+    if version > MANIFEST_FORMAT_VERSION:
+        raise ValueError(
+            "checkpoint format version is newer than this SAINT reader"
+        )
     raise ValueError("unsupported checkpoint format version")
 
 
 __all__ = [
     "checkpoint_payload",
+    "MANIFEST_FORMAT_VERSION",
     "migrate_checkpoint_manifest",
     "read_json",
     "require_delta_payload",

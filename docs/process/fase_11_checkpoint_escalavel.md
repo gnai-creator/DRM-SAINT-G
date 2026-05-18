@@ -75,10 +75,15 @@ Fase 11 concluida em escala smoke.
 O resultado prova que o runtime consegue continuar um treino real do
 `drm_transformer` a partir de deltas e estado AdamW salvos em checkpoint SAINT.
 
-## Pendencias Futuras
+## Continuidade
 
-- testar shards com checkpoints muito maiores;
-- fazer merge lendo apenas subconjuntos necessarios;
-- medir custo de I/O por dtype;
-- adicionar migracoes reais quando `format_version` passar de 1 para 2;
+As Fases 12A, 12B, 12C e 12D resolveram:
+
+- teste de shards com checkpoints maiores;
+- merge lendo apenas subconjuntos necessarios;
+- medicao de custo de I/O por dtype;
+- migracao real de manifesto v1 para v2.
+
+Permanece para a Fase 12E:
+
 - validar `bfloat16` e `int8` contra perda de qualidade em tarefa real.

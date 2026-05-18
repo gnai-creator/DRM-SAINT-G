@@ -1199,6 +1199,9 @@ format: saint_checkpoint
 format_version: 1
 ```
 
+Observacao: a Fase 12D atualizou o manifesto corrente para `format_version: 2`
+e manteve migracao automatica de manifestos v1.
+
 ### Perguntas
 
 - Qual e o menor formato suficiente para retomar treino?
@@ -1379,10 +1382,24 @@ mais tamanho, mas fica pendente de validacao de qualidade em tarefa real.
 
 #### Fase 12D - Compatibilidade e Migracao
 
+Status: **concluida**.
+
 - adicionar uma migracao real quando `format_version` passar de 1 para 2;
 - testar leitura de manifesto antigo;
 - testar erro para versao futura incompativel;
 - documentar campos estaveis e campos experimentais.
+
+Resultado:
+
+```text
+manifesto atual: format_version 2
+payload binario: payload_format_version 1
+migracao: manifest_v1_to_v2
+versao futura: rejeitada antes do resume/merge
+```
+
+O `checkpoint.json` agora possui campo `compatibility`, e manifestos v1 sao
+migrados automaticamente para v2 com `migrated_from`.
 
 #### Fase 12E - Qualidade Numerica
 

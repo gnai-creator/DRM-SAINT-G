@@ -42,6 +42,9 @@ files:
     sha256: ...
 ```
 
+Observacao: a Fase 12D migrou o manifesto atual para `format_version: 2`,
+mantendo leitura automatica de manifestos v1.
+
 ## Payload de Deltas
 
 `deltas.saintbin` usa:
