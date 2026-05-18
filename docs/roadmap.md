@@ -29,7 +29,7 @@ recomposicao final
 ```text
 Fase atual: Fase 14 - Escala 3B
 Fase anterior: Fase 13 concluida com ressalvas
-Proximo marco: Fase 14 Marco 5 - Reduzir Memoria do Roteamento
+Proximo marco: Fase 14 Marco 6 - Roteamento Aproximado de Baixo Custo
 ```
 
 Resumo do estado:
@@ -2004,7 +2004,7 @@ mas o pico CUDA ainda e dominado pelo roteamento por gradiente.
 
 ### Marco 5 - Reduzir Memoria do Roteamento
 
-Status: **pendente**.
+Status: **concluido com ressalvas**.
 
 Objetivo:
 
@@ -2021,6 +2021,46 @@ Entregas:
 - comparar roteamento completo contra roteamento aproximado barato;
 - repetir GPT-2 small com `budget=4096`, `lr=0.005`;
 - decidir se a ponte 3B pode iniciar.
+
+Resultado:
+
+| roteamento | SAINT mean val loss | SAINT best val loss | routing CUDA GB | train CUDA GB | decisao |
+|---|---:|---:|---:|---:|---|
+| gradient completo | 6.562497 | 6.140045 | 2.264 | 0.638 | passa com ressalva |
+| gradient sequencial | 6.140045 | 6.140045 | 2.247 | 0.637 | passa com ressalva |
+| magnitude | 6.751935 | 6.751935 | 0.518 | 0.637 | falha contra LoRA |
+
+Controle LoRA:
+
+```text
+LoRA: mean val loss 6.664005, best 6.563403, mean gain/param 0.00004904
+```
+
+Veredito:
+
+```text
+O sequencial preserva qualidade, mas nao reduz memoria o bastante.
+Magnitude mostra o piso barato, mas perde qualidade.
+```
+
+### Marco 6 - Roteamento Aproximado de Baixo Custo
+
+Status: **pendente**.
+
+Objetivo:
+
+```text
+aproximar o beneficio do gradiente sem rodar backward completo caro.
+```
+
+Entregas:
+
+- testar gradiente de ultima camada ou `lm_head` como proxy;
+- testar sensibilidade por ativacao sem backward completo;
+- testar score hibrido `magnitude * ativacao`;
+- testar subset de batch/seq_len menor apenas para roteamento;
+- comparar qualidade/memoria contra `gradient_sequential`;
+- decidir se GPT-2 small autoriza ponte 3B com ressalva.
 
 ## Fase 15 - Escala 14B
 

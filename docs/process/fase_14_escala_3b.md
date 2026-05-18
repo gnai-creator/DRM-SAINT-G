@@ -344,3 +344,73 @@ Marco 5 deve reduzir memoria do roteamento:
 - comparar roteamento por gradiente completo contra roteamento aproximado mais
   barato;
 - repetir `budget=4096`, `lr=0.005` antes de decidir ponte 3B.
+
+## Marco 5 - Roteamento Sequencial e Scores em CPU
+
+Status: **concluido com ressalvas**.
+
+### Mudancas
+
+- `routing_method=gradient_sequential` calcula sensibilidade uma matriz alvo por
+  vez;
+- cada score de gradiente e movido para CPU antes do `top-k` global;
+- o cache CUDA e limpo entre matrizes alvo;
+- `routing_method=magnitude` foi usado como controle barato aproximado;
+- o benchmark foi repetido com `budget=4096`, `lr=0.005`.
+
+### Comparacao
+
+| roteamento | SAINT mean val loss | SAINT best val loss | routing CUDA GB | train CUDA GB | decisao |
+|---|---:|---:|---:|---:|---|
+| gradient completo | 6.562497 | 6.140045 | 2.264 | 0.638 | passa com ressalva |
+| gradient sequencial | 6.140045 | 6.140045 | 2.247 | 0.637 | passa com ressalva |
+| magnitude | 6.751935 | 6.751935 | 0.518 | 0.637 | falha contra LoRA |
+
+Controle LoRA no mesmo grid:
+
+```text
+LoRA: mean val loss 6.664005, best 6.563403, mean gain/param 0.00004904
+```
+
+Memoria por etapa do `gradient_sequential`:
+
+```text
+load_cuda_peak_bytes: 508782592
+routing_cuda_peak_bytes: 2246670848
+train_cuda_peak_bytes: 633692672
+checkpoint_file_bytes: 19605
+merge_cuda_peak_bytes: 18087936
+```
+
+Memoria por etapa do roteador `magnitude`:
+
+```text
+load_cuda_peak_bytes: 508782592
+routing_cuda_peak_bytes: 518262784
+train_cuda_peak_bytes: 633430528
+checkpoint_file_bytes: 19572
+merge_cuda_peak_bytes: 18087936
+```
+
+### Veredito
+
+O roteamento sequencial preservou a qualidade do gradiente completo, mas reduziu
+pouco a memoria. Isso indica que o custo dominante nao e acumular gradientes de
+varias matrizes ao mesmo tempo, e sim o proprio backward usado para medir
+sensibilidade.
+
+O roteamento por magnitude mostrou o piso de memoria desejado, mas perdeu para
+LoRA. Portanto, a proxima melhoria deve aproximar o beneficio do gradiente sem
+rodar um backward completo caro.
+
+## Proximo Marco
+
+Marco 6 deve testar roteamento aproximado de baixo custo:
+
+- usar gradiente da ultima camada ou `lm_head` como proxy;
+- testar sensibilidade por ativacao sem backward completo;
+- testar score hibrido `magnitude * ativacao`;
+- testar subset de batch/seq_len menor apenas para roteamento;
+- comparar qualidade/memoria contra `gradient_sequential`;
+- decidir se GPT-2 small ja autoriza ponte 3B com ressalva ou se falta outro
+  ciclo de roteamento.

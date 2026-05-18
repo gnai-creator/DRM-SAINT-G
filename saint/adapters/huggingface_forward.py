@@ -94,7 +94,7 @@ def _target_names(model, metadata: dict[str, Any]) -> list[str]:
 def _score_indices(torch, scores: dict[str, Any], *, budget: int):
     total = sum(score.numel() for score in scores.values())
     count = max(1, min(budget, total))
-    flat = torch.cat([score.detach().abs().flatten() for score in scores.values()])
+    flat = torch.cat([score.detach().abs().cpu().flatten() for score in scores.values()])
     _, selected = torch.topk(flat, k=count)
     offsets = {}
     start = 0
@@ -119,9 +119,34 @@ def _gradient_scores(torch, functional_call, model, names, input_ids, attention_
     loss = _loss(functional_call, model, params, input_ids, attention_mask)
     grads = torch.autograd.grad(loss, [params[name] for name in names], allow_unused=True)
     return {
-        name: grad.detach().abs() if grad is not None else params[name].detach().abs()
+        name: grad.detach().abs().cpu() if grad is not None else params[name].detach().abs().cpu()
         for name, grad in zip(names, grads)
     }
+
+
+def _gradient_scores_sequential(
+    torch,
+    functional_call,
+    model,
+    names,
+    input_ids,
+    attention_mask,
+):
+    named = dict(model.named_parameters())
+    scores = {}
+    for name in names:
+        param = named[name].detach().requires_grad_(True)
+        loss = _loss(functional_call, model, {name: param}, input_ids, attention_mask)
+        grad = torch.autograd.grad(loss, param, allow_unused=True)[0]
+        scores[name] = (
+            grad.detach().abs().cpu()
+            if grad is not None
+            else param.detach().abs().cpu()
+        )
+        del loss, grad, param
+        if input_ids.device.type == "cuda":
+            torch.cuda.empty_cache()
+    return scores
 
 
 def _build_deltas(
@@ -138,8 +163,17 @@ def _build_deltas(
     named = dict(model.named_parameters())
     if routing_method == "gradient":
         scores = _gradient_scores(torch, functional_call, model, names, input_ids, attention_mask)
+    elif routing_method == "gradient_sequential":
+        scores = _gradient_scores_sequential(
+            torch,
+            functional_call,
+            model,
+            names,
+            input_ids,
+            attention_mask,
+        )
     else:
-        scores = {name: named[name].detach().abs() for name in names}
+        scores = {name: named[name].detach().abs().cpu() for name in names}
     selected = _score_indices(torch, scores, budget=parameter_budget)
     deltas = {}
     coordinates = {}
