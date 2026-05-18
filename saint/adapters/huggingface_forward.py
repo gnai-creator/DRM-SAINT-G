@@ -91,31 +91,77 @@ def _target_names(model, metadata: dict[str, Any]) -> list[str]:
     return candidates[: max(1, int(metadata.get("max_trainable_matrices", 2)))]
 
 
-def _mask_for_param(torch, param, *, budget: int):
-    flat = param.detach().abs().flatten()
-    count = max(1, min(budget, flat.numel()))
-    indices = torch.topk(flat, k=count).indices
-    mask = torch.zeros_like(flat)
-    mask[indices] = 1.0
-    return mask.reshape_as(param)
+def _score_indices(torch, scores: dict[str, Any], *, budget: int):
+    total = sum(score.numel() for score in scores.values())
+    count = max(1, min(budget, total))
+    flat = torch.cat([score.detach().abs().flatten() for score in scores.values()])
+    _, selected = torch.topk(flat, k=count)
+    offsets = {}
+    start = 0
+    for name, score in scores.items():
+        offsets[name] = (start, start + score.numel(), score.shape)
+        start += score.numel()
+    indices = {}
+    for name, (start, end, shape) in offsets.items():
+        local = selected[(selected >= start) & (selected < end)] - start
+        if local.numel() == 0:
+            continue
+        indices[name] = torch.unravel_index(local, shape)
+    return indices
 
 
-def _build_deltas(torch, model, names: list[str], *, parameter_budget: int):
+def _gradient_scores(torch, functional_call, model, names, input_ids, attention_mask):
+    params = {
+        name: param.detach().requires_grad_(name in names)
+        for name, param in model.named_parameters()
+    }
+    loss = _loss(functional_call, model, params, input_ids, attention_mask)
+    grads = torch.autograd.grad(loss, [params[name] for name in names], allow_unused=True)
+    return {
+        name: grad.detach().abs() if grad is not None else params[name].detach().abs()
+        for name, grad in zip(names, grads)
+    }
+
+
+def _build_deltas(
+    torch,
+    functional_call,
+    model,
+    names: list[str],
+    *,
+    parameter_budget: int,
+    input_ids,
+    attention_mask,
+    routing_method: str,
+):
     named = dict(model.named_parameters())
-    per_matrix = max(1, parameter_budget // max(1, len(names)))
+    if routing_method == "gradient":
+        scores = _gradient_scores(torch, functional_call, model, names, input_ids, attention_mask)
+    else:
+        scores = {name: named[name].detach().abs() for name in names}
+    selected = _score_indices(torch, scores, budget=parameter_budget)
     deltas = {}
-    masks = {}
+    coordinates = {}
     for name in names:
-        param = named[name]
-        deltas[name] = torch.zeros_like(param, requires_grad=True)
-        masks[name] = _mask_for_param(torch, param, budget=per_matrix)
-    return deltas, masks
+        rows, cols = selected.get(name, (None, None))
+        if rows is None:
+            continue
+        deltas[name] = torch.zeros(rows.numel(), device=named[name].device, requires_grad=True)
+        coordinates[name] = (rows.to(named[name].device), cols.to(named[name].device))
+    return deltas, coordinates
 
 
-def _merged_params(model, deltas, masks):
+def _dense_delta(torch, param, values, coordinates):
+    update = torch.zeros_like(param)
+    rows, cols = coordinates
+    update = update.index_put((rows, cols), values)
+    return update
+
+
+def _merged_params(torch, model, deltas, coordinates):
     params = dict(model.named_parameters())
     for name, delta in deltas.items():
-        params[name] = params[name] + (delta * masks[name])
+        params[name] = params[name] + _dense_delta(torch, params[name], delta, coordinates[name])
     return params
 
 
@@ -135,7 +181,7 @@ def _loss_value(functional_call, model, params, input_ids, attention_mask) -> fl
     )
 
 
-def _delta_payload(deltas, masks, base_weights) -> dict[str, Any]:
+def _delta_payload(deltas, coordinates, base_weights) -> dict[str, Any]:
     sparse = {}
     shapes = {
         name: [len(matrix), len(matrix[0]) if matrix else 0]
@@ -146,10 +192,15 @@ def _delta_payload(deltas, masks, base_weights) -> dict[str, Any]:
             continue
         rows = len(base_weights[name])
         cols = len(base_weights[name][0]) if rows else 0
-        matrix = (delta.detach() * masks[name])[:rows, :cols].cpu()
         entries = []
-        for row, col in matrix.nonzero(as_tuple=False).tolist():
-            entries.append([row, col, float(matrix[row, col].item())])
+        row_indices, col_indices = coordinates[name]
+        for row, col, value in zip(
+            row_indices.detach().cpu().tolist(),
+            col_indices.detach().cpu().tolist(),
+            delta.detach().cpu().tolist(),
+        ):
+            if row < rows and col < cols and abs(float(value)) > 0.0:
+                entries.append([int(row), int(col), float(value)])
         if entries:
             sparse[name] = entries
     return {"format": "saint_sparse_delta", "shapes": shapes, "values": sparse}
@@ -203,14 +254,19 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
         device=device,
     )
     names = _target_names(model, metadata)
-    deltas, masks = _build_deltas(
+    routing_method = str(metadata.get("routing_method", "gradient"))
+    deltas, coordinates = _build_deltas(
         torch,
+        functional_call,
         model,
         names,
         parameter_budget=max(1, config.parameter_budget),
+        input_ids=input_ids,
+        attention_mask=attention_mask,
+        routing_method=routing_method,
     )
     optimizer = torch.optim.AdamW(list(deltas.values()), lr=float(metadata.get("learning_rate", 1e-3)))
-    initial_loss = _loss_value(functional_call, model, _merged_params(model, deltas, masks), input_ids, attention_mask)
+    initial_loss = _loss_value(functional_call, model, _merged_params(torch, model, deltas, coordinates), input_ids, attention_mask)
     steps = max(1, int(config.steps))
     train_start = perf_counter()
     for _ in range(steps):
@@ -219,7 +275,7 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
             loss = _loss(
                 functional_call,
                 model,
-                _merged_params(model, deltas, masks),
+                _merged_params(torch, model, deltas, coordinates),
                 batch_ids,
                 batch_mask,
             ) / len(train_batches)
@@ -231,9 +287,9 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
         if device.type == "cuda"
         else 0
     )
-    final_loss = _loss_value(functional_call, model, _merged_params(model, deltas, masks), input_ids, attention_mask)
-    validation_loss = _loss_value(functional_call, model, _merged_params(model, deltas, masks), val_ids, val_mask)
-    parameter_count = int(sum(mask.sum().item() for mask in masks.values()))
+    final_loss = _loss_value(functional_call, model, _merged_params(torch, model, deltas, coordinates), input_ids, attention_mask)
+    validation_loss = _loss_value(functional_call, model, _merged_params(torch, model, deltas, coordinates), val_ids, val_mask)
+    parameter_count = int(sum(delta.numel() for delta in deltas.values()))
     tokens_seen = sum(int(ids.numel()) for ids, _ in train_batches) * steps
     cuda_peak = (
         int(torch.cuda.max_memory_allocated(device))
@@ -248,7 +304,7 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
         optimizer_state_values=parameter_count * 2,
         elapsed_s=perf_counter() - start,
         metadata={
-            "delta_payload": _delta_payload(deltas, masks, base_weights),
+            "delta_payload": _delta_payload(deltas, coordinates, base_weights),
             "adapter": "huggingface_causal_lm",
             "autograd": True,
             "real_forward": True,
@@ -264,6 +320,7 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
             "load_cuda_peak_bytes": load_cuda_peak,
             "train_cuda_peak_bytes": train_cuda_peak,
             "delta_payload_format": "saint_sparse_delta",
+            "routing_method": routing_method,
             "target_matrices": names,
             "marco": "fase_13_marco_3",
         },

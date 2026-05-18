@@ -30,6 +30,8 @@ def main() -> None:
     parser.add_argument("--saint-lrs", default="0.001,0.005")
     parser.add_argument("--lora-ranks", default="2,4")
     parser.add_argument("--lora-lrs", default="0.001,0.005")
+    parser.add_argument("--saint-target-matrices", type=int, default=2)
+    parser.add_argument("--saint-routing-method", default="gradient")
     args = parser.parse_args()
 
     result = run_hf_phase13_multiseed(
@@ -45,6 +47,8 @@ def main() -> None:
         lora_lrs=_floats(args.lora_lrs),
         device=args.device,
         batch_size=args.batch_size,
+        saint_target_matrices=args.saint_target_matrices,
+        saint_routing_method=args.saint_routing_method,
     )
     out = Path(args.out)
     print(f"rows={len(result['rows'])}")

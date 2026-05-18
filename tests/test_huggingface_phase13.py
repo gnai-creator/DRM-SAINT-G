@@ -229,6 +229,7 @@ class HuggingFacePhase13Tests(unittest.TestCase):
                 result["metadata"]["delta_payload_format"],
                 "saint_sparse_delta",
             )
+            self.assertEqual(result["metadata"]["routing_method"], "gradient")
             self.assertIn("load_cuda_peak_bytes", result["metadata"])
             self.assertTrue((run_dir / "deltas.saintdelta.json").exists())
             self.assertTrue(merged["shape_validation"])

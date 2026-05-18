@@ -136,6 +136,8 @@ def _saint_validation_row(
     train_texts: list[str],
     validation_texts: list[str],
     batch_size: int,
+    max_trainable_matrices: int = 2,
+    routing_method: str = "gradient",
 ) -> dict[str, Any]:
     from saint.runtime import merge_runtime, resume_runtime, train_runtime
 
@@ -158,6 +160,8 @@ def _saint_validation_row(
             "texts": train_texts,
             "validation_texts": validation_texts,
             "batch_size": batch_size,
+            "max_trainable_matrices": max_trainable_matrices,
+            "routing_method": routing_method,
         },
     )
     result = train_runtime(config)

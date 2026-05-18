@@ -100,6 +100,8 @@ def run_hf_phase13_multiseed(
     device: str = "auto",
     max_length: int = 32,
     batch_size: int = 4,
+    saint_target_matrices: int = 2,
+    saint_routing_method: str = "gradient",
     prompts: tuple[str, ...] = ("SAINT", "Checkpoint", "Training"),
 ) -> dict[str, Any]:
     root = Path(run_dir)
@@ -125,6 +127,8 @@ def run_hf_phase13_multiseed(
             device=device,
             max_length=max_length,
             batch_size=batch_size,
+            saint_target_matrices=saint_target_matrices,
+            saint_routing_method=saint_routing_method,
             prompts=prompts,
         )
         seed_results.append({"seed": seed, "summary": result["summary"]})

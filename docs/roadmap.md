@@ -29,7 +29,7 @@ recomposicao final
 ```text
 Fase atual: Fase 14 - Escala 3B
 Fase anterior: Fase 13 concluida com ressalvas
-Proximo marco: Fase 14 Marco 3 - Melhorar SAINT em GPT-2 Small
+Proximo marco: Fase 14 Marco 4 - Reduzir Overhead CUDA do SAINT
 ```
 
 Resumo do estado:
@@ -1903,7 +1903,7 @@ vence em loss, ganho por parametro e pico CUDA.
 
 ### Marco 3 - Melhorar SAINT em GPT-2 Small
 
-Status: **pendente**.
+Status: **concluido**.
 
 Objetivo:
 
@@ -1919,6 +1919,51 @@ Entregas:
 - comparar budgets maiores sem voltar a payload denso;
 - reduzir overhead CUDA do forward funcional;
 - manter LoRA rank `2` e `4` como controles obrigatorios.
+
+Resultado:
+
+```text
+SAINT: mean val loss 6.776390, best 6.704383, mean gain/param 0.00033130
+LoRA:  mean val loss 6.756175, best 6.727021, mean gain/param 0.00002527
+```
+
+Curva CUDA:
+
+| metodo | config | count | mean val loss | best val loss | mean gain/param | mean CUDA GB |
+|---|---:|---:|---:|---:|---:|---:|
+| SAINT | budget 256 | 3 | 6.833445 | 6.833445 | 0.00068272 | 2.263 |
+| SAINT | budget 1024 | 3 | 6.791341 | 6.791341 | 0.00022535 | 2.262 |
+| SAINT | budget 4096 | 3 | 6.704383 | 6.704383 | 0.00008584 | 2.262 |
+| LoRA | rank 2 | 3 | 6.771237 | 6.755111 | 0.00003135 | 1.018 |
+| LoRA | rank 4 | 3 | 6.741114 | 6.727021 | 0.00001918 | 1.018 |
+
+Veredito:
+
+```text
+SAINT ficou competitivo em qualidade, mas ainda nao em memoria.
+```
+
+O melhor SAINT venceu o melhor LoRA em validation loss, mas o pico CUDA
+continuou aproximadamente 2.2x maior que LoRA.
+
+### Marco 4 - Reduzir Overhead CUDA do SAINT
+
+Status: **pendente**.
+
+Objetivo:
+
+```text
+reduzir o pico CUDA do caminho SAINT antes de tentar 3B.
+```
+
+Entregas:
+
+- evitar `functional_call` com dicionario completo a cada step, se possivel;
+- testar aplicacao temporaria dos deltas diretamente nos parametros alvo;
+- medir o custo isolado do mapa de gradiente;
+- reduzir matrizes carregadas no payload base para apenas alvos treinaveis;
+- repetir GPT-2 small com `budget=4096` e steps maiores;
+- decidir se a RTX 4090 tem margem suficiente para ponte 3B.
 
 ## Fase 15 - Escala 14B
 

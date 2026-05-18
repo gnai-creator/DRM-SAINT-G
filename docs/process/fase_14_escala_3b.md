@@ -165,7 +165,7 @@ nao avancar ainda para 3B
 O caminho ficou mais eficiente e os checkpoints agora sao esparsos, mas SAINT
 ainda perde para LoRA em GPT-2 small em loss, ganho por parametro e pico CUDA.
 
-## Proximo Marco
+### Plano do Marco 3
 
 Marco 3 deve melhorar a competitividade SAINT em GPT-2 small:
 
@@ -175,3 +175,88 @@ Marco 3 deve melhorar a competitividade SAINT em GPT-2 small:
 - comparar budgets maiores sem aumentar payload denso;
 - reduzir overhead CUDA do forward funcional;
 - manter LoRA rank `2` e `4` como controle minimo.
+
+## Marco 3 - Roteamento por Gradiente em GPT-2 Small
+
+Status: **concluido**.
+
+Este marco trocou a selecao SAINT de deltas por magnitude inicial para gradiente
+real da loss. O caminho agora calcula um mapa de sensibilidade por autograd,
+seleciona os maiores gradientes dentro do budget e treina apenas esses valores
+como parametros reais do otimizador.
+
+### Mudancas Tecnicas
+
+- `hf_saint_forward_smoke` aceita `routing_method=gradient`;
+- o delta treinavel deixou de ser uma matriz densa mascarada;
+- AdamW otimiza apenas os valores selecionados;
+- o payload continua esparso;
+- o benchmark aceita `--saint-target-matrices`;
+- o experimento usou 4 matrizes alvo SAINT.
+
+### Comando
+
+```bash
+python scripts/benchmark_huggingface_multiseed_phase13.py \
+  --model models/gpt2 \
+  --corpus data/tinyshakespeare_phase13.txt \
+  --out runs/phase14_marco3_gpt2_gradient \
+  --device cuda \
+  --steps 8 \
+  --batch-size 4 \
+  --seeds 31,32,33 \
+  --saint-budgets 256,1024,4096 \
+  --saint-lrs 0.001 \
+  --lora-ranks 2,4 \
+  --lora-lrs 0.001 \
+  --saint-target-matrices 4 \
+  --saint-routing-method gradient
+```
+
+### Resultado CUDA
+
+| metodo | config | count | mean val loss | best val loss | mean gain/param | mean CUDA GB |
+|---|---:|---:|---:|---:|---:|---:|
+| SAINT | budget 256 | 3 | 6.833445 | 6.833445 | 0.00068272 | 2.263 |
+| SAINT | budget 1024 | 3 | 6.791341 | 6.791341 | 0.00022535 | 2.262 |
+| SAINT | budget 4096 | 3 | 6.704383 | 6.704383 | 0.00008584 | 2.262 |
+| LoRA | rank 2 | 3 | 6.771237 | 6.755111 | 0.00003135 | 1.018 |
+| LoRA | rank 4 | 3 | 6.741114 | 6.727021 | 0.00001918 | 1.018 |
+
+Agregado:
+
+```text
+SAINT: mean val loss 6.776390, best 6.704383, mean gain/param 0.00033130
+LoRA:  mean val loss 6.756175, best 6.727021, mean gain/param 0.00002527
+```
+
+Memoria por etapa em um run SAINT:
+
+```text
+load_cuda_peak_bytes: 508782592
+train_cuda_peak_bytes: 2263763456
+checkpoint_file_bytes: 527070
+merge_cuda_peak_bytes: 18087936
+```
+
+### Veredito
+
+```text
+SAINT ficou competitivo em qualidade, mas ainda nao em memoria.
+```
+
+O melhor SAINT (`budget=4096`) venceu o melhor LoRA em validation loss e o ganho
+medio por parametro foi maior. A ressalva e que o pico CUDA do caminho SAINT
+continua aproximadamente 2.2x maior que LoRA.
+
+## Proximo Marco
+
+Marco 4 deve reduzir overhead de memoria antes do 3B:
+
+- evitar `functional_call` com dicionario completo a cada step, se possivel;
+- testar aplicacao temporaria dos deltas diretamente nos parametros alvo;
+- medir o custo isolado do mapa de gradiente;
+- reduzir matrizes carregadas no payload base para apenas alvos treinaveis;
+- repetir GPT-2 small com `budget=4096` e steps maiores;
+- so iniciar 3B se o pico CUDA cair para perto de LoRA ou se houver margem clara
+  na RTX 4090.
