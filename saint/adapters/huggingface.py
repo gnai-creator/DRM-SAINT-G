@@ -25,6 +25,9 @@ DEFAULT_KEYWORDS = (
     "lm_head.weight",
     "embed_tokens.weight",
     "wte.weight",
+    "c_attn.weight",
+    "c_fc.weight",
+    "c_proj.weight",
 )
 
 
@@ -208,6 +211,10 @@ def _delta_payload(
 
 
 def run_method(config: RuntimeConfig) -> MiniTransformerResult:
+    if config.method == "hf_saint_forward_smoke":
+        from saint.adapters.huggingface_forward import run_hf_forward
+
+        return run_hf_forward(config)
     if config.method == "hf_saint_autograd_smoke":
         from saint.adapters.huggingface_autograd import run_hf_autograd
 

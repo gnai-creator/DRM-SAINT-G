@@ -117,12 +117,47 @@ e verifica se a loss final nao piora em relacao a `initial_loss`.
 
 ## Proximo Marco
 
-Marco 3 deve introduzir forward real de `transformers`:
+## Marco 3 - Forward Real Transformers
 
-- carregar modelo local pequeno com `transformers`;
-- carregar tokenizer local;
-- montar dataset curto;
-- aplicar deltas SAINT no `model.forward`;
-- medir loss/perplexity real;
+Status: **concluido**.
+
+Este marco adiciona `hf_saint_forward_smoke`, que carrega um modelo local via
+`AutoModelForCausalLM`, carrega tokenizer local, executa `model.forward` real
+com `labels`, treina deltas SAINT por autograd e salva checkpoint avaliavel.
+
+### Entregas
+
+- metodo `hf_saint_forward_smoke`;
+- modulo `saint/adapters/huggingface_forward.py`;
+- carregamento local com `AutoModelForCausalLM.from_pretrained`;
+- carregamento local com `AutoTokenizer.from_pretrained`;
+- tokenizacao de textos curtos;
+- forward real `model(input_ids, labels=input_ids)`;
+- aplicacao de deltas por `torch.func.functional_call`;
+- selecao de matrizes alvo por keywords;
+- medicao de loss inicial;
+- medicao de loss final;
+- perplexity simples por `exp(loss)`;
+- checkpoint robusto com dtype/shards;
+- merge dos deltas treinados;
+- config exemplo `configs/huggingface_forward_smoke.json`;
+- teste com GPT-2 minimo local criado sem rede.
+
+### Fluxo Validado
+
+```text
+modelo local -> tokenizer local -> forward real -> treino SAINT -> checkpoint -> merge
+```
+
+O teste cria um GPT-2 minimo local com tokenizer `WordLevel`, sem baixar nada da
+internet.
+
+## Proximo Marco
+
+Marco 4 deve comparar SAINT contra baselines no mesmo modelo:
+
 - comparar contra LoRA ou full fine-tuning pequeno;
+- repetir com seeds diferentes;
+- medir memoria CUDA;
+- medir tokens/s;
 - registrar checkpoint e merge avaliavel.

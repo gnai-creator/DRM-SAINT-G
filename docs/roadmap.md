@@ -29,7 +29,7 @@ recomposicao final
 ```text
 Fase atual: Fase 13 - Modelos Hugging Face Pequenos
 Fase anterior: Fase 12 concluida
-Proximo marco: Fase 13 Marco 3 - Forward Real Transformers
+Proximo marco: Fase 13 Marco 4 - Comparacao com Baselines HF
 ```
 
 Resumo do estado:
@@ -1531,16 +1531,40 @@ ambiente atual: torch ausente, transformers ausente
 O caminho foi implementado, mas a execucao real de autograd precisa de ambiente
 com PyTorch instalado.
 
+### Marco 3 - Forward Real Transformers
+
+Status: **concluido**.
+
+Entregas:
+
+- metodo `hf_saint_forward_smoke`;
+- modulo `saint/adapters/huggingface_forward.py`;
+- carregamento local com `AutoModelForCausalLM`;
+- carregamento local com `AutoTokenizer`;
+- tokenizacao de textos curtos;
+- forward real com `model(input_ids, labels=input_ids)`;
+- aplicacao de deltas por `torch.func.functional_call`;
+- treino SAINT por autograd em matrizes alvo;
+- medicao de loss inicial, loss final e perplexity;
+- checkpoint robusto com dtype/shards;
+- merge dos deltas treinados;
+- config exemplo `configs/huggingface_forward_smoke.json`;
+- teste com GPT-2 minimo local criado sem rede.
+
+Fluxo validado:
+
+```text
+modelo local -> tokenizer local -> forward real -> treino SAINT -> checkpoint -> merge
+```
+
 ### Proximo Marco
 
-Marco 3 - Forward Real Transformers:
+Marco 4 - Comparacao com Baselines HF:
 
-- carregar modelo pequeno local com `transformers`;
-- carregar tokenizer local;
-- montar dataset curto;
-- aplicar deltas SAINT no `model.forward`;
-- medir loss/perplexity real;
 - comparar contra LoRA ou full fine-tuning pequeno;
+- repetir com seeds diferentes;
+- medir memoria CUDA;
+- medir tokens/s;
 - salvar, retomar e fundir checkpoint avaliavel.
 
 ## Fase 14 - Escala 3B

@@ -35,6 +35,56 @@ def _write_hf_checkpoint(path: Path) -> None:
     )
 
 
+def _write_tiny_hf_model(path: Path) -> bool:
+    if importlib.util.find_spec("transformers") is None:
+        return False
+    from tokenizers import Tokenizer
+    from tokenizers.models import WordLevel
+    from tokenizers.pre_tokenizers import Whitespace
+    from transformers import AutoModelForCausalLM, GPT2Config, PreTrainedTokenizerFast
+
+    vocab = {
+        "[PAD]": 0,
+        "[UNK]": 1,
+        "[EOS]": 2,
+        "simple": 3,
+        "ai": 4,
+        "node": 5,
+        "training": 6,
+        "saint": 7,
+        "trains": 8,
+        "compact": 9,
+        "deltas": 10,
+        "small": 11,
+        "local": 12,
+        "causal": 13,
+        "language": 14,
+        "model": 15,
+    }
+    tokenizer = Tokenizer(WordLevel(vocab=vocab, unk_token="[UNK]"))
+    tokenizer.pre_tokenizer = Whitespace()
+    fast = PreTrainedTokenizerFast(
+        tokenizer_object=tokenizer,
+        unk_token="[UNK]",
+        pad_token="[PAD]",
+        eos_token="[EOS]",
+    )
+    config = GPT2Config(
+        vocab_size=len(vocab),
+        n_positions=16,
+        n_embd=16,
+        n_layer=1,
+        n_head=2,
+        bos_token_id=2,
+        eos_token_id=2,
+        pad_token_id=0,
+    )
+    model = AutoModelForCausalLM.from_config(config)
+    model.save_pretrained(path)
+    fast.save_pretrained(path)
+    return True
+
+
 class HuggingFacePhase13Tests(unittest.TestCase):
     def test_huggingface_json_checkpoint_smoke_flow(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -112,6 +162,43 @@ class HuggingFacePhase13Tests(unittest.TestCase):
 
             self.assertEqual(result["metadata"]["marco"], "fase_13_marco_2")
             self.assertTrue(result["metadata"]["autograd"])
+            self.assertLessEqual(
+                result["train_loss"],
+                result["metadata"]["initial_loss"],
+            )
+            self.assertTrue(merged["shape_validation"])
+
+    def test_huggingface_forward_real_model_smoke(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            model_dir = Path(tmp) / "tiny_model"
+            run_dir = Path(tmp) / "run"
+            if not _write_tiny_hf_model(model_dir):
+                self.skipTest("transformers is not installed")
+            config = RuntimeConfig(
+                experiment_name="hf_forward_smoke",
+                output_dir=str(run_dir),
+                task="huggingface_causal_lm",
+                method="hf_saint_forward_smoke",
+                steps=2,
+                parameter_budget=8,
+                metadata={
+                    "model_name_or_path": str(model_dir),
+                    "max_dim": 64,
+                    "max_matrices": 4,
+                    "checkpoint_dtype": "float16",
+                    "checkpoint_shard_bytes": 256,
+                    "device": "cpu",
+                    "learning_rate": 0.001,
+                    "max_length": 12,
+                },
+            )
+
+            result = train_runtime(config)
+            merged = merge_runtime(run_dir)
+
+            self.assertEqual(result["metadata"]["marco"], "fase_13_marco_3")
+            self.assertTrue(result["metadata"]["real_forward"])
+            self.assertIn("perplexity", result["metadata"])
             self.assertLessEqual(
                 result["train_loss"],
                 result["metadata"]["initial_loss"],
