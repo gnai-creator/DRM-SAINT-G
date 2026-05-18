@@ -37,6 +37,9 @@ def main() -> None:
     parser.add_argument("--model-dtype", default=None)
     parser.add_argument("--max-cuda-gb", type=float, default=None)
     parser.add_argument("--saint-delta-application", default="functional")
+    parser.add_argument("--hf-device-map", default=None)
+    parser.add_argument("--hf-max-memory", default=None)
+    parser.add_argument("--hf-offload-folder", default=None)
     parser.add_argument("--skip-lora", action="store_true")
     parser.add_argument("--skip-generation", action="store_true")
     args = parser.parse_args()
@@ -61,6 +64,15 @@ def main() -> None:
         model_dtype=args.model_dtype,
         max_cuda_gb=args.max_cuda_gb,
         saint_delta_application=args.saint_delta_application,
+        hf_load_metadata={
+            key: value
+            for key, value in {
+                "hf_device_map": args.hf_device_map,
+                "hf_max_memory": args.hf_max_memory,
+                "hf_offload_folder": args.hf_offload_folder,
+            }.items()
+            if value
+        },
         prompts=() if args.skip_generation else ("SAINT", "Checkpoint", "Training"),
     )
     out = Path(args.out)

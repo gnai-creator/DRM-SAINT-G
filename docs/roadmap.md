@@ -2240,7 +2240,7 @@ Ressalva:
 
 ## Fase 15 - Escala 14B
 
-Status: **pendente**.
+Status: **em andamento**.
 
 ### Objetivo
 
@@ -2272,6 +2272,66 @@ Prosseguir para 70B somente se 14B demonstrar:
 - ganho mensuravel;
 - tempo aceitavel;
 - alguma vantagem contra baseline.
+
+### Marco 1 - Ponte 14B Controlada
+
+Status: **concluido com bloqueio de treino**.
+
+Modelo:
+
+```text
+Qwen/Qwen2.5-14B
+```
+
+Mudancas:
+
+- adicionada dependencia `accelerate>=1.12`;
+- adicionados argumentos de offload HF:
+  - `--hf-device-map`;
+  - `--hf-max-memory`;
+  - `--hf-offload-folder`;
+- criado `scripts/benchmark_huggingface_phase15_14b.py`;
+- load HF centralizado em `saint.adapters.huggingface_loading`.
+
+Smoke:
+
+| metrica | valor |
+|---|---:|
+| checkpoint local | 29.55 GB |
+| load_s | 26.964 |
+| forward_s | 1.653 |
+| loss | 7.261498 |
+| load CUDA GB | 18.634 |
+| forward CUDA GB | 19.834 |
+
+Device map:
+
+```text
+GPU: embeddings + camadas 0 a 32
+CPU: camadas 33 a 47 + norm + rotary_emb + lm_head
+```
+
+Tentativa SAINT:
+
+```text
+inplace + activation + budget 4096 + micro-batch 1
+timeout apos 20 minutos
+```
+
+Veredito:
+
+```text
+14B load/forward e viavel com offload CPU.
+14B treino ainda esta bloqueado por latencia.
+```
+
+Proximo marco:
+
+- limitar treino a uma unica matriz em camada residente na GPU;
+- evitar tocar camadas offloadadas durante treino;
+- testar delta somente em `model.layers.0.self_attn.q_proj.weight`;
+- medir custo com diferentes `max_memory`;
+- so comparar LoRA 14B depois de SAINT completar um step abaixo de 5 minutos.
 
 ## Fase 16 - Escala 70B
 

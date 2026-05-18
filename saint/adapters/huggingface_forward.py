@@ -6,6 +6,7 @@ from math import exp
 from time import perf_counter
 from typing import Any
 
+from saint.adapters.huggingface_loading import load_causal_lm, model_dtype
 from saint.adapters.huggingface_routing import build_routed_deltas, merged_params
 from saint.config import RuntimeConfig
 from saint.transformer.training import MiniTransformerResult
@@ -35,14 +36,7 @@ def _device(torch, metadata: dict[str, Any]):
 
 
 def _dtype(torch, metadata: dict[str, Any]):
-    value = str(metadata.get("model_dtype", "")).lower()
-    if value in {"float16", "fp16"}:
-        return torch.float16
-    if value in {"bfloat16", "bf16"}:
-        return torch.bfloat16
-    if value in {"float32", "fp32"}:
-        return torch.float32
-    return None
+    return model_dtype(torch, metadata.get("model_dtype"))
 
 
 def _check_cuda_budget(torch, device, metadata: dict[str, Any], stage: str) -> None:
@@ -241,10 +235,7 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
     dtype = _dtype(torch, metadata)
-    load_kwargs = {"local_files_only": True}
-    if dtype is not None:
-        load_kwargs["dtype"] = dtype
-    model = AutoModelForCausalLM.from_pretrained(str(source), **load_kwargs).to(device)
+    model = load_causal_lm(AutoModelForCausalLM, source, device, metadata)
     tokenizer = AutoTokenizer.from_pretrained(str(source), local_files_only=True)
     load_cuda_peak = (
         int(torch.cuda.max_memory_allocated(device))

@@ -109,6 +109,7 @@ def run_hf_phase13_multiseed(
     model_dtype: str | None = None,
     max_cuda_gb: float | None = None,
     saint_delta_application: str = "functional",
+    hf_load_metadata: dict[str, Any] | None = None,
     prompts: tuple[str, ...] = ("SAINT", "Checkpoint", "Training"),
 ) -> dict[str, Any]:
     root = Path(run_dir)
@@ -141,6 +142,7 @@ def run_hf_phase13_multiseed(
             model_dtype=model_dtype,
             max_cuda_gb=max_cuda_gb,
             saint_delta_application=saint_delta_application,
+            hf_load_metadata=hf_load_metadata,
             prompts=prompts,
         )
         seed_results.append({"seed": seed, "summary": result["summary"]})

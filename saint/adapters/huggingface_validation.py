@@ -16,6 +16,7 @@ from saint.adapters.huggingface_benchmark import (
     _model_dtype,
     _require_deps,
 )
+from saint.adapters.huggingface_loading import load_causal_lm
 from saint.checkpoints import require_sparse_delta_payload, validate_checkpoint_bundle
 from saint.config import RuntimeConfig
 
@@ -63,11 +64,12 @@ def _generate(
     if device_name == "auto":
         device_name = "cuda" if torch.cuda.is_available() else "cpu"
     device = torch.device(device_name)
-    load_kwargs = {"local_files_only": True}
-    dtype = _model_dtype(torch, model_dtype)
-    if dtype is not None:
-        load_kwargs["dtype"] = dtype
-    model = AutoModelForCausalLM.from_pretrained(str(model_path), **load_kwargs).to(device)
+    model = load_causal_lm(
+        AutoModelForCausalLM,
+        model_path,
+        device,
+        {"model_dtype": model_dtype},
+    )
     tokenizer = AutoTokenizer.from_pretrained(str(model_path), local_files_only=True)
     if merged_weights is not None:
         state = model.state_dict()
@@ -106,11 +108,12 @@ def _evaluate_merged(
 ) -> dict[str, float]:
     torch, _, AutoModelForCausalLM, AutoTokenizer = _require_deps()
     device = torch.device(device_name)
-    load_kwargs = {"local_files_only": True}
-    dtype = _model_dtype(torch, model_dtype)
-    if dtype is not None:
-        load_kwargs["dtype"] = dtype
-    model = AutoModelForCausalLM.from_pretrained(str(model_path), **load_kwargs).to(device)
+    model = load_causal_lm(
+        AutoModelForCausalLM,
+        model_path,
+        device,
+        {"model_dtype": model_dtype},
+    )
     tokenizer = AutoTokenizer.from_pretrained(str(model_path), local_files_only=True)
     state = model.state_dict()
     with torch.no_grad():
@@ -152,16 +155,14 @@ def _evaluate_sparse_delta(
     device_name: str,
     max_length: int,
     model_dtype: str | None = None,
+    hf_load_metadata: dict[str, Any] | None = None,
 ) -> dict[str, float]:
     torch, _, AutoModelForCausalLM, AutoTokenizer = _require_deps()
     device = torch.device(device_name)
-    load_kwargs = {"local_files_only": True}
-    dtype = _model_dtype(torch, model_dtype)
-    if dtype is not None:
-        load_kwargs["dtype"] = dtype
+    metadata = {"model_dtype": model_dtype, **(hf_load_metadata or {})}
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
-    model = AutoModelForCausalLM.from_pretrained(str(model_path), **load_kwargs).to(device)
+    model = load_causal_lm(AutoModelForCausalLM, model_path, device, metadata)
     tokenizer = AutoTokenizer.from_pretrained(str(model_path), local_files_only=True)
     load_cuda_peak = (
         int(torch.cuda.max_memory_allocated(device)) if device.type == "cuda" else 0
@@ -212,6 +213,7 @@ def _saint_validation_row(
     model_dtype: str | None = None,
     max_cuda_gb: float | None = None,
     delta_application: str = "functional",
+    hf_load_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     from saint.runtime import resume_runtime, train_runtime
 
@@ -241,6 +243,7 @@ def _saint_validation_row(
             "model_dtype": model_dtype,
             "max_cuda_gb": max_cuda_gb,
             "delta_application": delta_application,
+            **(hf_load_metadata or {}),
         },
     )
     result = train_runtime(config)
@@ -254,6 +257,7 @@ def _saint_validation_row(
         device_name=result["metadata"]["device"],
         max_length=max_length,
         model_dtype=model_dtype,
+        hf_load_metadata=hf_load_metadata,
     )
     merge_cuda_peak = max(
         merged_eval.get("merge_load_cuda_peak_bytes", 0),

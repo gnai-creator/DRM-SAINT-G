@@ -15,6 +15,7 @@ from saint.adapters.huggingface_benchmark import (
     _model_dtype,
     _require_deps,
 )
+from saint.adapters.huggingface_loading import load_causal_lm
 from saint.adapters.huggingface_validation import (
     _generate,
     _saint_validation_row,
@@ -35,16 +36,14 @@ def _base_validation(
     device_name: str,
     max_length: int,
     model_dtype: str | None = None,
+    hf_load_metadata: dict[str, Any] | None = None,
 ) -> dict[str, float]:
     torch, _, AutoModelForCausalLM, AutoTokenizer = _require_deps()
     if device_name == "auto":
         device_name = "cuda" if torch.cuda.is_available() else "cpu"
     device = torch.device(device_name)
-    load_kwargs = {"local_files_only": True}
-    dtype = _model_dtype(torch, model_dtype)
-    if dtype is not None:
-        load_kwargs["dtype"] = dtype
-    model = AutoModelForCausalLM.from_pretrained(str(model_path), **load_kwargs).to(device)
+    metadata = {"model_dtype": model_dtype, **(hf_load_metadata or {})}
+    model = load_causal_lm(AutoModelForCausalLM, model_path, device, metadata)
     tokenizer = AutoTokenizer.from_pretrained(str(model_path), local_files_only=True)
     input_ids, attention_mask = _batch(
         tokenizer,
@@ -129,6 +128,7 @@ def run_hf_phase13_grid(
     model_dtype: str | None = None,
     max_cuda_gb: float | None = None,
     saint_delta_application: str = "functional",
+    hf_load_metadata: dict[str, Any] | None = None,
     prompts: tuple[str, ...] = ("SAINT", "Checkpoint", "LoRA"),
 ) -> dict[str, Any]:
     root = Path(run_dir)
@@ -140,6 +140,7 @@ def run_hf_phase13_grid(
         device_name=device,
         max_length=max_length,
         model_dtype=model_dtype,
+        hf_load_metadata=hf_load_metadata,
     )
     rows: list[dict[str, Any]] = []
     generation: dict[str, dict[str, str]] = {}
@@ -165,6 +166,7 @@ def run_hf_phase13_grid(
                 model_dtype=model_dtype,
                 max_cuda_gb=max_cuda_gb,
                 delta_application=saint_delta_application,
+                hf_load_metadata=hf_load_metadata,
             )
             delta_payload = row.pop("merged_delta_payload")
             run_path = combo / f"saint_budget_{budget}_seed_{seed}"
