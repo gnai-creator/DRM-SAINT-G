@@ -24,7 +24,29 @@ calculo agrupado,
 recomposicao final
 ```
 
+## Status Atual
+
+```text
+Fase atual: Fase 1 - Biblioteca de Blocos
+Fase anterior: Fase 0 concluida
+Proximo marco: Marco A - Prova de Matriz
+```
+
+Resumo do estado:
+
+| Fase | Nome | Status |
+|---|---|---|
+| 0 | Fundacao Conceitual | Concluida |
+| 1 | Biblioteca de Blocos | Proxima |
+| 2 | Benchmark de Reconstrucao | Pendente |
+| 3 | Roteador de Blocos | Pendente |
+| 4 | Treino de Camada Linear | Pendente |
+| 5 | Mini-Transformer | Pendente |
+| 6+ | Escala e runtime completo | Pendente |
+
 ## 1. Fase 0 - Fundacao Conceitual
+
+Status: **concluida**.
 
 ### Objetivo
 
@@ -36,9 +58,9 @@ Consolidar o paradigma antes de escrever um runtime grande.
 - `docs/paradigma_SAINT.md`
 - `docs/arquitetura.md`
 - `docs/roadmap.md`
-- glossario tecnico
-- documento de hipoteses
-- documento de criterios de sucesso/falha
+- `docs/glossario_tecnico.md`
+- `docs/hipoteses.md`
+- `docs/criterios_sucesso_falha.md`
 
 ### Perguntas
 
@@ -61,7 +83,33 @@ Em portugues:
 treino de deltas esparsos por dicionario multi-escala de blocos
 ```
 
+### Resultado
+
+A Fase 0 estabeleceu:
+
+- definicao tecnica do paradigma;
+- comparacao com treino tradicional;
+- arquitetura baseada em deltas esparsos e codebook multi-escala;
+- hipoteses testaveis;
+- criterios objetivos de sucesso e falha;
+- glossario comum para os proximos documentos e implementacoes.
+
+### Decisao
+
+```text
+continuar para Fase 1 - Biblioteca de Blocos
+```
+
+Motivo:
+
+```text
+o paradigma esta definido o suficiente para iniciar validacao matematica
+sem escrever ainda um runtime grande.
+```
+
 ## 2. Fase 1 - Biblioteca de Blocos
+
+Status: **proxima fase**.
 
 ### Objetivo
 
@@ -78,6 +126,28 @@ Criar operacoes basicas para dividir, agrupar, reconstruir e medir matrizes.
 - agrupamento de blocos iguais ou parecidos;
 - codebook fixo;
 - codebook treinavel.
+
+### Entregas Tecnicas
+
+- pacote inicial `saint`;
+- modulo `blocks`;
+- funcao para particionar matrizes;
+- funcao para reconstruir matrizes;
+- suporte a padding;
+- suporte a blocos de borda;
+- calculo de assinaturas;
+- agrupamento exato;
+- agrupamento aproximado por quantizacao;
+- testes unitarios.
+
+### API Inicial Desejada
+
+```python
+blocks = partition_matrix(W, block_size=(4, 4))
+W_recon = reconstruct_matrix(blocks, original_shape=W.shape)
+signatures = compute_block_signatures(blocks)
+groups = group_blocks(signatures)
+```
 
 ### Experimentos
 
@@ -109,7 +179,18 @@ W -> blocos -> codebook -> W_aprox
 
 e reporta erro, compressao e taxa de reutilizacao.
 
+### Criterio de Falha
+
+Reavaliar a fase se:
+
+- particionar e reconstruir sem perda for instavel;
+- padding gerar erros de shape;
+- agrupamento aproximado destruir informacao demais;
+- a API ficar acoplada demais a LLMs antes da hora.
+
 ## 3. Fase 2 - Benchmark de Reconstrucao
+
+Status: **pendente**.
 
 ### Objetivo
 
@@ -153,6 +234,8 @@ Prosseguir somente se o codebook multi-escala mostrar vantagem clara em pelo men
 - reconstrucao eficiente o suficiente para uso em treino.
 
 ## 4. Fase 3 - Roteador de Blocos
+
+Status: **pendente**.
 
 ### Objetivo
 
@@ -201,6 +284,8 @@ regiao D -> delta livre
 
 ## 5. Fase 4 - Treino de Camada Linear
 
+Status: **pendente**.
+
 ### Objetivo
 
 Testar aprendizado antes de usar Transformer.
@@ -240,6 +325,8 @@ SAINT deve empatar ou superar pelo menos uma baseline eficiente em algum eixo re
 - melhor ganho por byte.
 
 ## 6. Fase 5 - Mini-Transformer
+
+Status: **pendente**.
 
 ### Objetivo
 
@@ -282,6 +369,8 @@ Prosseguir se SAINT aprender de forma consistente e nao apenas memorizar comport
 
 ## 7. Fase 6 - Mapa de Sensibilidade
 
+Status: **pendente**.
+
 ### Objetivo
 
 Escolher os blocos certos para treinar.
@@ -313,6 +402,8 @@ Comparar selecao:
 O mapa de sensibilidade deve superar selecao aleatoria de forma clara.
 
 ## 8. Fase 7 - Runtime SAINT
+
+Status: **pendente**.
 
 ### Objetivo
 
@@ -365,6 +456,8 @@ O runtime deve executar experimentos pequenos de ponta a ponta com logs e checkp
 
 ## 9. Fase 8 - Checkpoint e Reconstituicao
 
+Status: **pendente**.
+
 ### Objetivo
 
 Salvar deltas parciais e recompor o modelo final.
@@ -404,6 +497,8 @@ treinar -> salvar -> retomar -> fundir -> avaliar
 
 ## 10. Fase 9 - Adaptador DRM Transformer
 
+Status: **pendente**.
+
 ### Objetivo
 
 Usar `drm_transformer` como primeiro modelo customizado.
@@ -423,6 +518,8 @@ Usar `drm_transformer` como primeiro modelo customizado.
 O `drm_transformer` deve treinar em modo SAINT em escala pequena e produzir logs comparaveis.
 
 ## 11. Fase 10 - Modelos Hugging Face Pequenos
+
+Status: **pendente**.
 
 ### Objetivo
 
@@ -449,6 +546,8 @@ SAINT deve mostrar vantagem ou comportamento complementar a LoRA em pelo menos u
 
 ## 12. Fase 11 - Escala 3B
 
+Status: **pendente**.
+
 ### Objetivo
 
 Primeiro teste serio em GPU domestica.
@@ -474,6 +573,8 @@ offload: opcional
 - medir ganho por byte.
 
 ## 13. Fase 12 - Escala 14B
+
+Status: **pendente**.
 
 ### Objetivo
 
@@ -507,6 +608,8 @@ Prosseguir para 70B somente se 14B demonstrar:
 - alguma vantagem contra baseline.
 
 ## 14. Fase 13 - Escala 70B
+
+Status: **pendente**.
 
 ### Objetivo
 
@@ -551,6 +654,8 @@ e alguma melhoria mensuravel na loss
 
 ## 15. Fase 14 - Otimizacoes
 
+Status: **pendente**.
+
 ### Objetivo
 
 Reduzir overhead.
@@ -574,6 +679,8 @@ O overhead do SAINT deve ficar pequeno o bastante para ser pratico em experiment
 
 ## 16. Fase 15 - Avaliacao
 
+Status: **pendente**.
+
 ### Objetivo
 
 Medir qualidade alem da loss.
@@ -592,12 +699,14 @@ Medir qualidade alem da loss.
 ### Perguntas
 
 - SAINT aprende algo util?
-- SAINT destrói capacidades antigas?
+- SAINT destroi capacidades antigas?
 - SAINT e mais eficiente que LoRA em algum regime?
 - SAINT escala com modelo maior?
 - SAINT depende demais do dataset?
 
 ## 17. Fase 16 - Produto de Pesquisa
+
+Status: **pendente**.
 
 ### Objetivo
 
@@ -630,6 +739,7 @@ saint merge --run runs/saint001 --out merged/
 Prioridade pratica:
 
 ```text
+0. fundacao conceitual concluida
 1. biblioteca de blocos
 2. benchmark de reconstrucao
 3. codebook multi-escala
@@ -643,6 +753,35 @@ Prioridade pratica:
 11. 3B
 12. 14B
 13. 70B
+```
+
+## 18.1 Proxima Acao Imediata
+
+Criar a base de implementacao da Fase 1:
+
+```text
+saint/
+  __init__.py
+  blocks/
+    __init__.py
+    partition.py
+    signatures.py
+    grouping.py
+tests/
+  test_blocks_partition.py
+  test_blocks_signatures.py
+```
+
+Primeiro objetivo tecnico:
+
+```text
+particionar matriz -> reconstruir matriz identica
+```
+
+Segundo objetivo tecnico:
+
+```text
+detectar blocos iguais por assinatura simples
 ```
 
 ## 19. Sinais de Alerta
@@ -736,4 +875,3 @@ provar acoplamento
 provar runtime
 provar escala
 ```
-
