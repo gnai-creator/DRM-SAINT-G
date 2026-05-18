@@ -36,6 +36,18 @@ def _artifact_bytes(run_dir: Path) -> int:
     return sum(path.stat().st_size for path in run_dir.rglob("*") if path.is_file())
 
 
+def _cuda_peak_for(device_name: str, operation):
+    torch, _, _, _ = _require_deps()
+    if device_name == "auto":
+        device_name = "cuda" if torch.cuda.is_available() else "cpu"
+    device = torch.device(device_name)
+    if device.type != "cuda":
+        return operation(), 0
+    torch.cuda.reset_peak_memory_stats(device)
+    value = operation()
+    return value, int(torch.cuda.max_memory_allocated(device))
+
+
 def _generate(
     model_path: str | Path,
     *,
@@ -150,7 +162,11 @@ def _saint_validation_row(
     )
     result = train_runtime(config)
     resumed = resume_runtime(run_dir)
-    merged = merge_runtime(run_dir)
+    target_matrices = set(result["metadata"].get("target_matrices", [])) or None
+    merged, merge_cuda_peak = _cuda_peak_for(
+        result["metadata"]["device"],
+        lambda: merge_runtime(run_dir, matrix_names=target_matrices),
+    )
     merged_eval = _evaluate_merged(
         model_path,
         merged["merged_weights"],
@@ -160,6 +176,13 @@ def _saint_validation_row(
     )
     initial = result["metadata"]["initial_loss"]
     final = result["train_loss"]
+    artifact_bytes = _artifact_bytes(run_dir)
+    stage_memory = {
+        "load_cuda_peak_bytes": result["metadata"].get("load_cuda_peak_bytes", 0),
+        "train_cuda_peak_bytes": result["metadata"].get("train_cuda_peak_bytes", 0),
+        "checkpoint_file_bytes": artifact_bytes,
+        "merge_cuda_peak_bytes": merge_cuda_peak,
+    }
     return {
         "method": "saint",
         "seed": seed,
@@ -174,9 +197,15 @@ def _saint_validation_row(
             final,
             result["parameter_count"],
         ),
-        "artifact_bytes": _artifact_bytes(run_dir),
+        "artifact_bytes": artifact_bytes,
         "tokens_per_s": result["metadata"]["tokens_per_s"],
         "cuda_peak_bytes": result["metadata"]["cuda_peak_bytes"],
+        "load_cuda_peak_bytes": stage_memory["load_cuda_peak_bytes"],
+        "train_cuda_peak_bytes": stage_memory["train_cuda_peak_bytes"],
+        "checkpoint_file_bytes": stage_memory["checkpoint_file_bytes"],
+        "merge_cuda_peak_bytes": stage_memory["merge_cuda_peak_bytes"],
+        "stage_memory": stage_memory,
+        "delta_payload_format": result["metadata"].get("delta_payload_format"),
         "resume_quality_delta": abs(resumed["train_loss"] - final),
         "device": result["metadata"]["device"],
         "merged_weights": merged["merged_weights"],

@@ -225,6 +225,12 @@ class HuggingFacePhase13Tests(unittest.TestCase):
             )
             self.assertIn("tokens_per_s", result["metadata"])
             self.assertIn("cuda_peak_bytes", result["metadata"])
+            self.assertEqual(
+                result["metadata"]["delta_payload_format"],
+                "saint_sparse_delta",
+            )
+            self.assertIn("load_cuda_peak_bytes", result["metadata"])
+            self.assertTrue((run_dir / "deltas.saintdelta.json").exists())
             self.assertTrue(merged["shape_validation"])
 
     def test_huggingface_baseline_comparison_smoke(self):

@@ -29,7 +29,7 @@ recomposicao final
 ```text
 Fase atual: Fase 14 - Escala 3B
 Fase anterior: Fase 13 concluida com ressalvas
-Proximo marco: Fase 14 Marco 2 - Otimizar SAINT em GPT-2 Small
+Proximo marco: Fase 14 Marco 3 - Melhorar SAINT em GPT-2 Small
 ```
 
 Resumo do estado:
@@ -1854,7 +1854,7 @@ SAINT precisa otimizar memoria/payload e melhorar selecao antes da escala 3B.
 
 ### Marco 2 - Otimizar SAINT em GPT-2 Small
 
-Status: **pendente**.
+Status: **concluido**.
 
 Entregas:
 
@@ -1864,6 +1864,61 @@ Entregas:
 - medir memoria por etapa;
 - testar budgets SAINT maiores contra LoRA ranks `2` e `4`;
 - decidir novamente se o projeto pode ir para 3B.
+
+Resultado:
+
+```text
+SAINT: mean val loss 6.814783, best 6.814630, mean gain/param 0.00000276
+LoRA:  mean val loss 6.803654, best 6.794116, mean gain/param 0.00000408
+```
+
+Curva CUDA:
+
+| metodo | config | count | mean val loss | best val loss | mean gain/param | mean CUDA GB |
+|---|---:|---:|---:|---:|---:|---:|
+| SAINT | budget 16 | 3 | 6.814889 | 6.814889 | 0.00000200 | 2.079 |
+| SAINT | budget 64 | 3 | 6.814830 | 6.814830 | 0.00000328 | 2.076 |
+| SAINT | budget 256 | 3 | 6.814630 | 6.814630 | 0.00000302 | 2.076 |
+| LoRA | rank 2 | 3 | 6.808302 | 6.806123 | 0.00000399 | 1.017 |
+| LoRA | rank 4 | 3 | 6.799007 | 6.794116 | 0.00000418 | 1.017 |
+
+Memoria por etapa em um run SAINT:
+
+```text
+load_cuda_peak_bytes: 508782592
+train_cuda_peak_bytes: 2045830144
+checkpoint_file_bytes: 273852
+merge_cuda_peak_bytes: 18087936
+```
+
+Veredito:
+
+```text
+nao avancar ainda para 3B.
+```
+
+O caminho melhorou: nao ha segunda carga completa no treino, o payload SAINT
+ficou esparso, e merge/eval usam matrizes selecionadas. Mesmo assim, LoRA ainda
+vence em loss, ganho por parametro e pico CUDA.
+
+### Marco 3 - Melhorar SAINT em GPT-2 Small
+
+Status: **pendente**.
+
+Objetivo:
+
+```text
+tornar SAINT competitivo contra LoRA rank 2/4 em GPT-2 small antes de 3B.
+```
+
+Entregas:
+
+- selecionar deltas por gradiente real, nao apenas por magnitude inicial;
+- testar mais matrizes alvo por camada;
+- aumentar steps e medir se SAINT ganha mais com treino longo;
+- comparar budgets maiores sem voltar a payload denso;
+- reduzir overhead CUDA do forward funcional;
+- manter LoRA rank `2` e `4` como controles obrigatorios.
 
 ## Fase 15 - Escala 14B
 

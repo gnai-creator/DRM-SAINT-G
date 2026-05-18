@@ -132,11 +132,21 @@ def _matrix_payload(config: RuntimeConfig) -> tuple[str, dict[str, list[list[flo
     source = metadata.get("model_name_or_path") or metadata.get("checkpoint")
     if not source:
         raise ValueError("Hugging Face adapter requires metadata.model_name_or_path")
+    matrices = matrices_from_state(_load_state_dict(source), metadata)
+    if not matrices:
+        raise ValueError("no matching 2D Hugging Face matrices found")
+    return str(source), matrices
+
+
+def matrices_from_state(
+    state: dict[str, Any],
+    metadata: dict[str, Any],
+) -> dict[str, list[list[float]]]:
     max_dim = int(metadata.get("max_dim", 64))
     max_matrices = int(metadata.get("max_matrices", 16))
     keywords = _keywords(metadata)
     matrices = {}
-    for name, tensor in _load_state_dict(source).items():
+    for name, tensor in state.items():
         if not _matches(name, keywords) or not _is_2d(tensor):
             continue
         tensor_rows, tensor_cols = _shape(tensor)
@@ -145,9 +155,7 @@ def _matrix_payload(config: RuntimeConfig) -> tuple[str, dict[str, list[list[flo
         matrices[name] = _slice(tensor, rows, cols)
         if len(matrices) >= max_matrices:
             break
-    if not matrices:
-        raise ValueError("no matching 2D Hugging Face matrices found")
-    return str(source), matrices
+    return matrices
 
 
 def make_task(config: RuntimeConfig) -> HuggingFaceTask:
@@ -271,4 +279,4 @@ def inspect_model(config: RuntimeConfig) -> dict[str, Any]:
     }
 
 
-__all__ = ["HuggingFaceTask", "inspect_model", "make_task", "run_method"]
+__all__ = ["HuggingFaceTask", "inspect_model", "make_task", "matrices_from_state", "run_method"]

@@ -135,19 +135,24 @@ def _loss_value(functional_call, model, params, input_ids, attention_mask) -> fl
     )
 
 
-def _delta_payload(deltas, masks, base_weights) -> dict[str, list[list[float]]]:
-    payload = {
-        name: [[0.0 for _ in row] for row in matrix]
+def _delta_payload(deltas, masks, base_weights) -> dict[str, Any]:
+    sparse = {}
+    shapes = {
+        name: [len(matrix), len(matrix[0]) if matrix else 0]
         for name, matrix in base_weights.items()
     }
     for name, delta in deltas.items():
-        if name not in payload:
+        if name not in base_weights:
             continue
-        rows = len(payload[name])
-        cols = len(payload[name][0]) if rows else 0
-        matrix = (delta.detach() * masks[name])[:rows, :cols].cpu().tolist()
-        payload[name] = [[float(value) for value in row] for row in matrix]
-    return payload
+        rows = len(base_weights[name])
+        cols = len(base_weights[name][0]) if rows else 0
+        matrix = (delta.detach() * masks[name])[:rows, :cols].cpu()
+        entries = []
+        for row, col in matrix.nonzero(as_tuple=False).tolist():
+            entries.append([row, col, float(matrix[row, col].item())])
+        if entries:
+            sparse[name] = entries
+    return {"format": "saint_sparse_delta", "shapes": shapes, "values": sparse}
 
 
 def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
@@ -163,9 +168,16 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
         torch.cuda.reset_peak_memory_stats(device)
     model = AutoModelForCausalLM.from_pretrained(str(source), local_files_only=True).to(device)
     tokenizer = AutoTokenizer.from_pretrained(str(source), local_files_only=True)
-    from saint.adapters.huggingface import make_task
+    load_cuda_peak = (
+        int(torch.cuda.max_memory_allocated(device))
+        if device.type == "cuda"
+        else 0
+    )
+    from saint.adapters.huggingface import matrices_from_state
 
-    task = make_task(config)
+    base_weights = matrices_from_state(dict(model.state_dict()), metadata)
+    if not base_weights:
+        raise ValueError("no matching 2D Hugging Face matrices found")
     model.eval()
     for param in model.parameters():
         param.requires_grad_(False)
@@ -214,6 +226,11 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
             loss.backward()
         optimizer.step()
     train_elapsed = max(perf_counter() - train_start, 1e-9)
+    train_cuda_peak = (
+        int(torch.cuda.max_memory_allocated(device))
+        if device.type == "cuda"
+        else 0
+    )
     final_loss = _loss_value(functional_call, model, _merged_params(model, deltas, masks), input_ids, attention_mask)
     validation_loss = _loss_value(functional_call, model, _merged_params(model, deltas, masks), val_ids, val_mask)
     parameter_count = int(sum(mask.sum().item() for mask in masks.values()))
@@ -231,7 +248,7 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
         optimizer_state_values=parameter_count * 2,
         elapsed_s=perf_counter() - start,
         metadata={
-            "delta_payload": _delta_payload(deltas, masks, task.base_weights),
+            "delta_payload": _delta_payload(deltas, masks, base_weights),
             "adapter": "huggingface_causal_lm",
             "autograd": True,
             "real_forward": True,
@@ -244,6 +261,9 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
             "tokens_seen": tokens_seen,
             "batch_count": len(train_batches),
             "cuda_peak_bytes": cuda_peak,
+            "load_cuda_peak_bytes": load_cuda_peak,
+            "train_cuda_peak_bytes": train_cuda_peak,
+            "delta_payload_format": "saint_sparse_delta",
             "target_matrices": names,
             "marco": "fase_13_marco_3",
         },

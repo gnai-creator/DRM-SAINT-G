@@ -25,6 +25,38 @@ def write_json(path: str | Path, payload: dict[str, Any]) -> None:
     target.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
 
+def _write_sparse_delta(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    write_json(path, payload)
+    value_count = sum(len(values) for values in payload.get("values", {}).values())
+    return {
+        "path": path.name,
+        "bytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+        "payload": "delta",
+        "format": "saint_sparse_delta_json",
+        "values": value_count,
+        "matrices": list(payload.get("shapes", {})),
+    }
+
+
+def _expand_sparse_delta(
+    payload: dict[str, Any],
+    matrix_names: set[str] | None = None,
+) -> dict[str, list[list[float]]]:
+    matrices = {}
+    shapes = payload.get("shapes", {})
+    values = payload.get("values", {})
+    for name, shape in shapes.items():
+        if matrix_names is not None and name not in matrix_names:
+            continue
+        rows, cols = int(shape[0]), int(shape[1])
+        matrix = [[0.0 for _ in range(cols)] for _ in range(rows)]
+        for row, col, value in values.get(name, []):
+            matrix[int(row)][int(col)] = float(value)
+        matrices[name] = matrix
+    return matrices
+
+
 def read_json(path: str | Path) -> dict[str, Any]:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(data, dict):
@@ -68,15 +100,18 @@ def write_checkpoint_bundle(run_dir: str | Path, payload: dict[str, Any]) -> dic
     files = []
     if delta_payload is not None:
         metadata = manifest.get("metadata", {})
-        shard_bytes = metadata.get("checkpoint_shard_bytes")
-        files.append(
-            write_matrix_payload(
-                target / "deltas.saintbin",
-                delta_payload,
-                dtype=str(metadata.get("checkpoint_dtype", "float32")),
-                shard_bytes=int(shard_bytes) if shard_bytes else None,
+        if delta_payload.get("format") == "saint_sparse_delta":
+            files.append(_write_sparse_delta(target / "deltas.saintdelta.json", delta_payload))
+        else:
+            shard_bytes = metadata.get("checkpoint_shard_bytes")
+            files.append(
+                write_matrix_payload(
+                    target / "deltas.saintbin",
+                    delta_payload,
+                    dtype=str(metadata.get("checkpoint_dtype", "float32")),
+                    shard_bytes=int(shard_bytes) if shard_bytes else None,
+                )
             )
-        )
     state_payload = optimizer_payload or {
         "optimizer_state_values": manifest["optimizer_state_values"],
         "state": {},
@@ -121,6 +156,9 @@ def require_delta_payload(
         entry = _file_entry(checkpoint, "delta")
         if entry is None or run_dir is None:
             raise ValueError("checkpoint does not contain a delta payload")
+        if entry.get("format") == "saint_sparse_delta_json":
+            payload = read_json(Path(run_dir) / entry["path"])
+            return _expand_sparse_delta(payload, matrix_names)
         return read_matrix_payload_entry(run_dir, entry, matrix_names=matrix_names)
     if matrix_names is None:
         return payload
