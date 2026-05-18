@@ -27,9 +27,9 @@ recomposicao final
 ## Status Atual
 
 ```text
-Fase atual: Fase 2 - Benchmark de Reconstrucao
-Fase anterior: Fase 1 concluida
-Proximo marco: Marco A - Prova de Matriz
+Fase atual: Fase 3 - Roteador de Blocos
+Fase anterior: Fase 2 concluida
+Proximo marco: Marco B - Prova de Aprendizado
 ```
 
 Resumo do estado:
@@ -38,8 +38,8 @@ Resumo do estado:
 |---|---|---|
 | 0 | Fundacao Conceitual | Concluida |
 | 1 | Biblioteca de Blocos | Concluida |
-| 2 | Benchmark de Reconstrucao | Proxima |
-| 3 | Roteador de Blocos | Pendente |
+| 2 | Benchmark de Reconstrucao | Concluida |
+| 3 | Roteador de Blocos | Proxima |
 | 4 | Treino de Camada Linear | Pendente |
 | 5 | Mini-Transformer | Pendente |
 | 6+ | Escala e runtime completo | Pendente |
@@ -194,11 +194,21 @@ Reavaliar a fase se:
 
 ## 3. Fase 2 - Benchmark de Reconstrucao
 
-Status: **pendente**.
+Status: **concluida**.
 
 ### Objetivo
 
 Testar se o codebook multi-escala representa matrizes melhor que alternativas simples.
+
+### Entregas Iniciais
+
+- modulo `saint.reconstruction`;
+- geradores de matrizes sinteticas;
+- baselines de quantizacao, low-rank, block-codebook e multi-scale simples;
+- runner de benchmark;
+- testes unitarios;
+- benchmark real com matrizes do `drm_transformer`;
+- documento `docs/process/fase_2_benchmark_reconstrucao.md`.
 
 ### Baselines
 
@@ -228,6 +238,23 @@ Testar se o codebook multi-escala representa matrizes melhor que alternativas si
 - Multi-escala melhora em relacao a `2x2` puro?
 - O custo do agrupamento compensa?
 
+### Resultado
+
+O benchmark diferencia regimes:
+
+- matriz gaussiana nao mostra reuso relevante;
+- matriz low-rank favorece baseline low-rank;
+- matriz sparse mostra reuso moderado;
+- matriz com blocos repetidos favorece codebook de blocos.
+- matrizes reais do `drm_transformer` favorecem `block_codebook_4` como tradeoff inicial.
+
+Veredito:
+
+```text
+hipotese parcialmente suportada;
+avancar para Fase 3 com foco em roteamento por regiao.
+```
+
 ### Criterio de conclusao
 
 Prosseguir somente se o codebook multi-escala mostrar vantagem clara em pelo menos um destes pontos:
@@ -239,7 +266,7 @@ Prosseguir somente se o codebook multi-escala mostrar vantagem clara em pelo men
 
 ## 4. Fase 3 - Roteador de Blocos
 
-Status: **pendente**.
+Status: **proxima fase**.
 
 ### Objetivo
 

@@ -206,6 +206,9 @@ tempCodeRunnerFile.py
 # Ruff stuff:
 .ruff_cache/
 
+# SAINT experiment outputs
+runs/
+
 # PyPI configuration file
 .pypirc
 
