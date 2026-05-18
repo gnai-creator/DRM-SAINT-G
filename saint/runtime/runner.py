@@ -18,6 +18,16 @@ from saint.memory import estimate_runtime_memory
 from saint.transformer.model import combine_weights
 
 
+def _shape_summary(weights: dict) -> dict:
+    return {
+        name: {
+            "rows": len(matrix),
+            "cols": len(matrix[0]) if matrix else 0,
+        }
+        for name, matrix in weights.items()
+    }
+
+
 def inspect_runtime(config: RuntimeConfig) -> dict:
     return inspect_model(config)
 
@@ -69,11 +79,15 @@ def merge_runtime(run_dir: str | Path) -> dict:
     delta_payload = require_delta_payload(checkpoint)
     task = make_task(config)
     merged_weights = combine_weights(task.base_weights, delta_payload)
+    base_shapes = _shape_summary(task.base_weights)
+    merged_shapes = _shape_summary(merged_weights)
     merged = {
         "experiment_name": checkpoint["experiment_name"],
         "method": checkpoint["method"],
         "parameter_count": checkpoint["parameter_count"],
         "merged_weights": merged_weights,
+        "shape_validation": base_shapes == merged_shapes,
+        "shapes": merged_shapes,
         "merged": True,
     }
     write_json(run_path / "merged.json", merged)

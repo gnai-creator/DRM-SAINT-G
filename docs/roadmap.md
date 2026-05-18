@@ -27,9 +27,9 @@ recomposicao final
 ## Status Atual
 
 ```text
-Fase atual: Fase 9 - Adaptador DRM Transformer
-Fase anterior: Fase 8 concluida
-Proximo marco: Fase 9 - Adaptador DRM Transformer
+Fase atual: Fase 10 - Checkpoint Robusto
+Fase anterior: Fase 9 concluida
+Proximo marco: Fase 10 - Checkpoint Robusto
 ```
 
 Resumo do estado:
@@ -45,8 +45,9 @@ Resumo do estado:
 | 6 | Mapa de Sensibilidade | Concluida |
 | 7 | Runtime SAINT | Concluida |
 | 8 | Checkpoint e Reconstituicao | Concluida |
-| 9 | Adaptador DRM Transformer | Pendente |
-| 10+ | Modelos reais e escala | Pendente |
+| 9 | Adaptador DRM Transformer | Concluida |
+| 10 | Checkpoint Robusto | Pendente |
+| 11+ | Modelos reais e escala | Pendente |
 
 ## 1. Fase 0 - Fundacao Conceitual
 
@@ -1071,7 +1072,7 @@ treinar -> salvar -> retomar -> fundir -> avaliar
 
 ## 10. Fase 9 - Adaptador DRM Transformer
 
-Status: **pendente**.
+Status: **concluida**.
 
 ### Objetivo
 
@@ -1085,13 +1086,115 @@ Usar `drm_transformer` como primeiro modelo customizado.
 - aplicar delta SAINT;
 - salvar deltas;
 - avaliar loss;
+- trocar diferenca finita por autograd/PyTorch;
+- medir gradientes reais para roteamento;
 - comparar contra treino tradicional pequeno.
+
+### Marco 1 - Integracao e Reconstituicao
+
+Status: **concluido**.
+
+O primeiro marco valida que o runtime SAINT consegue operar sobre pesos reais do
+`drm_transformer`, mesmo antes de treinar com autograd.
+
+Entregas:
+
+- carregar `DRMTransformer` ou checkpoint do `drm_transformer`;
+- listar matrizes treinaveis;
+- mapear nomes de matriz para regioes SAINT;
+- aplicar delta SAINT em pesos reais;
+- salvar deltas em checkpoint SAINT;
+- reconstituir pesos mesclados;
+- validar shapes e compatibilidade de merge.
+
+Resultado:
+
+```text
+drm_saint_delta_smoke:
+  checkpoint -> matrizes 2D -> regioes SAINT -> delta_payload -> merged_weights
+```
+
+### Marco 2 - Treino Real com Autograd
+
+Status: **concluido**.
+
+O segundo marco troca o experimento dependency-free por treino PyTorch real.
+
+Entregas:
+
+- substituir diferenca finita por autograd;
+- medir loss real do `drm_transformer`;
+- medir gradientes reais por matriz/bloco;
+- alimentar o roteador com sensibilidade por gradiente;
+- comparar SAINT contra treino tradicional pequeno;
+- gerar logs comparaveis com os experimentos anteriores.
+
+Resultado:
+
+```text
+drm_saint_autograd_smoke:
+  DRMTransformer pequeno -> loss real -> gradientes por bloco
+  -> mascara SAINT por sensibilidade -> delta_payload -> merge
+```
+
+Smoke validado:
+
+```text
+initial_loss: 4.1506
+saint_loss: 3.7953
+full_baseline_loss: 3.7548
+parameter_count: 32
+shape_validation: true
+```
 
 ### Criterio de conclusao
 
 O `drm_transformer` deve treinar em modo SAINT em escala pequena e produzir logs comparaveis.
 
-## 11. Fase 10 - Modelos Hugging Face Pequenos
+## 11. Fase 10 - Checkpoint Robusto
+
+Status: **pendente**.
+
+### Objetivo
+
+Transformar os checkpoints SAINT em artefatos compactos, verificaveis e
+adequados para treinos reais.
+
+Esta fase vem depois do adaptador `drm_transformer`, porque o formato robusto
+deve refletir o que um treino com PyTorch/autograd realmente precisa salvar.
+
+### Entregas
+
+- deltas em formato binario/compacto;
+- estado real do otimizador;
+- checksums por arquivo e por payload;
+- versao explicita do formato de checkpoint;
+- validacao de integridade no `resume`;
+- validacao de compatibilidade no `merge`;
+- separacao entre metricas leves e payload pesado;
+- suporte a checkpoints parciais por matriz/camada;
+- documentacao do formato.
+
+### Perguntas
+
+- Qual e o menor formato suficiente para retomar treino?
+- O checkpoint precisa salvar deltas materializados, codebooks, escalas e
+  roteamento, ou todos eles?
+- Quanto espaco o formato economiza contra JSON?
+- A validacao detecta payload corrompido antes do merge?
+- O formato continua legivel o bastante para debugging?
+
+### Criterio de conclusao
+
+SAINT deve conseguir:
+
+```text
+treinar -> salvar checkpoint compacto -> validar -> retomar -> fundir -> avaliar
+```
+
+com checksums e estado de otimizador preservados.
+
+## 12. Fase 11 - Modelos Hugging Face Pequenos
 
 Status: **pendente**.
 
@@ -1118,7 +1221,7 @@ Testar SAINT em modelos reais pequenos.
 
 SAINT deve mostrar vantagem ou comportamento complementar a LoRA em pelo menos um tipo de tarefa.
 
-## 12. Fase 11 - Escala 3B
+## 13. Fase 12 - Escala 3B
 
 Status: **pendente**.
 
@@ -1146,7 +1249,7 @@ offload: opcional
 - medir tokens/s;
 - medir ganho por byte.
 
-## 13. Fase 12 - Escala 14B
+## 14. Fase 13 - Escala 14B
 
 Status: **pendente**.
 
@@ -1181,7 +1284,7 @@ Prosseguir para 70B somente se 14B demonstrar:
 - tempo aceitavel;
 - alguma vantagem contra baseline.
 
-## 14. Fase 13 - Escala 70B
+## 15. Fase 14 - Escala 70B
 
 Status: **pendente**.
 
@@ -1226,7 +1329,7 @@ com checkpoint recomponivel
 e alguma melhoria mensuravel na loss
 ```
 
-## 15. Fase 14 - Otimizacoes
+## 16. Fase 15 - Otimizacoes
 
 Status: **pendente**.
 
@@ -1251,7 +1354,7 @@ Reduzir overhead.
 
 O overhead do SAINT deve ficar pequeno o bastante para ser pratico em experimentos reais.
 
-## 16. Fase 15 - Avaliacao
+## 17. Fase 16 - Avaliacao
 
 Status: **pendente**.
 
@@ -1278,7 +1381,7 @@ Medir qualidade alem da loss.
 - SAINT escala com modelo maior?
 - SAINT depende demais do dataset?
 
-## 17. Fase 16 - Produto de Pesquisa
+## 18. Fase 17 - Produto de Pesquisa
 
 Status: **pendente**.
 

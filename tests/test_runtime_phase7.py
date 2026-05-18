@@ -2,6 +2,7 @@ import tempfile
 from pathlib import Path
 import unittest
 
+from saint.checkpoints import write_json
 from saint.cli import main as cli_main
 from saint.config import RuntimeConfig, config_from_dict, load_config, save_config
 from saint.memory import estimate_runtime_memory
@@ -50,6 +51,56 @@ class RuntimePhase7Tests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             inspect_runtime(config)
+
+    def test_drm_checkpoint_smoke_flow(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            checkpoint = Path(tmp) / "drm_checkpoint.json"
+            run_dir = Path(tmp) / "run"
+            write_json(
+                checkpoint,
+                {
+                    "model": {
+                        "layers.0.attn.q_proj.weight": [
+                            [0.1, -0.2, 0.3, -0.4],
+                            [0.2, 0.1, -0.1, -0.2],
+                            [0.5, -0.3, 0.2, 0.1],
+                            [-0.1, 0.4, -0.5, 0.2],
+                        ],
+                        "layers.0.ffn.up_proj.weight": [
+                            [0.2, -0.1],
+                            [0.1, 0.3],
+                        ],
+                    }
+                },
+            )
+            config = RuntimeConfig(
+                experiment_name="drm_smoke",
+                output_dir=str(run_dir),
+                task="drm_transformer",
+                method="drm_saint_delta_smoke",
+                parameter_budget=8,
+                metadata={
+                    "checkpoint": str(checkpoint),
+                    "max_dim": 4,
+                    "max_matrices": 2,
+                    "block_size": 2,
+                },
+            )
+
+            inspected = inspect_runtime(config)
+            result = train_runtime(config)
+            resumed = resume_runtime(run_dir)
+            merged = merge_runtime(run_dir)
+
+            self.assertEqual(inspected["adapter"], "drm_transformer_checkpoint")
+            self.assertEqual(len(inspected["matrices"]), 2)
+            self.assertTrue(result["has_delta_payload"])
+            self.assertEqual(result["metadata"]["marco"], "fase_9_marco_1")
+            self.assertTrue(result["metadata"]["shape_validation"])
+            self.assertTrue(resumed["resumed"])
+            self.assertTrue(merged["merged"])
+            self.assertTrue(merged["shape_validation"])
+            self.assertIn("layers.0.attn.q_proj.weight", merged["merged_weights"])
 
     def test_train_resume_and_merge_runtime(self):
         with tempfile.TemporaryDirectory() as tmp:
