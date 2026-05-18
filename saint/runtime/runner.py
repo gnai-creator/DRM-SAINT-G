@@ -32,6 +32,15 @@ def _shape_summary(weights: dict) -> dict:
     }
 
 
+def _select_weights(weights: dict, matrix_names: set[str] | None) -> dict:
+    if matrix_names is None:
+        return weights
+    missing = sorted(matrix_names - set(weights))
+    if missing:
+        raise ValueError(f"unknown matrices requested for merge: {missing}")
+    return {name: weights[name] for name in weights if name in matrix_names}
+
+
 def inspect_runtime(config: RuntimeConfig) -> dict:
     return inspect_model(config)
 
@@ -75,20 +84,30 @@ def resume_runtime(run_dir: str | Path) -> dict:
     return checkpoint
 
 
-def merge_runtime(run_dir: str | Path) -> dict:
+def merge_runtime(run_dir: str | Path, matrix_names: set[str] | None = None) -> dict:
     run_path = Path(run_dir)
-    checkpoint = validate_checkpoint_bundle(run_path)
+    checkpoint = validate_checkpoint_bundle(
+        run_path,
+        validate_payloads=matrix_names is None,
+    )
     config = load_config(run_path / "config.json")
-    delta_payload = require_delta_payload(checkpoint, run_path)
     task = make_task(config)
-    merged_weights = combine_weights(task.base_weights, delta_payload)
-    base_shapes = _shape_summary(task.base_weights)
+    base_weights = _select_weights(task.base_weights, matrix_names)
+    delta_payload = require_delta_payload(
+        checkpoint,
+        run_path,
+        matrix_names=set(base_weights),
+    )
+    merged_weights = combine_weights(base_weights, delta_payload)
+    base_shapes = _shape_summary(base_weights)
     merged_shapes = _shape_summary(merged_weights)
     merged = {
         "experiment_name": checkpoint["experiment_name"],
         "method": checkpoint["method"],
         "parameter_count": checkpoint["parameter_count"],
         "merged_weights": merged_weights,
+        "partial": matrix_names is not None,
+        "selected_matrices": sorted(base_weights),
         "shape_validation": base_shapes == merged_shapes,
         "shapes": merged_shapes,
         "merged": True,

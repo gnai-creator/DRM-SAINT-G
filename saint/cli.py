@@ -42,6 +42,7 @@ def main(argv: list[str] | None = None) -> int:
 
     merge_parser = sub.add_parser("merge")
     merge_parser.add_argument("--run", required=True)
+    merge_parser.add_argument("--matrix", action="append")
 
     args = parser.parse_args(argv)
     if args.command == "inspect":
@@ -56,7 +57,8 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "resume":
         _print(resume_runtime(args.run))
     elif args.command == "merge":
-        _print(merge_runtime(args.run))
+        matrices = set(args.matrix) if args.matrix else None
+        _print(merge_runtime(args.run, matrix_names=matrices))
     return 0
 
 

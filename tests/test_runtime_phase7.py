@@ -163,6 +163,26 @@ class RuntimePhase7Tests(unittest.TestCase):
             self.assertGreater(delta_entry["shard_count"], 1)
             self.assertTrue(merged["shape_validation"])
 
+    def test_partial_merge_selects_requested_matrix(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = RuntimeConfig(
+                output_dir=str(Path(tmp) / "run"),
+                steps=1,
+                parameter_budget=24,
+                metadata={
+                    "checkpoint_shard_bytes": 64,
+                },
+            )
+
+            train_runtime(config)
+            merged = merge_runtime(config.output_dir, matrix_names={"w_q"})
+
+            self.assertTrue(merged["merged"])
+            self.assertTrue(merged["partial"])
+            self.assertEqual(merged["selected_matrices"], ["w_q"])
+            self.assertEqual(set(merged["merged_weights"]), {"w_q"})
+            self.assertTrue(merged["shape_validation"])
+
     def test_cli_commands_run(self):
         with tempfile.TemporaryDirectory() as tmp:
             config_path = Path(tmp) / "config.json"

@@ -102,14 +102,25 @@ def _file_entry(checkpoint: dict[str, Any], payload_name: str) -> dict[str, Any]
     return None
 
 
-def require_delta_payload(checkpoint: dict[str, Any], run_dir: str | Path | None = None) -> dict[str, Any]:
+def require_delta_payload(
+    checkpoint: dict[str, Any],
+    run_dir: str | Path | None = None,
+    *,
+    matrix_names: set[str] | None = None,
+) -> dict[str, Any]:
     payload = checkpoint.get("delta_payload")
     if not isinstance(payload, dict):
         entry = _file_entry(checkpoint, "delta")
         if entry is None or run_dir is None:
             raise ValueError("checkpoint does not contain a delta payload")
-        return read_matrix_payload_entry(run_dir, entry)
-    return payload
+        return read_matrix_payload_entry(run_dir, entry, matrix_names=matrix_names)
+    if matrix_names is None:
+        return payload
+    return {
+        name: matrix
+        for name, matrix in payload.items()
+        if name in matrix_names
+    }
 
 
 def require_optimizer_state(checkpoint: dict[str, Any], run_dir: str | Path) -> dict[str, Any]:
@@ -122,7 +133,11 @@ def require_optimizer_state(checkpoint: dict[str, Any], run_dir: str | Path) -> 
     )
 
 
-def validate_checkpoint_bundle(run_dir: str | Path) -> dict[str, Any]:
+def validate_checkpoint_bundle(
+    run_dir: str | Path,
+    *,
+    validate_payloads: bool = True,
+) -> dict[str, Any]:
     run_path = Path(run_dir)
     checkpoint = read_json(run_path / "checkpoint.json")
     checkpoint = migrate_checkpoint_manifest(checkpoint)
@@ -134,9 +149,10 @@ def validate_checkpoint_bundle(run_dir: str | Path) -> dict[str, Any]:
                 raise ValueError(
                     f"checkpoint file checksum mismatch: {file_entry['path']}"
                 )
-    if checkpoint.get("has_delta_payload"):
+    if validate_payloads and checkpoint.get("has_delta_payload"):
         require_delta_payload(checkpoint, run_path)
-    require_optimizer_state(checkpoint, run_path)
+    if validate_payloads:
+        require_optimizer_state(checkpoint, run_path)
     return checkpoint
 
 

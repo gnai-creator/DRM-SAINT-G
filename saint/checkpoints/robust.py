@@ -118,6 +118,7 @@ def _write_matrix_file(
         "payload": "delta",
         "format": "saint_matrix_payload",
         "dtype": dtype,
+        "matrices": list(payload),
     }
 
 
@@ -223,29 +224,70 @@ def read_matrix_payload(
     *,
     expected_sha256: str | None = None,
     use_mmap: bool = True,
+    matrix_names: set[str] | None = None,
 ) -> dict[str, list[list[float]]]:
     source = Path(path)
     if expected_sha256 and sha256_file(source) != expected_sha256:
         raise ValueError("checkpoint payload checksum mismatch")
     with source.open("rb") as handle:
         header = _read_header(handle, MATRIX_MAGIC)
+        dtype = header.get("dtype", "float32")
+        value_size = _dtype_size(dtype)
         if use_mmap:
             data_offset = handle.tell()
             with mmap.mmap(handle.fileno(), 0, access=mmap.ACCESS_READ) as mapped:
-                raw = bytes(mapped[data_offset:])
+                matrices = _read_matrices_from_buffer(
+                    mapped,
+                    data_offset=data_offset,
+                    header=header,
+                    value_size=value_size,
+                    matrix_names=matrix_names,
+                )
         else:
             raw = handle.read()
+            matrices = _read_matrices_from_buffer(
+                raw,
+                data_offset=0,
+                header=header,
+                value_size=value_size,
+                matrix_names=matrix_names,
+            )
+    return matrices
+
+
+def _read_matrices_from_buffer(
+    buffer,
+    *,
+    data_offset: int,
+    header: dict[str, Any],
+    value_size: int,
+    matrix_names: set[str] | None,
+) -> dict[str, list[list[float]]]:
     dtype = header.get("dtype", "float32")
-    values = _unpack_values(raw, dtype, float(header.get("quant_scale", 1.0)))
-    if len(values) != int(header["value_count"]):
-        raise ValueError("checkpoint payload value count mismatch")
+    scale = float(header.get("quant_scale", 1.0))
+    if matrix_names is None:
+        total_bytes = int(header["value_count"]) * value_size
+        raw = bytes(buffer[data_offset:data_offset + total_bytes])
+        values = _unpack_values(raw, dtype, scale)
+        if len(values) != int(header["value_count"]):
+            raise ValueError("checkpoint payload value count mismatch")
+    else:
+        values = None
     matrices = {}
     for name, spec in header["matrices"].items():
+        if matrix_names is not None and name not in matrix_names:
+            continue
         rows = int(spec["rows"])
         cols = int(spec["cols"])
         offset = int(spec["offset"])
         count = int(spec["values"])
-        matrix_values = values[offset:offset + count]
+        if values is None:
+            byte_start = data_offset + (offset * value_size)
+            byte_end = byte_start + (count * value_size)
+            raw = bytes(buffer[byte_start:byte_end])
+            matrix_values = _unpack_values(raw, dtype, scale)
+        else:
+            matrix_values = values[offset:offset + count]
         matrices[name] = [
             matrix_values[row * cols:(row + 1) * cols]
             for row in range(rows)
@@ -253,18 +295,40 @@ def read_matrix_payload(
     return matrices
 
 
-def read_matrix_payload_entry(run_dir: str | Path, entry: dict[str, Any]) -> dict[str, list[list[float]]]:
+def _shard_has_matrix(shard: dict[str, Any], matrix_names: set[str] | None) -> bool:
+    if matrix_names is None:
+        return True
+    parts = shard.get("matrix_parts", [])
+    if parts:
+        return any(str(part["name"]) in matrix_names for part in parts)
+    matrices = shard.get("matrices")
+    if isinstance(matrices, list):
+        return any(str(name) in matrix_names for name in matrices)
+    return True
+
+
+def read_matrix_payload_entry(
+    run_dir: str | Path,
+    entry: dict[str, Any],
+    *,
+    matrix_names: set[str] | None = None,
+) -> dict[str, list[list[float]]]:
     run_path = Path(run_dir)
     if entry.get("format") == "saint_matrix_shards":
         merged: dict[str, list[list[float]]] = {}
         partials: dict[str, list[tuple[int, list[list[float]]]]] = {}
         for shard in entry.get("shards", []):
+            if not _shard_has_matrix(shard, matrix_names):
+                continue
             shard_payload = read_matrix_payload(
                 run_path / shard["path"],
                 expected_sha256=shard.get("sha256"),
+                matrix_names=matrix_names,
             )
             for part in shard.get("matrix_parts", []):
                 name = str(part["name"])
+                if matrix_names is not None and name not in matrix_names:
+                    continue
                 row_start = int(part.get("row_start", 0))
                 partials.setdefault(name, []).append((row_start, shard_payload[name]))
             if not shard.get("matrix_parts"):
@@ -278,6 +342,7 @@ def read_matrix_payload_entry(run_dir: str | Path, entry: dict[str, Any]) -> dic
     return read_matrix_payload(
         run_path / entry["path"],
         expected_sha256=entry.get("sha256"),
+        matrix_names=matrix_names,
     )
 
 

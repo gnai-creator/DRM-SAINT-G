@@ -1330,11 +1330,30 @@ de linhas e remonta a matriz original no carregamento.
 
 #### Fase 12B - Merge Parcial
 
+Status: **concluida**.
+
 - fazer `merge` lendo apenas subconjuntos necessarios;
 - permitir carregar apenas algumas matrizes;
 - permitir carregar apenas algumas camadas;
 - evitar materializar checkpoint inteiro quando o alvo for parcial;
 - validar erro claro quando um shard necessario estiver ausente ou corrompido.
+
+Resultado:
+
+```text
+matrix_count: 8
+selected_count: 2
+dtype: float16
+shard_count: 16
+full_read_elapsed_s: 0.2910
+full_read_peak_bytes: 17524302
+partial_read_elapsed_s: 0.0787
+partial_read_peak_bytes: 4579606
+max_abs_error: 0.00000189
+```
+
+O runtime agora aceita `merge_runtime(..., matrix_names={...})` e a CLI aceita
+`saint merge --matrix <nome>` para fundir somente matrizes selecionadas.
 
 #### Fase 12C - Custo de I/O por Dtype
 

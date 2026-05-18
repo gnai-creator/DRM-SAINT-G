@@ -12,10 +12,15 @@ from saint.checkpoints.manager import (
     write_jsonl,
     write_metrics,
 )
-from saint.checkpoints.scale import benchmark_large_shards, synthetic_delta_payload
+from saint.checkpoints.scale import (
+    benchmark_large_shards,
+    benchmark_partial_shard_read,
+    synthetic_delta_payload,
+)
 
 __all__ = [
     "benchmark_large_shards",
+    "benchmark_partial_shard_read",
     "checkpoint_payload",
     "migrate_checkpoint_manifest",
     "read_json",

@@ -3,7 +3,11 @@ from pathlib import Path
 import unittest
 
 from saint.checkpoints.robust import read_matrix_payload_entry, write_matrix_payload
-from saint.checkpoints.scale import benchmark_large_shards, synthetic_delta_payload
+from saint.checkpoints.scale import (
+    benchmark_large_shards,
+    benchmark_partial_shard_read,
+    synthetic_delta_payload,
+)
 
 
 class CheckpointScalePhase12Tests(unittest.TestCase):
@@ -66,6 +70,45 @@ class CheckpointScalePhase12Tests(unittest.TestCase):
 
             with self.assertRaises(ValueError):
                 read_matrix_payload_entry(tmp, entry)
+
+    def test_partial_read_skips_unselected_shards(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            payload = synthetic_delta_payload(matrix_count=3, rows=16, cols=16)
+            entry = write_matrix_payload(
+                Path(tmp) / "delta.saintbin",
+                payload,
+                dtype="float32",
+                shard_bytes=1024,
+            )
+            selected = {"matrix_001"}
+            unused = [
+                shard
+                for shard in entry["shards"]
+                if all(part["name"] not in selected for part in shard["matrix_parts"])
+            ]
+            Path(tmp, unused[0]["path"]).unlink()
+
+            restored = read_matrix_payload_entry(tmp, entry, matrix_names=selected)
+
+            self.assertEqual(set(restored), selected)
+            self.assertEqual(len(restored["matrix_001"]), 16)
+
+    def test_partial_read_benchmark_reports_selected_matrices(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = benchmark_partial_shard_read(
+                tmp,
+                matrix_count=4,
+                rows=16,
+                cols=16,
+                selected_count=1,
+                dtype="float16",
+                shard_bytes=256,
+            )
+
+            self.assertEqual(result["full_matrix_count"], 4)
+            self.assertEqual(result["partial_matrix_count"], 1)
+            self.assertEqual(result["partial_keys"], ["matrix_000"])
+            self.assertLess(result["max_abs_error"], 0.001)
 
 
 if __name__ == "__main__":

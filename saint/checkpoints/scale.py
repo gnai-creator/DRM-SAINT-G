@@ -97,4 +97,76 @@ def benchmark_large_shards(
     }
 
 
-__all__ = ["benchmark_large_shards", "synthetic_delta_payload"]
+def benchmark_partial_shard_read(
+    run_dir: str | Path,
+    *,
+    matrix_count: int = 8,
+    rows: int = 256,
+    cols: int = 256,
+    selected_count: int = 2,
+    dtype: str = "float16",
+    shard_bytes: int = 65536,
+) -> dict[str, Any]:
+    target = Path(run_dir)
+    target.mkdir(parents=True, exist_ok=True)
+    payload = synthetic_delta_payload(
+        matrix_count=matrix_count,
+        rows=rows,
+        cols=cols,
+    )
+    entry = write_matrix_payload(
+        target / "partial_deltas.saintbin",
+        payload,
+        dtype=dtype,
+        shard_bytes=shard_bytes,
+    )
+    selected = {
+        f"matrix_{index:03d}"
+        for index in range(min(selected_count, matrix_count))
+    }
+
+    tracemalloc.start()
+    full_start = perf_counter()
+    full = read_matrix_payload_entry(target, entry)
+    full_elapsed_s = perf_counter() - full_start
+    _, full_peak_bytes = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    tracemalloc.start()
+    partial_start = perf_counter()
+    partial = read_matrix_payload_entry(target, entry, matrix_names=selected)
+    partial_elapsed_s = perf_counter() - partial_start
+    _, partial_peak_bytes = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    selected_values = sum(
+        len(row)
+        for name in selected
+        for row in payload[name]
+    )
+    return {
+        "format": entry["format"],
+        "dtype": dtype,
+        "matrix_count": matrix_count,
+        "selected_count": len(selected),
+        "full_matrix_count": len(full),
+        "partial_matrix_count": len(partial),
+        "selected_value_count": selected_values,
+        "shard_count": int(entry.get("shard_count", 1)),
+        "full_read_elapsed_s": full_elapsed_s,
+        "full_read_peak_bytes": full_peak_bytes,
+        "partial_read_elapsed_s": partial_elapsed_s,
+        "partial_read_peak_bytes": partial_peak_bytes,
+        "partial_keys": sorted(partial),
+        "max_abs_error": _max_abs_error(
+            {name: payload[name] for name in selected},
+            partial,
+        ),
+    }
+
+
+__all__ = [
+    "benchmark_large_shards",
+    "benchmark_partial_shard_read",
+    "synthetic_delta_payload",
+]
