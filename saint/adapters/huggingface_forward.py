@@ -290,6 +290,7 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
         ),
         phi_rank=int(metadata.get("phi_rank", 4)),
         phi_variant=str(metadata.get("phi_variant", "dense")),
+        phi_source=str(metadata.get("phi_source", "weight")),
     )
     routing_elapsed = perf_counter() - routing_start
     routing_cuda_peak = _cuda_peak(torch, device)
@@ -459,6 +460,7 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
             ),
             "phi_rank": int(metadata.get("phi_rank", 4)),
             "phi_variant": str(metadata.get("phi_variant", "dense")),
+            "phi_source": str(metadata.get("phi_source", "weight")),
             "target_matrices": names,
             "train_only": train_only,
             "gradient_checkpointing": bool(metadata.get("gradient_checkpointing", False)),

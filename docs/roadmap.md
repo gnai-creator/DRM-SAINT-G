@@ -2937,6 +2937,60 @@ Proximo marco:
 - inicializar `Phi` por gradiente/ativacao;
 - aumentar gradualmente textos de treino e validacao.
 
+### Marco 14 - Confirmacao do Phi Hadamard
+
+Status: **concluido como confirmacao parcial**.
+
+Resultados por seed, `layer 1`, `phi_rank=4`:
+
+| seed | validation delta | ganho val/param |
+|---:|---:|---:|
+| 31 | -0.009962 | 3.320694e-04 |
+| 32 | -0.016432 | 5.477269e-04 |
+| 33 | -0.008009 | 2.669652e-04 |
+
+Resultados por layer, `seed=31`, `phi_rank=4`:
+
+| layer | validation delta | ganho val/param |
+|---:|---:|---:|
+| 1 | -0.016432 | 5.477269e-04 |
+| 2 | -0.014893 | 4.964193e-04 |
+| 3 | -0.016785 | 5.594889e-04 |
+
+Resultados por rank, `seed=31`, `layer=1`:
+
+| phi_rank | validation delta | ganho val/param |
+|---:|---:|---:|
+| 2 | +0.022626 | 0.000000e+00 |
+| 4 | -0.008009 | 2.669652e-04 |
+| 8 | -0.023454 | 7.817904e-04 |
+
+Controle LoRA rank 1:
+
+| metodo | validation delta | ganho val/param | params |
+|---|---:|---:|---:|
+| SAINT Phi hadamard rank 8 | -0.032917 | 1.097218e-03 | 30 |
+| LoRA rank 1 forward-hook | +0.004285 | 0.000000e+00 | 6144 |
+
+Veredito:
+
+```text
+Phi hadamard rank 4 e positivo, mas nao bate Marco 12.
+Phi hadamard rank 8 e o novo candidato principal.
+```
+
+`phi_source=score` nao ajudou nesta rodada; SVD local do peso continuou melhor.
+
+Proximo marco:
+
+- repetir `phi_rank=8` em seeds 31, 32 e 33;
+- comparar LoRA rank 1 nas mesmas seeds;
+- aumentar textos de treino/validacao;
+- testar steps 8 e scheduler;
+- testar `gradient_phi_validation_rerank`;
+- comparar `v_proj`, `o_proj` e `v_proj + o_proj`;
+- decidir se Fase 15 fecha com `Phi hadamard rank 8`.
+
 ## Fase 16 - Escala 70B
 
 Status: **pendente**.

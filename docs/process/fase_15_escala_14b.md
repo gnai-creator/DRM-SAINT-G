@@ -1786,3 +1786,178 @@ Marco 14 deve consolidar `Phi`:
 - testar `Phi` inicializado por gradiente, nao so por SVD local do peso;
 - medir se `Phi` mantem vantagem quando `train_texts` e `validation_texts`
   aumentam.
+
+## Marco 14 - Confirmacao do Phi Hadamard
+
+Status: **concluido como confirmacao parcial**.
+
+### Objetivo
+
+Verificar se o melhor resultado do Marco 13 nao foi apenas um ponto acidental.
+
+O foco foi:
+
+- `Phi = hadamard`;
+- `budget = 32`;
+- `target = v_proj`;
+- comparacao contra o melhor Marco 12;
+- seeds, layers e ranks diferentes;
+- LoRA rank 1 como controle.
+
+### Seeds
+
+Config:
+
+```text
+layer: 1
+phi_rank: 4
+seeds: 31, 32, 33
+```
+
+Resultados:
+
+| seed | validation delta | ganho val/param | params |
+|---:|---:|---:|---:|
+| 31 | -0.009962 | 3.320694e-04 | 30 |
+| 32 | -0.016432 | 5.477269e-04 | 30 |
+| 33 | -0.008009 | 2.669652e-04 | 30 |
+
+Leitura:
+
+```text
+Phi hadamard rank 4 melhorou validacao em todas as seeds, mas nao reproduziu
+o pico do Marco 13 nem bateu o Marco 12 em ganho por parametro.
+```
+
+### Layers
+
+Config:
+
+```text
+seed: 31
+phi_rank: 4
+layers: 1, 2, 3
+```
+
+Resultados:
+
+| layer | validation delta | ganho val/param | params |
+|---:|---:|---:|---:|
+| 1 | -0.016432 | 5.477269e-04 | 30 |
+| 2 | -0.014893 | 4.964193e-04 | 30 |
+| 3 | -0.016785 | 5.594889e-04 | 30 |
+
+Leitura:
+
+```text
+o sinal positivo aparece em mais de uma camada, mas rank 4 ainda fica abaixo
+do criterio Marco 12.
+```
+
+### Ranks
+
+Config:
+
+```text
+seed: 31
+layer: 1
+phi_ranks: 2, 4, 8
+```
+
+Resultados:
+
+| phi_rank | validation delta | ganho val/param | params |
+|---:|---:|---:|---:|
+| 2 | +0.022626 | 0.000000e+00 | 30 |
+| 4 | -0.008009 | 2.669652e-04 | 30 |
+| 8 | -0.023454 | 7.817904e-04 | 30 |
+
+Leitura:
+
+```text
+rank 8 foi o primeiro ponto do Marco 14 que bateu o Marco 12.
+```
+
+### Phi Source
+
+Teste:
+
+```text
+phi_source: score
+seed: 31
+layer: 1
+phi_rank: 8
+```
+
+Resultado:
+
+| phi_source | validation delta | ganho val/param |
+|---|---:|---:|
+| score | +0.004720 | 0.000000e+00 |
+
+Leitura:
+
+```text
+usar o score de ativacao como fonte direta para SVD local piorou neste teste.
+O melhor caminho continua sendo SVD local do peso.
+```
+
+### LoRA Rank 1
+
+Controle:
+
+```text
+seed: 31
+layer: 1
+phi_rank: 8
+LoRA rank 1
+```
+
+Resultados:
+
+| metodo | validation delta | ganho val/param | params |
+|---|---:|---:|---:|
+| SAINT Phi hadamard rank 8 | -0.032917 | 1.097218e-03 | 30 |
+| LoRA rank 1 forward-hook | +0.004285 | 0.000000e+00 | 6144 |
+
+Leitura:
+
+```text
+nesta rodada curta, SAINT Phi rank 8 venceu LoRA rank 1 em validation loss e
+em ganho por parametro.
+```
+
+Essa comparacao ainda e pequena. Ela nao prova superioridade geral contra LoRA,
+mas fortalece o eixo cientifico correto:
+
+```text
+SAINT Phi e competitivo em budgets extremos.
+```
+
+### Veredito
+
+```text
+Marco 14 confirma Phi hadamard como direcao valida, mas muda o candidato
+principal de rank 4 para rank 8.
+```
+
+Resumo:
+
+- rank 4 e estavel, mas nao bate Marco 12;
+- rank 8 bate Marco 12 e LoRA rank 1 em uma rodada curta;
+- `phi_source=score` nao ajudou;
+- SVD local do peso continua melhor nesta etapa;
+- o ganho aparece em layers 1, 2 e 3.
+
+## Proximo Marco
+
+Marco 15 deve testar robustez real do `Phi rank 8`:
+
+- seeds 31, 32 e 33 com `phi_rank=8`;
+- LoRA rank 1 com seeds 31, 32 e 33;
+- aumentar `train_texts` e `validation_texts`;
+- testar `steps` 8 e scheduler;
+- testar `gradient_phi_validation_rerank`;
+- comparar `v_proj`, `o_proj` e `v_proj + o_proj`;
+- decidir se Fase 15 fecha com `Phi hadamard rank 8` como baseline para Fase
+  16.

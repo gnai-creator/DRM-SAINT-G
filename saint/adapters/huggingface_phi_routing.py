@@ -21,6 +21,7 @@ def phi_validation_indices(
     block_size: int,
     phi_rank: int,
     phi_variant: str,
+    phi_source: str = "weight",
     candidate_multiplier: int,
     validation_batch,
     epsilon: float,
@@ -50,11 +51,13 @@ def phi_validation_indices(
         prototype, scale_ids = _phi_prototypes(
             torch,
             param,
+            scores[name],
             rows,
             cols,
             block_size=max(1, block_size),
             rank=max(1, phi_rank),
             variant=phi_variant,
+            phi_source=phi_source,
         )
         routed[name] = (rows, cols, prototype, scale_ids)
     return routed
@@ -86,7 +89,18 @@ def phi_candidate_summary(
     ]
 
 
-def _phi_prototypes(torch, param, rows, cols, *, block_size: int, rank: int, variant: str):
+def _phi_prototypes(
+    torch,
+    param,
+    score,
+    rows,
+    cols,
+    *,
+    block_size: int,
+    rank: int,
+    variant: str,
+    phi_source: str,
+):
     grouped = _group_blocks(rows, cols, block_size)
     prototypes = []
     scale_ids = []
@@ -95,7 +109,7 @@ def _phi_prototypes(torch, param, rows, cols, *, block_size: int, rank: int, var
         block_rows, block_cols = block_coords(torch, param.shape, row, col, block_size)
         block_rows = block_rows.to(param.device)
         block_cols = block_cols.to(param.device)
-        block = _block_matrix(torch, param, block_rows, block_cols, block_size)
+        block = _source_block(torch, param, score, block_rows, block_cols, block_size, phi_source)
         left, right = _svd_bases(torch, block, rank=rank)
         basis = _phi_basis(torch, rank, variant, device=block.device, dtype=block.dtype)
         local_proto = _projected_basis(torch, left, basis, right)
@@ -124,11 +138,18 @@ def _group_blocks(rows, cols, block_size: int) -> list[tuple[int, int]]:
     return seen
 
 
-def _block_matrix(torch, param, rows, cols, block_size: int):
+def _source_block(torch, param, score, rows, cols, block_size: int, phi_source: str):
     dense = torch.zeros(block_size, block_size, device=param.device, dtype=param.dtype)
     local_rows = (rows - int(rows.min().item())).long()
     local_cols = (cols - int(cols.min().item())).long()
-    dense[local_rows, local_cols] = param[rows, cols].detach()
+    if phi_source == "score":
+        values = score[rows.detach().cpu(), cols.detach().cpu()].to(param.device, param.dtype)
+    elif phi_source == "weight_score":
+        score_values = score[rows.detach().cpu(), cols.detach().cpu()].to(param.device, param.dtype)
+        values = param[rows, cols].detach() * score_values
+    else:
+        values = param[rows, cols].detach()
+    dense[local_rows, local_cols] = values
     return dense.float()
 
 

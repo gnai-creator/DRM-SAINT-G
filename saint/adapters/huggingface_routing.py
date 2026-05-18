@@ -315,6 +315,7 @@ def build_routed_deltas(
     structured_scale_granularity: str = "block",
     phi_rank: int = 4,
     phi_variant: str = "dense",
+    phi_source: str = "weight",
 ):
     named = dict(model.named_parameters())
     if routing_method == "gradient":
@@ -331,8 +332,14 @@ def build_routed_deltas(
         "activation_block_validation_rerank",
         "activation_structured_block_validation_rerank",
         "activation_phi_validation_rerank",
+        "gradient_phi_validation_rerank",
     }:
-        scores = _activation_scores(torch, model, names, input_ids, attention_mask, hybrid=False)
+        if routing_method == "gradient_phi_validation_rerank":
+            scores = _gradient_scores_sequential(
+                torch, functional_call, model, names, input_ids, attention_mask, loss_fn
+            )
+        else:
+            scores = _activation_scores(torch, model, names, input_ids, attention_mask, hybrid=False)
     elif routing_method == "magnitude_activation":
         scores = _activation_scores(torch, model, names, input_ids, attention_mask, hybrid=True)
     elif routing_method == "lm_head_proxy":
@@ -388,6 +395,7 @@ def build_routed_deltas(
             block_size=max(1, routing_block_size),
             phi_rank=max(1, phi_rank),
             phi_variant=phi_variant,
+            phi_source=phi_source,
             candidate_multiplier=validation_rerank_multiplier,
             validation_batch=validation_batch,
             epsilon=validation_probe_epsilon,

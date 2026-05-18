@@ -1,4 +1,4 @@
-"""Benchmark SAINT Phi deltas: Delta W = A Phi B."""
+"""Confirm Phase 15 SAINT Phi results across seeds, layers, and ranks."""
 
 from __future__ import annotations
 
@@ -16,13 +16,7 @@ from benchmark_huggingface_phase15_compare import (
     _row_from_saint,
     _run_saint_subprocess,
 )
-
-
-MARCO12_GAIN = 6.233305e-04
-
-
-def _csv(value: str) -> list[str]:
-    return [item.strip() for item in value.split(",") if item.strip()]
+from benchmark_huggingface_phase15_phi import MARCO12_GAIN
 
 
 def _safe(value: str) -> str:
@@ -38,103 +32,94 @@ def _delta(row: dict[str, Any]) -> float | None:
     return float(value) if value is not None else None
 
 
-def _case_args(args, *, target: str, budget: int, variant: str, memory: str):
+def _target(layer: int, suffix: str) -> str:
+    return f"model.layers.{layer}.self_attn.{suffix}.weight"
+
+
+def _phi_case(args, *, seed: int, layer: int, rank: int, memory: str) -> dict[str, Any]:
+    target = _target(layer, args.target_suffix)
     namespace = copy(args)
+    namespace.seed = seed
     namespace.target_names = target
-    namespace.budget = budget
-    namespace.routing_method = "activation_phi_validation_rerank"
-    namespace.phi_variant = variant
+    namespace.routing_method = args.phi_routing_method
+    namespace.phi_variant = args.phi_variant
+    namespace.phi_rank = rank
     namespace.out = str(
-        Path(args.out) / f"phi_{variant}_b{budget}_{_safe(target)}_{_safe(memory)}"
+        Path(args.out) / f"phi_s{seed}_l{layer}_r{rank}_{_safe(memory)}"
     )
-    return namespace
-
-
-def _run_phi(args, *, target: str, budget: int, variant: str, memory: str):
-    values = _case_args(args, target=target, budget=budget, variant=variant, memory=memory)
-    result = _run_saint_subprocess(values, budget=budget, max_memory=memory)
-    row = _row_from_saint(result, budget=budget, max_memory=memory)
+    result = _run_saint_subprocess(namespace, budget=args.budget, max_memory=memory)
+    row = _row_from_saint(result, budget=args.budget, max_memory=memory)
     row.update(
         {
             "method": "saint_phi_delta",
+            "seed": seed,
+            "layer": layer,
             "target": target,
-            "phi_rank": args.phi_rank,
-            "phi_variant": variant,
+            "phi_rank": rank,
+            "phi_variant": args.phi_variant,
             "phi_source": args.phi_source,
-            "baseline_marco12_gain_per_parameter": MARCO12_GAIN,
             "beats_marco12_gain_per_parameter": _gain(row) >= MARCO12_GAIN,
         }
     )
     return row
 
 
-def _lora(args, targets: list[str]) -> list[dict[str, Any]]:
-    rows = []
-    for target in targets:
-        for rank in _ints(args.lora_ranks):
-            try:
-                namespace = copy(args)
-                namespace.target_names = target
-                namespace.out = str(Path(args.out) / f"lora_{_safe(target)}_r{rank}")
-                row = _lora_rank(namespace, rank=rank)
-                row["target"] = target
-                rows.append(row)
-            except Exception as exc:  # pragma: no cover - large-model diagnostic.
-                rows.append(
-                    {
-                        "method": f"lora_rank{rank}_train_only",
-                        "target": target,
-                        "rank": rank,
-                        "status": "failed",
-                        "error": str(exc),
-                    }
-                )
-    return rows
+def _lora_case(args, *, seed: int, layer: int) -> dict[str, Any]:
+    namespace = copy(args)
+    namespace.seed = seed
+    namespace.target_names = _target(layer, args.target_suffix)
+    namespace.out = str(Path(args.out) / f"lora_s{seed}_l{layer}")
+    row = _lora_rank(namespace, rank=1)
+    row.update({"seed": seed, "layer": layer, "target": namespace.target_names})
+    return row
+
+
+def _aggregate(rows: list[dict[str, Any]], *, method: str) -> dict[str, Any]:
+    subset = [row for row in rows if row.get("method") == method and row.get("status") == "ok"]
+    if not subset:
+        return {"count": 0}
+    gains = [_gain(row) for row in subset]
+    deltas = [_delta(row) for row in subset if _delta(row) is not None]
+    return {
+        "count": len(subset),
+        "mean_validation_gain_per_parameter": sum(gains) / len(gains),
+        "best_validation_gain_per_parameter": max(gains),
+        "mean_validation_delta": sum(deltas) / len(deltas) if deltas else None,
+        "wins_vs_marco12": sum(1 for row in subset if _gain(row) >= MARCO12_GAIN),
+    }
 
 
 def _best(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
-    candidates = [
-        row
-        for row in rows
-        if row.get("method") == "saint_phi_delta" and row.get("status") == "ok"
-    ]
-    return max(candidates, key=_gain) if candidates else None
+    subset = [row for row in rows if row.get("method") == "saint_phi_delta" and row.get("status") == "ok"]
+    return max(subset, key=_gain) if subset else None
 
 
 def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    best = _best(rows)
-    lora_gain = max(
-        [
-            _gain(row)
-            for row in rows
-            if str(row.get("method", "")).startswith("lora_rank")
-            and row.get("status") == "ok"
-        ]
-        or [0.0]
-    )
+    phi = _aggregate(rows, method="saint_phi_delta")
+    lora = _aggregate(rows, method="lora_rank1_train_only")
     return {
-        "best_phi": best,
-        "best_phi_validation_gain_per_parameter": _gain(best or {}),
-        "best_lora_validation_gain_per_parameter": lora_gain,
-        "beats_marco12": bool(best and _gain(best) >= MARCO12_GAIN),
-        "criterion": "compare Phi against Marco 12 layer 1 v_proj budget 32",
+        "best_phi": _best(rows),
+        "phi": phi,
+        "lora_rank1": lora,
+        "passed": phi.get("best_validation_gain_per_parameter", 0.0) >= MARCO12_GAIN,
+        "criterion": "Phi hadamard must reproduce or beat Marco 12 on at least one confirmed run",
     }
 
 
 def _markdown(rows: list[dict[str, Any]], summary: dict[str, Any]) -> str:
     lines = [
-        "# Phase 15 Marco 13 Phi Sweep",
+        "# Phase 15 Marco 14 Phi Confirmation",
         "",
-        "| method | target | budget | phi | val delta | val gain/param | params | status |",
-        "|---|---|---:|---|---:|---:|---:|---|",
+        "| method | seed | layer | rank | val delta | val gain/param | params | status |",
+        "|---|---:|---:|---:|---:|---:|---:|---|",
     ]
     for row in rows:
         lines.append(
-            "| {method} | {target} | {budget} | {phi} | {delta} | {gain} | {params} | {status} |".format(
+            "| {method} | {seed} | {layer} | {rank} | {delta} | {gain} | {params} | {status} |".format(
                 method=row.get("method", ""),
-                target=row.get("target", ""),
-                budget="" if row.get("budget") is None else row.get("budget"),
-                phi=row.get("phi_variant", ""),
+                seed=row.get("seed", ""),
+                layer=row.get("layer", ""),
+                rank=row.get("phi_rank") or row.get("rank", ""),
                 delta="" if _delta(row) is None else f"{_delta(row):.6f}",
                 gain=f"{_gain(row):.6e}",
                 params="" if row.get("parameter_count") is None else row.get("parameter_count"),
@@ -148,27 +133,37 @@ def _markdown(rows: list[dict[str, Any]], summary: dict[str, Any]) -> str:
 def run(args) -> dict[str, Any]:
     root = Path(args.out)
     root.mkdir(parents=True, exist_ok=True)
-    rows = []
-    targets = _items(args.target_names)
-    for memory in _memory_items(args.max_memories):
-        for target in targets:
-            for budget in _ints(args.budgets):
-                for variant in _csv(args.phi_variants):
-                    rows.append(
-                        _run_phi(
-                            args,
-                            target=target,
-                            budget=budget,
-                            variant=variant,
-                            memory=memory,
-                        )
-                    )
+    rows: list[dict[str, Any]] = []
+    memory = _memory_items(args.max_memories)[0]
+    for seed in _ints(args.seeds):
+        for layer in _ints(args.layers):
+            for rank in _ints(args.phi_ranks):
+                rows.append(_phi_case(args, seed=seed, layer=layer, rank=rank, memory=memory))
     if not args.skip_lora:
-        rows.extend(_lora(args, targets))
+        for seed in _ints(args.lora_seeds):
+            for layer in _ints(args.layers):
+                try:
+                    rows.append(_lora_case(args, seed=seed, layer=layer))
+                except Exception as exc:  # pragma: no cover - large-model diagnostic.
+                    rows.append(
+                        {
+                            "method": "lora_rank1_train_only",
+                            "seed": seed,
+                            "layer": layer,
+                            "status": "failed",
+                            "error": str(exc),
+                        }
+                    )
     summary = _summary(rows)
     result = {"model": args.model, "rows": rows, "summary": summary}
-    (root / "phase15_phi_results.json").write_text(dumps(result, indent=2), encoding="utf-8")
-    (root / "phase15_phi_results.md").write_text(_markdown(rows, summary), encoding="utf-8")
+    (root / "phase15_phi_confirm_results.json").write_text(
+        dumps(result, indent=2),
+        encoding="utf-8",
+    )
+    (root / "phase15_phi_confirm_results.md").write_text(
+        _markdown(rows, summary),
+        encoding="utf-8",
+    )
     return result
 
 
@@ -176,11 +171,14 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True)
     parser.add_argument("--corpus", default="data/tinyshakespeare_phase13.txt")
-    parser.add_argument("--out", default="runs/phase15_marco13_phi")
+    parser.add_argument("--out", default="runs/phase15_marco14_phi_confirm")
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--model-dtype", default="bfloat16")
-    parser.add_argument("--seed", type=int, default=31)
+    parser.add_argument("--seeds", default="31,32,33")
+    parser.add_argument("--layers", default="1,2,3")
+    parser.add_argument("--target-suffix", default="v_proj")
     parser.add_argument("--steps", type=int, default=4)
+    parser.add_argument("--budget", type=int, default=32)
     parser.add_argument("--budgets", default="32")
     parser.add_argument("--max-memories", default="0=14GiB,cpu=64GiB")
     parser.add_argument("--batch-size", type=int, default=1)
@@ -190,6 +188,7 @@ def main() -> None:
     parser.add_argument("--learning-rate", type=float, default=0.001)
     parser.add_argument("--lr-decay", type=float, default=1.0)
     parser.add_argument("--routing-method", default="activation_phi_validation_rerank")
+    parser.add_argument("--phi-routing-method", default="activation_phi_validation_rerank")
     parser.add_argument("--routing-max-length", type=int, default=4)
     parser.add_argument("--routing-batch-size", type=int, default=1)
     parser.add_argument("--routing-block-size", type=int, default=4)
@@ -208,17 +207,15 @@ def main() -> None:
     parser.add_argument("--structured-prototype-count", type=int, default=1)
     parser.add_argument("--structured-prototype-mode", default="weight_sign")
     parser.add_argument("--structured-scale-granularity", default="block")
+    parser.add_argument("--phi-ranks", default="2,4,8")
     parser.add_argument("--phi-rank", type=int, default=4)
-    parser.add_argument(
-        "--phi-variants",
-        default="dense,diagonal,upper_triangular,block_diagonal,kronecker,hadamard,codebook_2x2,codebook_4x4",
-    )
-    parser.add_argument("--phi-variant", default="dense")
+    parser.add_argument("--phi-variant", default="hadamard")
     parser.add_argument("--phi-source", default="weight")
     parser.add_argument("--hf-device-map", default="auto")
     parser.add_argument("--lora-max-memory", default="0=14GiB,cpu=64GiB")
     parser.add_argument("--lora-learning-rate", type=float, default=0.001)
     parser.add_argument("--lora-ranks", default="1")
+    parser.add_argument("--lora-seeds", default="31")
     parser.add_argument("--lora-b-init-scale", type=float, default=0.0)
     parser.add_argument("--skip-lora", action="store_true")
     args = parser.parse_args()
