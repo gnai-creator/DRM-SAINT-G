@@ -42,6 +42,7 @@ def train_mini_saint_delta(
     epsilon: float = 1e-4,
     name: str = "mini_saint_dynamic_delta",
     share_scope: str = "global",
+    sensitivity_method: str | None = None,
 ) -> MiniTransformerResult:
     """Train a tiny SAINT codebook adapter against global transformer loss."""
 
@@ -50,11 +51,25 @@ def train_mini_saint_delta(
     start = perf_counter()
     all_coords = _coords(task.base_weights)
     initial = _initial_gradients(task, all_coords, epsilon=epsilon)
+    sensitivity_scores = None
+    if sensitivity_method is not None:
+        from saint.sensitivity.transformer import score_sensitivity
+
+        sensitivity_scores = score_sensitivity(
+            task,
+            method=sensitivity_method,
+            epsilon=epsilon,
+            block_size=block_size,
+        )
     ranked_blocks = []
     for matrix_name, row, col in _blocks(task.base_weights, block_size):
         rows, cols = shape(task.base_weights[matrix_name])
         coords = _block_coords(matrix_name, row, col, rows, cols, block_size)
-        ranked_blocks.append((sum(abs(initial[coord]) for coord in coords), matrix_name, row, col, coords))
+        if sensitivity_scores is None:
+            score = sum(abs(initial[coord]) for coord in coords)
+        else:
+            score = sum(sensitivity_scores[coord] for coord in coords)
+        ranked_blocks.append((score, matrix_name, row, col, coords))
     prototype_cost = max_prototypes * block_size * block_size
     block_budget = max(1, (parameter_budget - prototype_cost) // 3)
     selected = sorted(ranked_blocks, reverse=True)[:block_budget]
@@ -163,6 +178,7 @@ def train_mini_saint_delta(
             "assigned_blocks": len(assignments),
             "residual_blocks": len(residuals),
             "global_loss": True,
+            "sensitivity_method": sensitivity_method,
         },
     )
 

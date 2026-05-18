@@ -27,9 +27,9 @@ recomposicao final
 ## Status Atual
 
 ```text
-Fase atual: Fase 6 - Mapa de Sensibilidade
-Fase anterior: Fase 5 concluida
-Proximo marco: Fase 6 - Mapa de Sensibilidade
+Fase atual: Fase 7 - Runtime SAINT
+Fase anterior: Fase 6 concluida
+Proximo marco: Fase 7 - Runtime SAINT
 ```
 
 Resumo do estado:
@@ -42,7 +42,8 @@ Resumo do estado:
 | 3 | Roteador de Blocos | Concluida |
 | 4 | Treino de Camada Linear | Concluida |
 | 5 | Mini-Transformer | Concluida |
-| 6+ | Escala e runtime completo | Pendente |
+| 6 | Mapa de Sensibilidade | Concluida |
+| 7+ | Escala e runtime completo | Pendente |
 
 ## 1. Fase 0 - Fundacao Conceitual
 
@@ -790,11 +791,79 @@ Prosseguir se SAINT aprender de forma consistente e nao apenas memorizar comport
 
 ## 7. Fase 6 - Mapa de Sensibilidade
 
-Status: **pendente**.
+Status: **concluida**.
 
 ### Objetivo
 
 Escolher os blocos certos para treinar.
+
+### Implementacao Inicial
+
+Foi criado o modulo:
+
+```text
+saint/sensitivity/
+```
+
+Com benchmark:
+
+```text
+scripts/benchmark_sensitivity_phase6.py
+```
+
+E documentacao:
+
+```text
+docs/process/fase_6_mapa_sensibilidade.md
+```
+
+O primeiro experimento compara metodos de selecao com mesmo orcamento no
+mini-transformer da Fase 5.
+
+Resultado inicial:
+
+```text
+sensitivity_fisher test_loss medio: 0.00029264
+sensitivity_gradient_norm test_loss medio: 0.00029264
+sensitivity_gradient_weight test_loss medio: 0.00029269
+sensitivity_random test_loss medio: 0.00029433
+```
+
+Decisao inicial:
+
+```text
+7 metodos venceram random.
+criterio inicial passou.
+Fase 6 continua em andamento ate testar blocos, regimes separados e uso no SAINT.
+```
+
+Resultado final:
+
+```text
+mini_saint_default_for_sensitivity test_loss medio: 0.00029131
+mini_saint_gradient_norm test_loss medio: 0.00029131
+sensitivity_accumulated_gradient test_loss medio: 0.00029264
+sensitivity_fisher test_loss medio: 0.00029264
+sensitivity_gradient_norm test_loss medio: 0.00029264
+block_sensitivity_gradient_norm test_loss medio: 0.00029268
+sensitivity_random test_loss medio: 0.00029433
+```
+
+Criterio final:
+
+```text
+repeated aprovado: sim
+dense aprovado: sim
+melhor bloco 2x2 venceu random: sim
+sensibilidade acumulada venceu random: sim
+SAINT alimentado por sensibilidade empatou/venceu SAINT padrao: sim
+```
+
+Resultado:
+
+```text
+Fase 6 concluida pelo criterio atual.
+```
 
 ### Metodos
 
