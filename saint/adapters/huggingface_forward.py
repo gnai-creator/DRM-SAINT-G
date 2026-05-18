@@ -278,6 +278,16 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
         attention_mask=route_mask,
         routing_method=route_method,
         loss_fn=_loss,
+        validation_batch=(val_ids, val_mask),
+        validation_rerank_multiplier=int(
+            metadata.get("validation_rerank_multiplier", 4)
+        ),
+        validation_rerank_chunk_size=int(
+            metadata.get("validation_rerank_chunk_size", 256)
+        ),
+        validation_probe_epsilon=float(
+            metadata.get("validation_probe_epsilon", 1e-3)
+        ),
     )
     routing_elapsed = perf_counter() - routing_start
     routing_cuda_peak = _cuda_peak(torch, device)

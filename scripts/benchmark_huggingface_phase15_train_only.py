@@ -68,6 +68,9 @@ def _config(args) -> RuntimeConfig:
         "validate_during_train": args.validate_during_train,
         "early_stopping": args.early_stopping,
         "early_stopping_min_delta": args.early_stopping_min_delta,
+        "validation_rerank_multiplier": args.validation_rerank_multiplier,
+        "validation_rerank_chunk_size": args.validation_rerank_chunk_size,
+        "validation_probe_epsilon": args.validation_probe_epsilon,
         "target_names": _target_names(args.target_names),
         "target_device": args.target_device,
         "max_cuda_gb": args.max_cuda_gb,
@@ -142,6 +145,9 @@ def main() -> None:
     parser.add_argument("--validate-during-train", action="store_true")
     parser.add_argument("--early-stopping", action="store_true")
     parser.add_argument("--early-stopping-min-delta", type=float, default=0.0)
+    parser.add_argument("--validation-rerank-multiplier", type=int, default=4)
+    parser.add_argument("--validation-rerank-chunk-size", type=int, default=256)
+    parser.add_argument("--validation-probe-epsilon", type=float, default=1e-3)
     parser.add_argument("--hf-device-map", default=None)
     parser.add_argument("--hf-max-memory", default=None)
     parser.add_argument("--hf-offload-folder", default=None)

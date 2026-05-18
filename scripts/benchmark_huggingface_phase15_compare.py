@@ -10,6 +10,8 @@ import sys
 from types import SimpleNamespace
 from typing import Any
 
+from saint.adapters.huggingface_lora_train import train_lora_rank
+
 
 def _items(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
@@ -108,6 +110,9 @@ def _saint_args(args, *, budget: int, max_memory: str) -> SimpleNamespace:
         validate_during_train=args.validate_during_train,
         early_stopping=args.early_stopping,
         early_stopping_min_delta=args.early_stopping_min_delta,
+        validation_rerank_multiplier=args.validation_rerank_multiplier,
+        validation_rerank_chunk_size=args.validation_rerank_chunk_size,
+        validation_probe_epsilon=args.validation_probe_epsilon,
         hf_device_map=args.hf_device_map,
         hf_max_memory=max_memory,
         hf_offload_folder=str(Path(args.out) / f"offload_{label}"),
@@ -174,6 +179,16 @@ def _run_saint_subprocess(args, *, budget: int, max_memory: str) -> dict[str, An
     if values.early_stopping:
         command.append("--early-stopping")
         command.extend(["--early-stopping-min-delta", str(values.early_stopping_min_delta)])
+    command.extend(
+        [
+            "--validation-rerank-multiplier",
+            str(values.validation_rerank_multiplier),
+            "--validation-rerank-chunk-size",
+            str(values.validation_rerank_chunk_size),
+            "--validation-probe-epsilon",
+            str(values.validation_probe_epsilon),
+        ]
+    )
     command.append("--measure-loss")
     completed = subprocess.run(command, capture_output=True, text=True, check=False)
     result_path = Path(values.out) / "phase15_train_only_result.json"
@@ -188,111 +203,15 @@ def _run_saint_subprocess(args, *, budget: int, max_memory: str) -> dict[str, An
     }
 
 
-def _load_batch(tokenizer, texts: list[str], *, max_length: int, device):
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token or tokenizer.unk_token
-    encoded = tokenizer(
-        texts,
-        return_tensors="pt",
-        padding=True,
-        truncation=True,
-        max_length=max_length,
-    )
-    mask = encoded.get("attention_mask")
-    return encoded["input_ids"].to(device), mask.to(device) if mask is not None else None
-
-
-def _plain_loss(model, input_ids, attention_mask):
-    kwargs = {"input_ids": input_ids, "labels": input_ids}
-    if attention_mask is not None:
-        kwargs["attention_mask"] = attention_mask
-    return model(**kwargs).loss
-
-
 def _lora_rank(args, *, rank: int) -> dict[str, Any]:
-    from saint.adapters.huggingface_loading import load_causal_lm, model_dtype
-    import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-
-    device = torch.device(args.device)
-    metadata = {
-        "model_dtype": args.model_dtype,
-        "hf_device_map": args.hf_device_map,
-        "hf_max_memory": args.lora_max_memory,
-        "hf_offload_folder": str(Path(args.out) / "offload_lora_rank1"),
-    }
-    if device.type == "cuda":
-        torch.cuda.reset_peak_memory_stats(device)
-    model = load_causal_lm(AutoModelForCausalLM, args.model, device, metadata)
-    if args.gradient_checkpointing and hasattr(model, "gradient_checkpointing_enable"):
-        model.gradient_checkpointing_enable()
-    if hasattr(model, "config") and hasattr(model.config, "use_cache"):
-        model.config.use_cache = False
-    tokenizer = AutoTokenizer.from_pretrained(args.model, local_files_only=True)
-    input_ids, attention_mask = _load_batch(
-        tokenizer,
-        _text_items(args.corpus, args.train_texts),
-        max_length=args.max_length,
-        device=device,
+    namespace = SimpleNamespace(**vars(args))
+    namespace.lora_target = _items(args.target_names)[0]
+    namespace.lora_offload_folder = Path(args.out) / f"offload_lora_rank{rank}"
+    return train_lora_rank(
+        namespace,
+        rank=rank,
+        texts=_text_items(args.corpus, args.train_texts),
     )
-    named = dict(model.named_parameters())
-    target = _items(args.target_names)[0]
-    if target not in named:
-        raise ValueError(f"missing LoRA target: {target}")
-    for param in model.parameters():
-        param.requires_grad_(False)
-    weight = named[target]
-    rows, cols = weight.shape
-    dtype = model_dtype(torch, args.model_dtype) or weight.dtype
-    a = (torch.randn(rows, rank, device=weight.device, dtype=dtype) * 0.01).requires_grad_()
-    b = (
-        torch.randn(rank, cols, device=weight.device, dtype=dtype) * args.lora_b_init_scale
-    ).requires_grad_()
-    optimizer = torch.optim.AdamW([a, b], lr=args.lora_learning_rate)
-    model.train()
-    from time import perf_counter
-
-    with torch.no_grad():
-        initial_loss = float(_plain_loss(model, input_ids, attention_mask).cpu().item())
-    start = perf_counter()
-    update = None
-    for _ in range(args.steps):
-        optimizer.zero_grad()
-        update = a @ b
-        with torch.no_grad():
-            weight.add_(update)
-        try:
-            loss = _plain_loss(model, input_ids, attention_mask)
-            loss.backward()
-        finally:
-            with torch.no_grad():
-                weight.sub_(update)
-        optimizer.step()
-    elapsed = perf_counter() - start
-    with torch.no_grad():
-        final_update = a @ b
-        weight.add_(final_update)
-        try:
-            final_loss = float(_plain_loss(model, input_ids, attention_mask).cpu().item())
-        finally:
-            weight.sub_(final_update)
-    peak = int(torch.cuda.max_memory_allocated(device)) if device.type == "cuda" else 0
-    if peak / 1_000_000_000 > args.max_cuda_gb:
-        raise RuntimeError(f"CUDA budget exceeded during lora: {peak / 1_000_000_000:.3f} GB")
-    return {
-        "method": f"lora_rank{rank}_train_only",
-        "budget": None,
-        "rank": rank,
-        "max_memory": args.lora_max_memory,
-        "status": "ok",
-        "elapsed_s": elapsed,
-        "initial_loss": initial_loss,
-        "train_loss": final_loss,
-        "loss_delta": final_loss - initial_loss,
-        "parameter_count": int(a.numel() + b.numel()),
-        "gain_per_parameter": max(initial_loss - final_loss, 0.0) / int(a.numel() + b.numel()),
-        "train_cuda_gb": _gb(peak),
-    }
 
 
 def _markdown(rows: list[dict[str, Any]]) -> str:
@@ -382,6 +301,9 @@ def main() -> None:
     parser.add_argument("--validate-during-train", action="store_true")
     parser.add_argument("--early-stopping", action="store_true")
     parser.add_argument("--early-stopping-min-delta", type=float, default=0.0)
+    parser.add_argument("--validation-rerank-multiplier", type=int, default=4)
+    parser.add_argument("--validation-rerank-chunk-size", type=int, default=256)
+    parser.add_argument("--validation-probe-epsilon", type=float, default=1e-3)
     parser.add_argument("--hf-device-map", default="auto")
     parser.add_argument("--lora-max-memory", default="0=14GiB,cpu=64GiB")
     parser.add_argument("--lora-learning-rate", type=float, default=0.001)

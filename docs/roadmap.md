@@ -2636,6 +2636,60 @@ Proximo marco:
 - tornar LoRA rank 2 esparso/low-rank sem update denso temporario;
 - manter `activation` como baseline 14B ate o roteador de validacao vencer.
 
+### Marco 8 - Roteamento de Validacao Barato
+
+Status: **em andamento**.
+
+Mudancas:
+
+- criado `activation_validation_rerank`;
+- candidatos sao selecionados por `activation`;
+- um subconjunto e ranqueado por mini-validacao com deltas temporarios;
+- cada probe usa rollback antes do proximo candidato;
+- LoRA rank 1/2 passou a usar `forward_hook`, sem materializar `A @ B` como
+  delta denso temporario.
+
+Nota sobre LoRA:
+
+```text
+LoRA forward-hook baseline ainda e LoRA:
+W' = W + A @ B
+
+A diferenca e operacional:
+y = x @ W.T + x @ B.T @ A.T
+```
+
+Isso evita criar uma matriz densa temporaria. Portanto, quando o LoRA rank 2
+passa a caber, isso nao e uma versao adulterada do LoRA; e um baseline mais
+justo e mais proximo do uso real.
+
+Resultado parcial em Qwen2.5-14B, layer 2 `v_proj`, `train_texts=3`,
+`validation_texts=6`:
+
+| metodo | loss delta | params | ganho/param | CUDA treino |
+|---|---:|---:|---:|---:|
+| SAINT `activation_validation_rerank` | -0.090874 | 8192 | 1.1093e-05 | 15.782 GB |
+| SAINT `activation` | -0.086226 | 8192 | 1.0526e-05 | 15.782 GB |
+| LoRA rank 1 forward-hook | -0.132801 | 6144 | 2.1615e-05 | 15.778 GB |
+| LoRA rank 2 forward-hook | -0.573527 | 12288 | 4.6674e-05 | 15.778 GB |
+
+Veredito parcial:
+
+```text
+o rerank barato cabe em memoria e melhora um pouco contra activation,
+mas ainda perde para LoRA forward-hook.
+```
+
+Proximo marco:
+
+- fazer SAINT operar em blocos 2x2/4x4 no treino HF, nao apenas coordenadas
+  independentes;
+- usar mini-validacao para escolher blocos;
+- comparar budgets menores;
+- medir validation loss antes/depois no mesmo processo;
+- testar camadas 1, 2 e 3;
+- manter LoRA forward-hook rank 1/2 como baseline obrigatorio.
+
 ## Fase 16 - Escala 70B
 
 Status: **pendente**.

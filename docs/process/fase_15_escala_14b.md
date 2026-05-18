@@ -959,3 +959,120 @@ Marco 8 deve focar em roteamento de validacao barato e competitivo:
 - tornar LoRA rank 2 esparso/low-rank sem update denso temporario;
 - aumentar `train_texts` e `validation_texts` gradualmente;
 - manter `activation` como baseline 14B ate o roteador de validacao vencer.
+
+## Marco 8 - Roteamento de Validacao Barato
+
+Status: **em andamento**.
+
+### Mudancas
+
+- adicionado roteamento `activation_validation_rerank`;
+- o roteador seleciona candidatos por `activation`;
+- apenas um subconjunto dos candidatos e ranqueado por mini-validacao;
+- a mini-validacao aplica deltas temporarios por grupos de coordenadas;
+- cada grupo usa rollback antes do proximo teste;
+- o probe de validacao testa pertubacao nos dois sentidos e usa o melhor ganho;
+- LoRA rank 1/2 passou a usar `forward_hook`, sem materializar `A @ B` como
+  matriz densa temporaria.
+
+### Nota Sobre LoRA
+
+O baseline LoRA anterior era matematicamente correto, mas operacionalmente
+ingenuo para modelos grandes:
+
+```text
+update = A @ B
+W += update
+forward
+W -= update
+```
+
+Esse caminho cria uma matriz densa temporaria do mesmo tamanho de `W`. Quando
+rank 2 estourava memoria, isso nao provava que SAINT era melhor; provava que o
+baseline LoRA estava implementado de forma desfavoravel.
+
+O novo baseline usa a forma usual de LoRA no forward:
+
+```text
+y = x @ W.T + x @ B.T @ A.T
+```
+
+Isto e algebraicamente equivalente a:
+
+```text
+W' = W + A @ B
+```
+
+mas evita materializar o delta denso completo. Portanto, o nome correto nos
+relatorios e:
+
+```text
+LoRA forward-hook baseline
+```
+
+ou:
+
+```text
+LoRA sem materializacao densa do delta
+```
+
+Esse baseline e mais justo. Ele aumenta a barra para SAINT, porque compara
+contra uma implementacao mais proxima do uso real de LoRA/PEFT.
+
+### Resultados Parciais
+
+Config principal:
+
+```text
+model: models/Qwen2.5-14B
+target: model.layers.2.self_attn.v_proj.weight
+budget: 8192
+train_texts: 3
+validation_texts: 6
+steps: 4
+max_length: 8
+max_memory: 0=12GiB,cpu=64GiB
+```
+
+Comparacao inicial:
+
+| metodo | loss delta | params | ganho/param | pico treino CUDA |
+|---|---:|---:|---:|---:|
+| SAINT `activation_validation_rerank` | -0.090874 | 8192 | 1.1093e-05 | 15.782 GB |
+| SAINT `activation` | -0.086226 | 8192 | 1.0526e-05 | 15.782 GB |
+| LoRA rank 1 forward-hook | -0.132801 | 6144 | 2.1615e-05 | 15.778 GB |
+| LoRA rank 2 forward-hook | -0.573527 | 12288 | 4.6674e-05 | 15.778 GB |
+
+Leitura:
+
+```text
+o rerank por mini-validacao melhorou ligeiramente contra activation nesse
+teste, mas ainda perdeu para LoRA rank 1/2.
+```
+
+O resultado e util porque corrige dois pontos:
+
+- SAINT agora tem um roteador de validacao barato que cabe no limite de memoria;
+- LoRA rank 2 deixou de ser desclassificado por detalhe de implementacao.
+
+### Veredito Parcial
+
+```text
+Marco 8 ainda nao fecha.
+```
+
+O progresso tecnico e real, mas o resultado cientifico ficou mais exigente:
+SAINT precisa vencer um LoRA forward-hook forte, ou mostrar vantagem clara em
+checkpoint, memoria, ganho por parametro treinavel ou comportamento em budgets
+menores.
+
+## Proximo Marco
+
+O proximo passo deve atacar onde SAINT ainda perde para LoRA:
+
+- trocar o delta por coordenada independente por blocos 2x2/4x4 treinaveis;
+- usar o rerank de validacao para escolher blocos, nao valores isolados;
+- comparar budgets menores, por exemplo 1024, 2048 e 4096;
+- medir validacao real antes/depois no mesmo corpus, nao apenas train loss;
+- testar `activation_validation_rerank` em camadas 1, 2 e 3;
+- manter LoRA forward-hook rank 1/2 como baseline obrigatorio.
