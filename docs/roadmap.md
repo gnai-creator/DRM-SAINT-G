@@ -27,9 +27,9 @@ recomposicao final
 ## Status Atual
 
 ```text
-Fase atual: Fase 12 - Modelos Hugging Face Pequenos
+Fase atual: Fase 12 - Validacao de Escala de Checkpoint
 Fase anterior: Fase 11 concluida
-Proximo marco: Fase 12 - Modelos Hugging Face Pequenos
+Proximo marco: Fase 12 - Validacao de Escala de Checkpoint
 ```
 
 Resumo do estado:
@@ -48,7 +48,8 @@ Resumo do estado:
 | 9 | Adaptador DRM Transformer | Concluida |
 | 10 | Checkpoint Robusto | Concluida |
 | 11 | Checkpoint Escalavel | Concluida |
-| 12+ | Modelos reais e escala | Pendente |
+| 12 | Validacao de Escala de Checkpoint | Pendente |
+| 13+ | Modelos reais e escala | Pendente |
 
 ## Fase 0 - Fundacao Conceitual
 
@@ -1282,7 +1283,101 @@ shape_validation: true
 SAINT deve conseguir retomar um treino DRM autograd preservando estado real de
 AdamW e usando checkpoints shardados/compactos com validacao de integridade.
 
-## Fase 12 - Modelos Hugging Face Pequenos
+## Fase 12 - Validacao de Escala de Checkpoint
+
+Status: **pendente**.
+
+### Objetivo
+
+Validar o checkpoint escalavel em payloads maiores antes de entrar em modelos
+Hugging Face pequenos.
+
+A Fase 11 provou o formato em escala smoke. A Fase 12 deve medir se o formato
+continua eficiente, integro e utilizavel quando o payload cresce.
+
+### Subfases
+
+#### Fase 12A - Validacao de Shards Grandes
+
+Status: **concluida**.
+
+- testar shards com checkpoints muito maiores;
+- medir tempo de escrita;
+- medir tempo de leitura;
+- medir memoria usada no `resume`;
+- medir memoria usada no `merge`;
+- validar checksums por shard.
+
+Resultado:
+
+```text
+format: saint_matrix_shards
+matrix_count: 8
+rows: 256
+cols: 256
+dtype: float16
+shard_count: 16
+payload_bytes: 1052000
+write_elapsed_s: 0.1800
+read_elapsed_s: 0.2984
+read_peak_bytes: 17515952
+checksum_validated: true
+max_abs_error: 0.00000377
+```
+
+O formato agora tambem divide uma matriz individual grande em partes por faixa
+de linhas e remonta a matriz original no carregamento.
+
+#### Fase 12B - Merge Parcial
+
+- fazer `merge` lendo apenas subconjuntos necessarios;
+- permitir carregar apenas algumas matrizes;
+- permitir carregar apenas algumas camadas;
+- evitar materializar checkpoint inteiro quando o alvo for parcial;
+- validar erro claro quando um shard necessario estiver ausente ou corrompido.
+
+#### Fase 12C - Custo de I/O por Dtype
+
+- medir tamanho de checkpoint por dtype;
+- medir tempo de escrita por dtype;
+- medir tempo de leitura por dtype;
+- comparar `float32`, `float16`, `bfloat16` e `int8`;
+- registrar perda de precisao por dtype.
+
+#### Fase 12D - Compatibilidade e Migracao
+
+- adicionar uma migracao real quando `format_version` passar de 1 para 2;
+- testar leitura de manifesto antigo;
+- testar erro para versao futura incompativel;
+- documentar campos estaveis e campos experimentais.
+
+#### Fase 12E - Qualidade Numerica
+
+- validar `bfloat16` e `int8` contra perda de qualidade em tarefa real;
+- comparar loss apos `resume` por dtype;
+- comparar loss apos `merge` por dtype;
+- definir quando cada dtype e aceitavel.
+
+### Perguntas
+
+- Qual tamanho de shard reduz I/O sem fragmentar demais o checkpoint?
+- O `merge` parcial economiza RAM de forma mensuravel?
+- Qual dtype tem melhor troca entre tamanho, velocidade e perda de qualidade?
+- A migracao de formato detecta incompatibilidade antes de corromper o merge?
+- `int8` e util para treino/resume ou apenas para distribuicao/merge final?
+
+### Criterio de Conclusao
+
+SAINT deve conseguir:
+
+```text
+checkpoint grande -> validar -> retomar -> merge parcial -> avaliar
+```
+
+com uso de memoria menor que carregar o payload completo e com perda numerica
+medida por dtype.
+
+## Fase 13 - Modelos Hugging Face Pequenos
 
 Status: **pendente**.
 
@@ -1309,7 +1404,7 @@ Testar SAINT em modelos reais pequenos.
 
 SAINT deve mostrar vantagem ou comportamento complementar a LoRA em pelo menos um tipo de tarefa.
 
-## Fase 13 - Escala 3B
+## Fase 14 - Escala 3B
 
 Status: **pendente**.
 
@@ -1337,7 +1432,7 @@ offload: opcional
 - medir tokens/s;
 - medir ganho por byte.
 
-## Fase 14 - Escala 14B
+## Fase 15 - Escala 14B
 
 Status: **pendente**.
 
@@ -1372,7 +1467,7 @@ Prosseguir para 70B somente se 14B demonstrar:
 - tempo aceitavel;
 - alguma vantagem contra baseline.
 
-## Fase 15 - Escala 70B
+## Fase 16 - Escala 70B
 
 Status: **pendente**.
 
@@ -1417,7 +1512,7 @@ com checkpoint recomponivel
 e alguma melhoria mensuravel na loss
 ```
 
-## Fase 16 - Otimizacoes
+## Fase 17 - Otimizacoes
 
 Status: **pendente**.
 
@@ -1442,7 +1537,7 @@ Reduzir overhead.
 
 O overhead do SAINT deve ficar pequeno o bastante para ser pratico em experimentos reais.
 
-## Fase 17 - Avaliacao
+## Fase 18 - Avaliacao
 
 Status: **pendente**.
 
@@ -1469,7 +1564,7 @@ Medir qualidade alem da loss.
 - SAINT escala com modelo maior?
 - SAINT depende demais do dataset?
 
-## Fase 18 - Produto de Pesquisa
+## Fase 19 - Produto de Pesquisa
 
 Status: **pendente**.
 
