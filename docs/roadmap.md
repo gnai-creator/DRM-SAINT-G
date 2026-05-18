@@ -27,9 +27,9 @@ recomposicao final
 ## Status Atual
 
 ```text
-Fase atual: Fase 4 - Treino de Camada Linear
-Fase anterior: Fase 4 concluida
-Proximo marco: Fase 5 - Mini-Transformer
+Fase atual: Fase 6 - Mapa de Sensibilidade
+Fase anterior: Fase 5 concluida
+Proximo marco: Fase 6 - Mapa de Sensibilidade
 ```
 
 Resumo do estado:
@@ -41,7 +41,7 @@ Resumo do estado:
 | 2 | Benchmark de Reconstrucao | Concluida |
 | 3 | Roteador de Blocos | Concluida |
 | 4 | Treino de Camada Linear | Concluida |
-| 5 | Mini-Transformer | Pendente |
+| 5 | Mini-Transformer | Concluida |
 | 6+ | Escala e runtime completo | Pendente |
 
 ## 1. Fase 0 - Fundacao Conceitual
@@ -678,11 +678,80 @@ Fase 4 concluida pelo criterio atual.
 
 ## 6. Fase 5 - Mini-Transformer
 
-Status: **pendente**.
+Status: **concluida**.
 
 ### Objetivo
 
 Validar SAINT em um modelo com acoplamento real entre camadas.
+
+### Implementacao Inicial
+
+Foi criado um mini-transformer dependency-free em:
+
+```text
+saint/transformer/
+```
+
+Componentes:
+
+- `model.py`: forward com embeddings, self-attention de ultima posicao, MLP e head;
+- `training.py`: baselines `mini_full_delta`, `mini_budgeted_delta` e `mini_block_budgeted_delta`;
+- `saint_adapter.py`: `mini_saint_dynamic_delta`;
+- `benchmark.py`: sweep inicial;
+- `scripts/benchmark_mini_transformer_phase5.py`;
+- `tests/test_transformer_phase5.py`;
+- `docs/process/fase_5_mini_transformer.md`.
+
+O primeiro benchmark usa diferenca finita para medir gradientes contra loss
+global. Isso e intencionalmente pequeno e auditavel; nao e o runtime final.
+
+Resultado inicial:
+
+```text
+mini_saint_dynamic_delta test_loss medio: 0.00001998
+mini_saint_dynamic_delta params medios: 48.0
+mini_full_delta test_loss medio: 0.00002063
+mini_full_delta params medios: 160.0
+mini_budgeted_delta_for_saint test_loss medio: 0.00002063
+mini_block_budgeted_delta_for_saint test_loss medio: 0.00002064
+```
+
+Leitura:
+
+```text
+SAINT venceu os controles no primeiro teste,
+mas a tarefa ainda esta facil demais para concluir a fase.
+```
+
+Resultado com tarefa mais dificil:
+
+```text
+delta_scale: 3.0
+mini_saint_dynamic_delta test_loss medio: 0.00020029
+mini_saint_dynamic_delta params medios: 48.0
+mini_saint_per_matrix_delta test_loss medio: 0.00019998
+mini_saint_per_matrix_delta params medios: 72.0
+mini_budgeted_delta_for_saint test_loss medio: 0.00020591
+mini_block_budgeted_delta_for_saint test_loss medio: 0.00020598
+mini_lora_rank_1 test_loss medio: 0.00020912
+mini_lora_rank_2 test_loss medio: 0.00020912
+```
+
+Criterio automatico:
+
+```text
+SAINT global venceu LoRA rank 1 em 4/4 regimes.
+SAINT global venceu LoRA rank 2 em 4/4 regimes.
+SAINT global venceu budgeted_delta em 4/4 regimes.
+SAINT global venceu block_budgeted_delta em 4/4 regimes.
+SAINT global teve melhor eficiencia que SAINT por matriz em 4/4 regimes.
+```
+
+Resultado:
+
+```text
+Fase 5 concluida pelo criterio inicial.
+```
 
 ### Modelo
 
