@@ -29,7 +29,7 @@ recomposicao final
 ```text
 Fase atual: Fase 13 - Modelos Hugging Face Pequenos
 Fase anterior: Fase 12 concluida
-Proximo marco: Fase 13 - Modelos Hugging Face Pequenos
+Proximo marco: Fase 13 Marco 3 - Forward Real Transformers
 ```
 
 Resumo do estado:
@@ -1452,11 +1452,36 @@ I/O por dtype, migracao de manifesto e qualidade numerica inicial por dtype.
 
 ## Fase 13 - Modelos Hugging Face Pequenos
 
-Status: **pendente**.
+Status: **em andamento**.
 
 ### Objetivo
 
 Testar SAINT em modelos reais pequenos.
+
+### Marco 1 - Adaptador Local Dependency-Optional
+
+Status: **concluido**.
+
+Entregas:
+
+- adapter `huggingface_causal_lm`;
+- leitura de state dict JSON local;
+- leitura opcional de `.bin`, `.pt` e `.pth` via PyTorch;
+- tentativa opcional de `AutoModelForCausalLM.from_pretrained` com
+  `local_files_only=True`;
+- listagem de matrizes 2D por keywords;
+- metodo `hf_saint_delta_smoke`;
+- checkpoint robusto com dtype/shards;
+- `inspect -> train -> resume -> merge`;
+- config exemplo `configs/huggingface_smoke.json`;
+- testes automatizados sem rede.
+
+Limite:
+
+```text
+este marco valida integracao local com pesos Hugging Face,
+mas ainda nao mede perplexity real nem executa autograd em transformers.
+```
 
 ### Modelos Alvo
 
@@ -1476,6 +1501,47 @@ Testar SAINT em modelos reais pequenos.
 ### Criterio de conclusao
 
 SAINT deve mostrar vantagem ou comportamento complementar a LoRA em pelo menos um tipo de tarefa.
+
+### Proximo Marco
+
+### Marco 2 - Treino Real com Autograd
+
+Status: **implementado, pendente de execucao com PyTorch/Transformers no ambiente atual**.
+
+Entregas:
+
+- metodo `hf_saint_autograd_smoke`;
+- modulo `saint/adapters/huggingface_autograd.py`;
+- deltas treinaveis com PyTorch autograd;
+- selecao de parametros por magnitude;
+- otimizador AdamW;
+- medicao de `initial_loss` e `train_loss`;
+- exportacao de `delta_payload`;
+- checkpoint robusto com dtype/shards;
+- config exemplo `configs/huggingface_autograd_smoke.json`;
+- teste que executa o fluxo completo quando PyTorch existe;
+- erro claro quando PyTorch nao esta instalado.
+
+Observacao:
+
+```text
+ambiente atual: torch ausente, transformers ausente
+```
+
+O caminho foi implementado, mas a execucao real de autograd precisa de ambiente
+com PyTorch instalado.
+
+### Proximo Marco
+
+Marco 3 - Forward Real Transformers:
+
+- carregar modelo pequeno local com `transformers`;
+- carregar tokenizer local;
+- montar dataset curto;
+- aplicar deltas SAINT no `model.forward`;
+- medir loss/perplexity real;
+- comparar contra LoRA ou full fine-tuning pequeno;
+- salvar, retomar e fundir checkpoint avaliavel.
 
 ## Fase 14 - Escala 3B
 

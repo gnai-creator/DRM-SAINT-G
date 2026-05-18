@@ -1,0 +1,24 @@
+{
+  "delta_scale": 3.0,
+  "d_model": 4,
+  "experiment_name": "hf_autograd_smoke",
+  "metadata": {
+    "checkpoint_dtype": "float16",
+    "checkpoint_shard_bytes": 128,
+    "learning_rate": 0.1,
+    "max_dim": 64,
+    "max_matrices": 16,
+    "model_name_or_path": "path/to/local/hf/model-or-state-dict.json"
+  },
+  "method": "hf_saint_autograd_smoke",
+  "output_dir": "runs/hf_autograd_smoke",
+  "parameter_budget": 48,
+  "seed": 31,
+  "seq_len": 4,
+  "steps": 8,
+  "task": "huggingface_causal_lm",
+  "test_samples": 4,
+  "train_samples": 8,
+  "vocab_size": 8,
+  "vram_gb": 12.0
+}

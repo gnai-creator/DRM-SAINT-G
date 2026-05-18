@@ -1,6 +1,6 @@
 """Model adapters for SAINT runtime."""
 
-from saint.adapters import drm_transformer, mini_transformer
+from saint.adapters import drm_transformer, huggingface, mini_transformer
 
 
 def _select(config):
@@ -8,6 +8,8 @@ def _select(config):
         return mini_transformer
     if config.task == "drm_transformer":
         return drm_transformer
+    if config.task == "huggingface_causal_lm":
+        return huggingface
     raise ValueError(f"unknown runtime task: {config.task}")
 
 
