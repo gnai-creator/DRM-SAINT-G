@@ -278,6 +278,38 @@ class HuggingFacePhase13Tests(unittest.TestCase):
             self.assertTrue(all("cuda_peak_bytes" in row for row in rows))
             self.assertTrue(all("gain_per_parameter" in row for row in rows))
 
+    def test_huggingface_activation_router_smoke(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            model_dir = Path(tmp) / "tiny_model"
+            run_dir = Path(tmp) / "run"
+            if not _write_tiny_hf_model(model_dir):
+                self.skipTest("transformers is not installed")
+            config = RuntimeConfig(
+                experiment_name="hf_activation_router",
+                output_dir=str(run_dir),
+                task="huggingface_causal_lm",
+                method="hf_saint_forward_smoke",
+                steps=1,
+                parameter_budget=4,
+                metadata={
+                    "model_name_or_path": str(model_dir),
+                    "max_dim": 4,
+                    "max_matrices": 4,
+                    "device": "cpu",
+                    "max_length": 12,
+                    "routing_method": "activation",
+                    "routing_max_length": 8,
+                    "routing_batch_size": 1,
+                },
+            )
+
+            result = train_runtime(config)
+
+            self.assertEqual(result["metadata"]["routing_method"], "activation")
+            self.assertEqual(result["metadata"]["routing_max_length"], 8)
+            self.assertEqual(result["metadata"]["routing_batch_size"], 1)
+            self.assertTrue(result["has_delta_payload"])
+
     def test_huggingface_phase13_sweep_writes_tables(self):
         with tempfile.TemporaryDirectory() as tmp:
             model_dir = Path(tmp) / "tiny_model"

@@ -29,7 +29,7 @@ recomposicao final
 ```text
 Fase atual: Fase 14 - Escala 3B
 Fase anterior: Fase 13 concluida com ressalvas
-Proximo marco: Fase 14 Marco 6 - Roteamento Aproximado de Baixo Custo
+Proximo marco: Fase 14 Marco 7 - Ponte 3B Controlada
 ```
 
 Resumo do estado:
@@ -2045,7 +2045,7 @@ Magnitude mostra o piso barato, mas perde qualidade.
 
 ### Marco 6 - Roteamento Aproximado de Baixo Custo
 
-Status: **pendente**.
+Status: **concluido**.
 
 Objetivo:
 
@@ -2061,6 +2061,57 @@ Entregas:
 - testar subset de batch/seq_len menor apenas para roteamento;
 - comparar qualidade/memoria contra `gradient_sequential`;
 - decidir se GPT-2 small autoriza ponte 3B com ressalva.
+
+Resultado:
+
+| roteamento | SAINT mean val loss | SAINT best val loss | routing CUDA GB | train CUDA GB | decisao |
+|---|---:|---:|---:|---:|---|
+| gradient sequencial completo | 6.140045 | 6.140045 | 2.259 | 0.637 | passa com ressalva |
+| gradient sequencial subset | 6.441031 | 6.441031 | 0.540 | 0.637 | passa com ressalva |
+| activation subset | 6.522398 | 6.522398 | 0.519 | 0.613 | passa com ressalva |
+| magnitude activation subset | 6.716236 | 6.716236 | 0.528 | 0.637 | falha contra LoRA |
+| lm_head proxy subset | 6.716236 | 6.716236 | 0.528 | 0.637 | falha contra LoRA |
+
+Controle LoRA:
+
+```text
+LoRA: mean val loss 6.664005, best 6.563403, mean gain/param 0.00004904
+```
+
+Veredito:
+
+```text
+GPT-2 small autoriza uma ponte 3B experimental com ressalva.
+```
+
+Condicoes:
+
+- usar `activation` como roteador inicial;
+- manter `gradient_sequential` como controle de qualidade;
+- micro-batch 1;
+- `routing_max_length` baixo;
+- checkpoint somente com deltas esparsos;
+- abortar se pico CUDA passar do budget definido.
+
+### Marco 7 - Ponte 3B Controlada
+
+Status: **pendente**.
+
+Objetivo:
+
+```text
+testar um modelo proximo de 3B sem prometer treino completo.
+```
+
+Entregas:
+
+- escolher modelo causal LM proximo de 3B que caiba localmente;
+- carregar em CUDA com dtype economico quando suportado;
+- rodar smoke de load/forward sem treino;
+- rodar SAINT com roteador `activation`;
+- comparar contra LoRA pequeno se couber;
+- medir load/routing/train/checkpoint/merge;
+- decidir se Fase 14 fecha ou precisa de mais otimizacao.
 
 ## Fase 15 - Escala 14B
 

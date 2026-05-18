@@ -414,3 +414,89 @@ Marco 6 deve testar roteamento aproximado de baixo custo:
 - comparar qualidade/memoria contra `gradient_sequential`;
 - decidir se GPT-2 small ja autoriza ponte 3B com ressalva ou se falta outro
   ciclo de roteamento.
+
+## Marco 6 - Roteamento Aproximado de Baixo Custo
+
+Status: **concluido**.
+
+### Mudancas
+
+- roteamento foi separado em `saint/adapters/huggingface_routing.py`;
+- `routing_method=activation` usa ativacoes capturadas por hooks, sem backward;
+- `routing_method=magnitude_activation` usa `magnitude * ativacao`;
+- `routing_method=lm_head_proxy` usa proxy barato combinado com `lm_head`;
+- o benchmark aceita `--saint-routing-max-length` e
+  `--saint-routing-batch-size`;
+- o roteamento pode usar subset menor que o treino.
+
+### Comando Base
+
+```bash
+python scripts/benchmark_huggingface_multiseed_phase13.py \
+  --model models/gpt2 \
+  --corpus data/tinyshakespeare_phase13.txt \
+  --device cuda \
+  --steps 8 \
+  --batch-size 4 \
+  --seeds 31,32,33 \
+  --saint-budgets 4096 \
+  --saint-lrs 0.005 \
+  --lora-ranks 2,4 \
+  --lora-lrs 0.005 \
+  --saint-target-matrices 4 \
+  --saint-routing-max-length 8 \
+  --saint-routing-batch-size 1
+```
+
+### Comparacao
+
+| roteamento | SAINT mean val loss | SAINT best val loss | routing CUDA GB | train CUDA GB | decisao |
+|---|---:|---:|---:|---:|---|
+| gradient sequencial completo | 6.140045 | 6.140045 | 2.259 | 0.637 | passa com ressalva |
+| gradient sequencial subset | 6.441031 | 6.441031 | 0.540 | 0.637 | passa com ressalva |
+| activation subset | 6.522398 | 6.522398 | 0.519 | 0.613 | passa com ressalva |
+| magnitude activation subset | 6.716236 | 6.716236 | 0.528 | 0.637 | falha contra LoRA |
+| lm_head proxy subset | 6.716236 | 6.716236 | 0.528 | 0.637 | falha contra LoRA |
+
+Controle LoRA:
+
+```text
+LoRA: mean val loss 6.664005, best 6.563403, mean gain/param 0.00004904
+```
+
+### Veredito
+
+```text
+GPT-2 small autoriza uma ponte 3B experimental com ressalva.
+```
+
+Motivo:
+
+- `activation` nao usa backward para sensibilidade;
+- reduziu roteamento de ~2.26 GB para ~0.52 GB;
+- venceu LoRA em media de validation loss neste grid;
+- `gradient_sequential` com subset tambem venceu LoRA e ficou barato;
+- o pico total SAINT ainda fica acima de LoRA, mas a RTX 4090 tem margem para
+  uma ponte 3B controlada se o modelo base for carregado de forma conservadora.
+
+### Condicoes Para Ponte 3B
+
+- usar `activation` como roteador inicial;
+- manter `gradient_sequential` como controle de qualidade;
+- `micro_batch=1`;
+- `routing_max_length` baixo;
+- salvar apenas deltas esparsos;
+- nao tentar full fine-tuning;
+- abortar se pico CUDA passar do budget definido.
+
+## Proximo Marco
+
+Marco 7 deve iniciar ponte 3B controlada:
+
+- escolher modelo causal LM proximo de 3B que caiba localmente;
+- carregar em CUDA com dtype economico quando suportado;
+- rodar smoke sem treino primeiro;
+- rodar SAINT `activation` com `budget=4096` ou menor;
+- comparar contra LoRA pequeno se couber;
+- medir load/routing/train/checkpoint/merge;
+- decidir se Fase 14 fecha ou precisa de mais otimizacao.

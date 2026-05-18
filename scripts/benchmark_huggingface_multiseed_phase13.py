@@ -32,6 +32,8 @@ def main() -> None:
     parser.add_argument("--lora-lrs", default="0.001,0.005")
     parser.add_argument("--saint-target-matrices", type=int, default=2)
     parser.add_argument("--saint-routing-method", default="gradient")
+    parser.add_argument("--saint-routing-max-length", type=int, default=None)
+    parser.add_argument("--saint-routing-batch-size", type=int, default=None)
     args = parser.parse_args()
 
     result = run_hf_phase13_multiseed(
@@ -49,6 +51,8 @@ def main() -> None:
         batch_size=args.batch_size,
         saint_target_matrices=args.saint_target_matrices,
         saint_routing_method=args.saint_routing_method,
+        saint_routing_max_length=args.saint_routing_max_length,
+        saint_routing_batch_size=args.saint_routing_batch_size,
     )
     out = Path(args.out)
     print(f"rows={len(result['rows'])}")

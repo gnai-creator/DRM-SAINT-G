@@ -6,6 +6,7 @@ from math import exp
 from time import perf_counter
 from typing import Any
 
+from saint.adapters.huggingface_routing import build_routed_deltas, merged_params
 from saint.config import RuntimeConfig
 from saint.transformer.training import MiniTransformerResult
 
@@ -91,116 +92,6 @@ def _target_names(model, metadata: dict[str, Any]) -> list[str]:
     return candidates[: max(1, int(metadata.get("max_trainable_matrices", 2)))]
 
 
-def _score_indices(torch, scores: dict[str, Any], *, budget: int):
-    total = sum(score.numel() for score in scores.values())
-    count = max(1, min(budget, total))
-    flat = torch.cat([score.detach().abs().cpu().flatten() for score in scores.values()])
-    _, selected = torch.topk(flat, k=count)
-    offsets = {}
-    start = 0
-    for name, score in scores.items():
-        offsets[name] = (start, start + score.numel(), score.shape)
-        start += score.numel()
-    indices = {}
-    for name, (start, end, shape) in offsets.items():
-        local = selected[(selected >= start) & (selected < end)] - start
-        if local.numel() == 0:
-            continue
-        indices[name] = torch.unravel_index(local, shape)
-    return indices
-
-
-def _gradient_scores(torch, functional_call, model, names, input_ids, attention_mask):
-    params = {
-        name: param.detach().requires_grad_(name in names)
-        for name, param in model.named_parameters()
-        if name in names
-    }
-    loss = _loss(functional_call, model, params, input_ids, attention_mask)
-    grads = torch.autograd.grad(loss, [params[name] for name in names], allow_unused=True)
-    return {
-        name: grad.detach().abs().cpu() if grad is not None else params[name].detach().abs().cpu()
-        for name, grad in zip(names, grads)
-    }
-
-
-def _gradient_scores_sequential(
-    torch,
-    functional_call,
-    model,
-    names,
-    input_ids,
-    attention_mask,
-):
-    named = dict(model.named_parameters())
-    scores = {}
-    for name in names:
-        param = named[name].detach().requires_grad_(True)
-        loss = _loss(functional_call, model, {name: param}, input_ids, attention_mask)
-        grad = torch.autograd.grad(loss, param, allow_unused=True)[0]
-        scores[name] = (
-            grad.detach().abs().cpu()
-            if grad is not None
-            else param.detach().abs().cpu()
-        )
-        del loss, grad, param
-        if input_ids.device.type == "cuda":
-            torch.cuda.empty_cache()
-    return scores
-
-
-def _build_deltas(
-    torch,
-    functional_call,
-    model,
-    names: list[str],
-    *,
-    parameter_budget: int,
-    input_ids,
-    attention_mask,
-    routing_method: str,
-):
-    named = dict(model.named_parameters())
-    if routing_method == "gradient":
-        scores = _gradient_scores(torch, functional_call, model, names, input_ids, attention_mask)
-    elif routing_method == "gradient_sequential":
-        scores = _gradient_scores_sequential(
-            torch,
-            functional_call,
-            model,
-            names,
-            input_ids,
-            attention_mask,
-        )
-    else:
-        scores = {name: named[name].detach().abs().cpu() for name in names}
-    selected = _score_indices(torch, scores, budget=parameter_budget)
-    deltas = {}
-    coordinates = {}
-    for name in names:
-        rows, cols = selected.get(name, (None, None))
-        if rows is None:
-            continue
-        deltas[name] = torch.zeros(rows.numel(), device=named[name].device, requires_grad=True)
-        coordinates[name] = (rows.to(named[name].device), cols.to(named[name].device))
-    return deltas, coordinates
-
-
-def _dense_delta(torch, param, values, coordinates):
-    update = torch.zeros_like(param)
-    rows, cols = coordinates
-    update = update.index_put((rows, cols), values)
-    return update
-
-
-def _merged_params(torch, model, deltas, coordinates):
-    params = dict(model.named_parameters())
-    updated = {}
-    for name, delta in deltas.items():
-        updated[name] = params[name] + _dense_delta(torch, params[name], delta, coordinates[name])
-    return updated
-
-
 def _loss(functional_call, model, params, input_ids, attention_mask):
     kwargs = {"input_ids": input_ids, "labels": input_ids}
     if attention_mask is not None:
@@ -282,6 +173,14 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
         device=device,
         batch_size=int(metadata.get("batch_size", len(train_texts))),
     )
+    routing_length = int(metadata.get("routing_max_length", metadata.get("max_length", 32)))
+    routing_batch_size = int(metadata.get("routing_batch_size", len(train_texts)))
+    routing_ids, routing_mask = _load_batch(
+        tokenizer,
+        train_texts[: max(1, routing_batch_size)],
+        max_length=routing_length,
+        device=device,
+    )
     validation_texts = metadata.get("validation_texts")
     val_ids, val_mask = _load_batch(
         tokenizer,
@@ -295,15 +194,16 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
     routing_method = str(metadata.get("routing_method", "gradient"))
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
-    deltas, coordinates = _build_deltas(
+    deltas, coordinates = build_routed_deltas(
         torch,
         functional_call,
         model,
         names,
         parameter_budget=max(1, config.parameter_budget),
-        input_ids=input_ids,
-        attention_mask=attention_mask,
+        input_ids=routing_ids,
+        attention_mask=routing_mask,
         routing_method=routing_method,
+        loss_fn=_loss,
     )
     routing_cuda_peak = (
         int(torch.cuda.max_memory_allocated(device))
@@ -311,7 +211,7 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
         else 0
     )
     optimizer = torch.optim.AdamW(list(deltas.values()), lr=float(metadata.get("learning_rate", 1e-3)))
-    initial_loss = _loss_value(functional_call, model, _merged_params(torch, model, deltas, coordinates), input_ids, attention_mask)
+    initial_loss = _loss_value(functional_call, model, merged_params(torch, model, deltas, coordinates), input_ids, attention_mask)
     steps = max(1, int(config.steps))
     train_start = perf_counter()
     if device.type == "cuda":
@@ -322,7 +222,7 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
             loss = _loss(
                 functional_call,
                 model,
-                _merged_params(torch, model, deltas, coordinates),
+                merged_params(torch, model, deltas, coordinates),
                 batch_ids,
                 batch_mask,
             ) / len(train_batches)
@@ -334,8 +234,8 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
         if device.type == "cuda"
         else 0
     )
-    final_loss = _loss_value(functional_call, model, _merged_params(torch, model, deltas, coordinates), input_ids, attention_mask)
-    validation_loss = _loss_value(functional_call, model, _merged_params(torch, model, deltas, coordinates), val_ids, val_mask)
+    final_loss = _loss_value(functional_call, model, merged_params(torch, model, deltas, coordinates), input_ids, attention_mask)
+    validation_loss = _loss_value(functional_call, model, merged_params(torch, model, deltas, coordinates), val_ids, val_mask)
     parameter_count = int(sum(delta.numel() for delta in deltas.values()))
     tokens_seen = sum(int(ids.numel()) for ids, _ in train_batches) * steps
     cuda_peak = (
@@ -369,6 +269,8 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
             "train_cuda_peak_bytes": train_cuda_peak,
             "delta_payload_format": "saint_sparse_delta",
             "routing_method": routing_method,
+            "routing_max_length": routing_length,
+            "routing_batch_size": routing_batch_size,
             "target_matrices": names,
             "marco": "fase_13_marco_3",
         },

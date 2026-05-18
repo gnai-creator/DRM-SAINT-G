@@ -122,6 +122,8 @@ def run_hf_phase13_grid(
     batch_size: int = 3,
     saint_target_matrices: int = 2,
     saint_routing_method: str = "gradient",
+    saint_routing_max_length: int | None = None,
+    saint_routing_batch_size: int | None = None,
     prompts: tuple[str, ...] = ("SAINT", "Checkpoint", "LoRA"),
 ) -> dict[str, Any]:
     root = Path(run_dir)
@@ -152,6 +154,8 @@ def run_hf_phase13_grid(
                 batch_size=batch_size,
                 max_trainable_matrices=saint_target_matrices,
                 routing_method=saint_routing_method,
+                routing_max_length=saint_routing_max_length,
+                routing_batch_size=saint_routing_batch_size,
             )
             weights = row.pop("merged_weights")
             run_path = combo / f"saint_budget_{budget}_seed_{seed}"
