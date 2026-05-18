@@ -84,7 +84,12 @@ def resume_runtime(run_dir: str | Path) -> dict:
     return checkpoint
 
 
-def merge_runtime(run_dir: str | Path, matrix_names: set[str] | None = None) -> dict:
+def merge_runtime(
+    run_dir: str | Path,
+    matrix_names: set[str] | None = None,
+    *,
+    write_artifact: bool = True,
+) -> dict:
     run_path = Path(run_dir)
     checkpoint = validate_checkpoint_bundle(
         run_path,
@@ -112,7 +117,8 @@ def merge_runtime(run_dir: str | Path, matrix_names: set[str] | None = None) -> 
         "shapes": merged_shapes,
         "merged": True,
     }
-    write_json(run_path / "merged.json", merged)
+    if write_artifact:
+        write_json(run_path / "merged.json", merged)
     return merged
 
 

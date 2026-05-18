@@ -249,6 +249,33 @@ O melhor SAINT (`budget=4096`) venceu o melhor LoRA em validation loss e o ganho
 medio por parametro foi maior. A ressalva e que o pico CUDA do caminho SAINT
 continua aproximadamente 2.2x maior que LoRA.
 
+### Teste com Learning Rate 0.005
+
+O mesmo grid foi repetido com `--saint-lrs 0.005` e `--lora-lrs 0.005`.
+
+Resultado:
+
+```text
+SAINT: mean val loss 6.562497, best 6.140045, mean gain/param 0.00049000
+LoRA:  mean val loss 6.664005, best 6.563403, mean gain/param 0.00004904
+```
+
+Curva:
+
+| metodo | config | count | mean val loss | best val loss | mean gain/param | mean CUDA GB |
+|---|---:|---:|---:|---:|---:|---:|
+| SAINT | budget 256 | 3 | 6.743636 | 6.743636 | 0.00085865 | 2.263 |
+| SAINT | budget 1024 | 3 | 6.803809 | 6.803809 | 0.00024298 | 2.262 |
+| SAINT | budget 4096 | 3 | 6.140045 | 6.140045 | 0.00036838 | 2.262 |
+| LoRA | rank 2 | 3 | 6.642759 | 6.563403 | 0.00007042 | 1.018 |
+| LoRA | rank 4 | 3 | 6.685251 | 6.633552 | 0.00002766 | 1.018 |
+
+Decisao automatica:
+
+```text
+fase_13_can_close_with_caveat
+```
+
 ## Proximo Marco
 
 Marco 4 deve reduzir overhead de memoria antes do 3B:
@@ -260,3 +287,60 @@ Marco 4 deve reduzir overhead de memoria antes do 3B:
 - repetir GPT-2 small com `budget=4096` e steps maiores;
 - so iniciar 3B se o pico CUDA cair para perto de LoRA ou se houver margem clara
   na RTX 4090.
+
+## Marco 4 - Diagnostico de Memoria CUDA
+
+Status: **concluido com ressalvas**.
+
+### Mudancas
+
+- `functional_call` agora recebe apenas parametros alterados, em vez de um
+  dicionario completo de parametros;
+- o payload base do checkpoint SAINT guarda apenas matrizes alvo por padrao;
+- benchmarks de validacao chamam `merge_runtime(..., write_artifact=False)`;
+- `merge_runtime` ganhou opcao `write_artifact`;
+- as metricas separam `routing_cuda_peak_bytes` e `train_cuda_peak_bytes`.
+
+### Resultado
+
+Com o mesmo grid `lr=0.005`, a qualidade permaneceu igual:
+
+```text
+SAINT: mean val loss 6.562497, best 6.140045, mean gain/param 0.00049000
+LoRA:  mean val loss 6.664005, best 6.563403, mean gain/param 0.00004904
+```
+
+Memoria por etapa em um run SAINT:
+
+```text
+load_cuda_peak_bytes: 508782592
+routing_cuda_peak_bytes: 2263763456
+train_cuda_peak_bytes: 633309184
+checkpoint_file_bytes: 19342
+merge_cuda_peak_bytes: 18087936
+```
+
+Comparacao com Marco 3:
+
+```text
+checkpoint/artifact caiu de ~527 KB para ~19 KB
+train isolado ficou em ~0.64 GB
+pico total ainda e dominado pelo roteamento por gradiente: ~2.26 GB
+```
+
+### Veredito
+
+SAINT esta competitivo em qualidade no GPT-2 small, mas o roteamento por
+gradiente precisa ficar mais barato antes de um salto confiante para 3B.
+
+## Proximo Marco
+
+Marco 5 deve reduzir memoria do roteamento:
+
+- calcular gradiente apenas por matriz alvo, uma matriz por vez;
+- limpar cache entre matrizes alvo;
+- escolher top-k global a partir de scores em CPU;
+- testar `torch.no_grad()`/descarte agressivo para tensors intermediarios;
+- comparar roteamento por gradiente completo contra roteamento aproximado mais
+  barato;
+- repetir `budget=4096`, `lr=0.005` antes de decidir ponte 3B.

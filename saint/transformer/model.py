@@ -106,7 +106,10 @@ def make_mini_transformer_task(
 def combine_weights(base: MatrixDict, deltas: MatrixDict | None = None) -> MatrixDict:
     if deltas is None:
         return {name: copy_matrix(matrix) for name, matrix in base.items()}
-    return {name: add(matrix, deltas[name]) for name, matrix in base.items()}
+    return {
+        name: add(matrix, deltas.get(name, zeros(*shape(matrix))))
+        for name, matrix in base.items()
+    }
 
 
 def zero_deltas(weights: MatrixDict) -> MatrixDict:

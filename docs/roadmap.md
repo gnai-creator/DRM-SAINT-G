@@ -29,7 +29,7 @@ recomposicao final
 ```text
 Fase atual: Fase 14 - Escala 3B
 Fase anterior: Fase 13 concluida com ressalvas
-Proximo marco: Fase 14 Marco 4 - Reduzir Overhead CUDA do SAINT
+Proximo marco: Fase 14 Marco 5 - Reduzir Memoria do Roteamento
 ```
 
 Resumo do estado:
@@ -1946,9 +1946,22 @@ SAINT ficou competitivo em qualidade, mas ainda nao em memoria.
 O melhor SAINT venceu o melhor LoRA em validation loss, mas o pico CUDA
 continuou aproximadamente 2.2x maior que LoRA.
 
+Teste adicional com `--saint-lrs 0.005` e `--lora-lrs 0.005`:
+
+```text
+SAINT: mean val loss 6.562497, best 6.140045, mean gain/param 0.00049000
+LoRA:  mean val loss 6.664005, best 6.563403, mean gain/param 0.00004904
+```
+
+Decisao automatica:
+
+```text
+fase_13_can_close_with_caveat
+```
+
 ### Marco 4 - Reduzir Overhead CUDA do SAINT
 
-Status: **pendente**.
+Status: **concluido com ressalvas**.
 
 Objetivo:
 
@@ -1964,6 +1977,50 @@ Entregas:
 - reduzir matrizes carregadas no payload base para apenas alvos treinaveis;
 - repetir GPT-2 small com `budget=4096` e steps maiores;
 - decidir se a RTX 4090 tem margem suficiente para ponte 3B.
+
+Resultado:
+
+```text
+SAINT: mean val loss 6.562497, best 6.140045, mean gain/param 0.00049000
+LoRA:  mean val loss 6.664005, best 6.563403, mean gain/param 0.00004904
+```
+
+Memoria por etapa em um run SAINT:
+
+```text
+load_cuda_peak_bytes: 508782592
+routing_cuda_peak_bytes: 2263763456
+train_cuda_peak_bytes: 633309184
+checkpoint_file_bytes: 19342
+merge_cuda_peak_bytes: 18087936
+```
+
+Veredito:
+
+```text
+SAINT venceu em qualidade e reduziu artifact/checkpoint de benchmark,
+mas o pico CUDA ainda e dominado pelo roteamento por gradiente.
+```
+
+### Marco 5 - Reduzir Memoria do Roteamento
+
+Status: **pendente**.
+
+Objetivo:
+
+```text
+calcular sensibilidade por gradiente sem materializar custo alto de todas as
+matrizes alvo ao mesmo tempo.
+```
+
+Entregas:
+
+- calcular gradiente uma matriz alvo por vez;
+- mover scores para CPU antes do top-k global;
+- limpar cache CUDA entre matrizes;
+- comparar roteamento completo contra roteamento aproximado barato;
+- repetir GPT-2 small com `budget=4096`, `lr=0.005`;
+- decidir se a ponte 3B pode iniciar.
 
 ## Fase 15 - Escala 14B
 

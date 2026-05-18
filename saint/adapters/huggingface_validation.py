@@ -169,7 +169,11 @@ def _saint_validation_row(
     target_matrices = set(result["metadata"].get("target_matrices", [])) or None
     merged, merge_cuda_peak = _cuda_peak_for(
         result["metadata"]["device"],
-        lambda: merge_runtime(run_dir, matrix_names=target_matrices),
+        lambda: merge_runtime(
+            run_dir,
+            matrix_names=target_matrices,
+            write_artifact=False,
+        ),
     )
     merged_eval = _evaluate_merged(
         model_path,
@@ -183,6 +187,7 @@ def _saint_validation_row(
     artifact_bytes = _artifact_bytes(run_dir)
     stage_memory = {
         "load_cuda_peak_bytes": result["metadata"].get("load_cuda_peak_bytes", 0),
+        "routing_cuda_peak_bytes": result["metadata"].get("routing_cuda_peak_bytes", 0),
         "train_cuda_peak_bytes": result["metadata"].get("train_cuda_peak_bytes", 0),
         "checkpoint_file_bytes": artifact_bytes,
         "merge_cuda_peak_bytes": merge_cuda_peak,
@@ -205,6 +210,7 @@ def _saint_validation_row(
         "tokens_per_s": result["metadata"]["tokens_per_s"],
         "cuda_peak_bytes": result["metadata"]["cuda_peak_bytes"],
         "load_cuda_peak_bytes": stage_memory["load_cuda_peak_bytes"],
+        "routing_cuda_peak_bytes": stage_memory["routing_cuda_peak_bytes"],
         "train_cuda_peak_bytes": stage_memory["train_cuda_peak_bytes"],
         "checkpoint_file_bytes": stage_memory["checkpoint_file_bytes"],
         "merge_cuda_peak_bytes": stage_memory["merge_cuda_peak_bytes"],

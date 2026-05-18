@@ -114,6 +114,7 @@ def _gradient_scores(torch, functional_call, model, names, input_ids, attention_
     params = {
         name: param.detach().requires_grad_(name in names)
         for name, param in model.named_parameters()
+        if name in names
     }
     loss = _loss(functional_call, model, params, input_ids, attention_mask)
     grads = torch.autograd.grad(loss, [params[name] for name in names], allow_unused=True)
@@ -160,9 +161,10 @@ def _dense_delta(torch, param, values, coordinates):
 
 def _merged_params(torch, model, deltas, coordinates):
     params = dict(model.named_parameters())
+    updated = {}
     for name, delta in deltas.items():
-        params[name] = params[name] + _dense_delta(torch, params[name], delta, coordinates[name])
-    return params
+        updated[name] = params[name] + _dense_delta(torch, params[name], delta, coordinates[name])
+    return updated
 
 
 def _loss(functional_call, model, params, input_ids, attention_mask):
@@ -254,7 +256,11 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
         device=device,
     )
     names = _target_names(model, metadata)
+    if bool(metadata.get("payload_target_only", True)):
+        base_weights = {name: base_weights[name] for name in names if name in base_weights}
     routing_method = str(metadata.get("routing_method", "gradient"))
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
     deltas, coordinates = _build_deltas(
         torch,
         functional_call,
@@ -265,10 +271,17 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
         attention_mask=attention_mask,
         routing_method=routing_method,
     )
+    routing_cuda_peak = (
+        int(torch.cuda.max_memory_allocated(device))
+        if device.type == "cuda"
+        else 0
+    )
     optimizer = torch.optim.AdamW(list(deltas.values()), lr=float(metadata.get("learning_rate", 1e-3)))
     initial_loss = _loss_value(functional_call, model, _merged_params(torch, model, deltas, coordinates), input_ids, attention_mask)
     steps = max(1, int(config.steps))
     train_start = perf_counter()
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
     for _ in range(steps):
         optimizer.zero_grad()
         for batch_ids, batch_mask in train_batches:
@@ -318,6 +331,7 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
             "batch_count": len(train_batches),
             "cuda_peak_bytes": cuda_peak,
             "load_cuda_peak_bytes": load_cuda_peak,
+            "routing_cuda_peak_bytes": routing_cuda_peak,
             "train_cuda_peak_bytes": train_cuda_peak,
             "delta_payload_format": "saint_sparse_delta",
             "routing_method": routing_method,
