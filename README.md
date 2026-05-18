@@ -1,2 +1,2 @@
-# SAIT
-SAIT - Simple AI Training
+# SAINT
+SAINT - Simple AI Node Training
