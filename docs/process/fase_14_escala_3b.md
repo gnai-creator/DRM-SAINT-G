@@ -606,14 +606,108 @@ Mas SAINT ainda nao esta competitivo contra LoRA rank 1 em qualidade e pico CUDA
 neste regime. A proxima etapa deve reduzir overhead de memoria e melhorar o
 ganho por parametro antes de declarar a Fase 14 concluida.
 
+## Marco 8 - Otimizacao SAINT 3B contra LoRA
+
+Status: **concluido com ressalva**.
+
+### Mudancas
+
+- o caminho `hf_saint_forward_smoke` deixou de materializar recortes densos via
+  `matrices_from_state` durante o treino real;
+- o payload `saint_sparse_delta` agora salva shapes completos e coordenadas
+  reais dos tensores alvo;
+- checkpoints esparsos podem ser validados sem expandir para matriz densa;
+- benchmarks HF leem e aplicam deltas esparsos diretamente por coordenada;
+- `merge_runtime` continua compativel com deltas esparsos, recortando para o
+  shape base quando necessario;
+- `bfloat16` foi adotado como dtype operacional para os testes 3B.
+
+### Grid Activation
+
+Configuracao:
+
+```text
+model: Qwen/Qwen2.5-3B
+dtype: bfloat16
+seeds: 31, 32
+budgets SAINT: 8192, 16384
+LoRA ranks: 1, 2
+steps: 1
+batch_size: 1
+routing_method: activation
+routing_max_length: 8
+routing_batch_size: 1
+max_cuda_gb: 22
+```
+
+Agregado:
+
+| metodo | count | mean val loss | best val loss | mean gain/param |
+|---|---:|---:|---:|---:|
+| SAINT activation | 4 | 7.657179 | 7.656769 | 0.00000225 |
+| LoRA rank 1/2 | 4 | 7.671440 | 7.661643 | 0.00000430 |
+
+Por linha:
+
+| metodo | seed | budget/rank | val loss | params | peak CUDA GB | merge CUDA GB |
+|---|---:|---:|---:|---:|---:|---:|
+| SAINT activation | 31 | 8192 | 7.657590 | 8192 | 11.827 | 8.094 |
+| SAINT activation | 31 | 16384 | 7.656769 | 16384 | 11.827 | 8.094 |
+| LoRA | 31 | rank 1 | 7.664804 | 6400 | 7.630 | n/a |
+| LoRA | 31 | rank 2 | 7.661643 | 12800 | 7.630 | n/a |
+| SAINT activation | 32 | 8192 | 7.657590 | 8192 | 11.827 | 8.094 |
+| SAINT activation | 32 | 16384 | 7.656769 | 16384 | 11.827 | 8.094 |
+| LoRA | 32 | rank 1 | 7.678699 | 6400 | 7.630 | n/a |
+| LoRA | 32 | rank 2 | 7.680615 | 12800 | 7.630 | n/a |
+
+### Controle Gradient Sequential Subset
+
+Configuracao:
+
+```text
+seed: 31
+budgets: 8192, 16384
+routing_method: gradient_sequential
+routing_max_length: 8
+routing_batch_size: 1
+dtype: bfloat16
+max_cuda_gb: 22
+```
+
+Resultado:
+
+| metodo | budget | val loss | params | load CUDA GB | routing CUDA GB | train CUDA GB | merge CUDA GB |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| gradient_sequential | 8192 | 7.460260 | 8192 | 5.863 | 5.956 | 5.969 | 8.084 |
+| gradient_sequential | 16384 | 7.448014 | 16384 | 5.870 | 5.956 | 5.970 | 8.084 |
+
+O `gradient_sequential` subset melhorou qualidade sem estourar o limite de
+22 GB. Ele venceu tanto o melhor SAINT activation quanto o melhor LoRA rank 2
+neste smoke.
+
+### Veredito
+
+```text
+Fase 14 Marco 8 passou, mas Fase 14 ainda nao fecha.
+```
+
+Motivo:
+
+- SAINT voltou a vencer LoRA em validation loss no grid activation;
+- `gradient_sequential` subset deu o melhor resultado do marco;
+- o delta esparso agora nao depende mais de recorte denso para ser salvo/aplicado;
+- o pico do forward funcional SAINT ainda fica maior que LoRA;
+- o merge/eval ainda carrega o modelo para avaliar o delta aplicado, gerando pico
+  CUDA relevante.
+
 ## Proximo Marco
 
-Marco 8 deve otimizar SAINT 3B contra LoRA:
+Marco 9 deve reduzir o pico do forward funcional:
 
-- evitar picos duplicados de memoria no caminho funcional;
-- eliminar segunda materializacao de parametros quando possivel;
-- salvar/aplicar deltas esparsos por coordenada sem depender do recorte denso;
-- testar `budget=8192` e `budget=16384` com o mesmo limite CUDA;
-- testar `bfloat16` como dtype padrao para 3B;
-- comparar contra LoRA rank 1 e 2 com seeds adicionais;
-- medir se `gradient_sequential` subset melhora qualidade sem estourar budget.
+- evitar criar `zeros_like` completo para cada delta esparso durante cada loss;
+- testar aplicacao temporaria in-place do delta antes do forward e rollback
+  depois do backward;
+- comparar caminho funcional atual contra caminho in-place controlado;
+- medir memoria de merge/eval separada de load;
+- repetir `gradient_sequential` subset com seeds 31, 32 e 33;
+- decidir se Fase 14 fecha com `gradient_sequential` subset como baseline 3B.

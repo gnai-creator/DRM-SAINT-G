@@ -29,7 +29,7 @@ recomposicao final
 ```text
 Fase atual: Fase 14 - Escala 3B
 Fase anterior: Fase 13 concluida com ressalvas
-Proximo marco: Fase 14 Marco 8 - Otimizacao SAINT 3B contra LoRA
+Proximo marco: Fase 14 Marco 9 - Reducao do Pico Funcional
 ```
 
 Resumo do estado:
@@ -2150,13 +2150,52 @@ Motivo:
 - LoRA rank 1 ainda vence em qualidade e pico CUDA neste microteste;
 - o proximo marco precisa reduzir overhead e melhorar ganho por parametro.
 
+### Marco 8 - Otimizacao SAINT 3B contra LoRA
+
+Status: **concluido com ressalva**.
+
+Mudancas:
+
+- treino HF deixou de materializar recortes densos de pesos para checkpoint;
+- `saint_sparse_delta` salva coordenadas reais e shapes completos;
+- validacao de checkpoint esparso nao expande payload para matriz densa;
+- benchmarks HF aplicam deltas por coordenada;
+- `bfloat16` passou a ser o dtype operacional para 3B.
+
+Grid activation:
+
+| metodo | count | mean val loss | best val loss | mean gain/param |
+|---|---:|---:|---:|---:|
+| SAINT activation | 4 | 7.657179 | 7.656769 | 0.00000225 |
+| LoRA rank 1/2 | 4 | 7.671440 | 7.661643 | 0.00000430 |
+
+Controle `gradient_sequential` subset:
+
+| metodo | budget | val loss | params | routing CUDA GB | train CUDA GB | merge CUDA GB |
+|---|---:|---:|---:|---:|---:|---:|
+| gradient_sequential | 8192 | 7.460260 | 8192 | 5.956 | 5.969 | 8.084 |
+| gradient_sequential | 16384 | 7.448014 | 16384 | 5.956 | 5.970 | 8.084 |
+
+Veredito:
+
+```text
+Fase 14 Marco 8 passou, mas Fase 14 ainda nao fecha.
+```
+
+Motivo:
+
+- SAINT activation venceu LoRA em validation loss media e melhor loss;
+- `gradient_sequential` subset foi muito melhor que activation e LoRA;
+- o pico do forward funcional SAINT ainda fica maior que LoRA.
+
 Proximo marco:
 
-- evitar picos duplicados no caminho funcional;
-- salvar/aplicar deltas esparsos por coordenada sem recorte denso;
-- testar budgets 8192 e 16384;
-- comparar contra LoRA rank 1/2 com seeds adicionais;
-- testar `gradient_sequential` subset como controle de qualidade.
+- evitar `zeros_like` completo por delta durante cada loss;
+- testar aplicacao temporaria in-place do delta e rollback;
+- comparar caminho funcional atual contra caminho in-place controlado;
+- medir memoria de merge/eval separada de load;
+- repetir `gradient_sequential` subset com seeds 31, 32 e 33;
+- decidir se Fase 14 fecha com `gradient_sequential` subset como baseline 3B.
 
 ## Fase 15 - Escala 14B
 

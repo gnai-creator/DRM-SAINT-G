@@ -11,6 +11,7 @@ from saint.checkpoints import (
     read_json,
     require_delta_payload,
     require_optimizer_state,
+    require_sparse_delta_payload,
     validate_checkpoint_bundle,
     write_checkpoint_bundle,
     write_json,
@@ -39,6 +40,21 @@ def _select_weights(weights: dict, matrix_names: set[str] | None) -> dict:
     if missing:
         raise ValueError(f"unknown matrices requested for merge: {missing}")
     return {name: weights[name] for name in weights if name in matrix_names}
+
+
+def _sparse_delta_for_base(base_weights: dict, sparse_payload: dict) -> dict:
+    deltas = {}
+    for name, matrix in base_weights.items():
+        rows = len(matrix)
+        cols = len(matrix[0]) if rows else 0
+        delta = [[0.0 for _ in range(cols)] for _ in range(rows)]
+        for row, col, value in sparse_payload.get("values", {}).get(name, []):
+            row_index = int(row)
+            col_index = int(col)
+            if row_index < rows and col_index < cols:
+                delta[row_index][col_index] = float(value)
+        deltas[name] = delta
+    return deltas
 
 
 def inspect_runtime(config: RuntimeConfig) -> dict:
@@ -98,11 +114,19 @@ def merge_runtime(
     config = load_config(run_path / "config.json")
     task = make_task(config)
     base_weights = _select_weights(task.base_weights, matrix_names)
-    delta_payload = require_delta_payload(
-        checkpoint,
-        run_path,
-        matrix_names=set(base_weights),
-    )
+    try:
+        sparse_payload = require_sparse_delta_payload(
+            checkpoint,
+            run_path,
+            matrix_names=set(base_weights),
+        )
+        delta_payload = _sparse_delta_for_base(base_weights, sparse_payload)
+    except ValueError:
+        delta_payload = require_delta_payload(
+            checkpoint,
+            run_path,
+            matrix_names=set(base_weights),
+        )
     merged_weights = combine_weights(base_weights, delta_payload)
     base_shapes = _shape_summary(base_weights)
     merged_shapes = _shape_summary(merged_weights)

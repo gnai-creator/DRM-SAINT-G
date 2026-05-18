@@ -16,6 +16,7 @@ from saint.adapters.huggingface_benchmark import (
     _model_dtype,
     _require_deps,
 )
+from saint.checkpoints import require_sparse_delta_payload, validate_checkpoint_bundle
 from saint.config import RuntimeConfig
 
 
@@ -55,6 +56,7 @@ def _generate(
     prompt: str,
     device_name: str,
     merged_weights: dict[str, list[list[float]]] | None = None,
+    merged_delta_payload: dict[str, Any] | None = None,
     model_dtype: str | None = None,
 ) -> str:
     torch, _, AutoModelForCausalLM, AutoTokenizer = _require_deps()
@@ -78,6 +80,8 @@ def _generate(
                 rows = min(tensor.shape[0], values.shape[0])
                 cols = min(tensor.shape[1], values.shape[1])
                 tensor[:rows, :cols].copy_(values[:rows, :cols])
+    if merged_delta_payload is not None:
+        _apply_sparse_delta(torch, model.state_dict(), merged_delta_payload, device)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token or tokenizer.unk_token
     encoded = tokenizer(prompt, return_tensors="pt").to(device)
@@ -128,6 +132,51 @@ def _evaluate_merged(
     return {"merged_validation_loss": loss, "merged_perplexity": exp(min(loss, 20.0))}
 
 
+def _apply_sparse_delta(torch, state: dict[str, Any], payload: dict[str, Any], device) -> None:
+    with torch.no_grad():
+        for name, entries in payload.get("values", {}).items():
+            if name not in state:
+                continue
+            tensor = state[name]
+            for row, col, value in entries:
+                tensor[int(row), int(col)].add_(
+                    torch.tensor(float(value), dtype=tensor.dtype, device=device)
+                )
+
+
+def _evaluate_sparse_delta(
+    model_path: str | Path,
+    payload: dict[str, Any],
+    *,
+    validation_texts: list[str],
+    device_name: str,
+    max_length: int,
+    model_dtype: str | None = None,
+) -> dict[str, float]:
+    torch, _, AutoModelForCausalLM, AutoTokenizer = _require_deps()
+    device = torch.device(device_name)
+    load_kwargs = {"local_files_only": True}
+    dtype = _model_dtype(torch, model_dtype)
+    if dtype is not None:
+        load_kwargs["dtype"] = dtype
+    model = AutoModelForCausalLM.from_pretrained(str(model_path), **load_kwargs).to(device)
+    tokenizer = AutoTokenizer.from_pretrained(str(model_path), local_files_only=True)
+    _apply_sparse_delta(torch, model.state_dict(), payload, device)
+    input_ids, attention_mask = _batch(
+        tokenizer,
+        device,
+        max_length=max_length,
+        texts=validation_texts,
+    )
+    loss = float(_loss(model, input_ids, attention_mask).detach().cpu().item())
+    return {"merged_validation_loss": loss, "merged_perplexity": exp(min(loss, 20.0))}
+
+
+def _sparse_payload_from_run(run_dir: Path, matrix_names: set[str] | None):
+    checkpoint = validate_checkpoint_bundle(run_dir)
+    return require_sparse_delta_payload(checkpoint, run_dir, matrix_names=matrix_names)
+
+
 def _saint_validation_row(
     model_path: str | Path,
     root: Path,
@@ -148,7 +197,7 @@ def _saint_validation_row(
     model_dtype: str | None = None,
     max_cuda_gb: float | None = None,
 ) -> dict[str, Any]:
-    from saint.runtime import merge_runtime, resume_runtime, train_runtime
+    from saint.runtime import resume_runtime, train_runtime
 
     run_dir = root / f"saint_budget_{budget}_seed_{seed}"
     config = RuntimeConfig(
@@ -180,21 +229,17 @@ def _saint_validation_row(
     result = train_runtime(config)
     resumed = resume_runtime(run_dir)
     target_matrices = set(result["metadata"].get("target_matrices", [])) or None
-    merged, merge_cuda_peak = _cuda_peak_for(
+    sparse_payload = _sparse_payload_from_run(run_dir, target_matrices)
+    merged_eval, merge_cuda_peak = _cuda_peak_for(
         result["metadata"]["device"],
-        lambda: merge_runtime(
-            run_dir,
-            matrix_names=target_matrices,
-            write_artifact=False,
+        lambda: _evaluate_sparse_delta(
+            model_path,
+            sparse_payload,
+            validation_texts=validation_texts,
+            device_name=result["metadata"]["device"],
+            max_length=max_length,
+            model_dtype=model_dtype,
         ),
-    )
-    merged_eval = _evaluate_merged(
-        model_path,
-        merged["merged_weights"],
-        validation_texts=validation_texts,
-        device_name=result["metadata"]["device"],
-        max_length=max_length,
-        model_dtype=model_dtype,
     )
     initial = result["metadata"]["initial_loss"]
     final = result["train_loss"]
@@ -232,7 +277,7 @@ def _saint_validation_row(
         "delta_payload_format": result["metadata"].get("delta_payload_format"),
         "resume_quality_delta": abs(resumed["train_loss"] - final),
         "device": result["metadata"]["device"],
-        "merged_weights": merged["merged_weights"],
+        "merged_delta_payload": sparse_payload,
     }
 
 
@@ -324,7 +369,7 @@ def run_hf_phase13_validation(
     )
     full.update({"method": "full", "budget": None, "rank": None, "artifact_bytes": 0})
     rows.append(full)
-    saint_weights = rows[0].pop("merged_weights")
+    saint_delta = rows[0].pop("merged_delta_payload")
     generation = {
         "prompt": "SAINT",
         "base": _generate(
@@ -336,7 +381,7 @@ def run_hf_phase13_validation(
             model_path,
             prompt="SAINT",
             device_name=rows[0].get("device", device),
-            merged_weights=saint_weights,
+            merged_delta_payload=saint_delta,
         ),
     }
     result = {

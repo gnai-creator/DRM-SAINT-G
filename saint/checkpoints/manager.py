@@ -57,6 +57,45 @@ def _expand_sparse_delta(
     return matrices
 
 
+def _validate_sparse_delta(payload: dict[str, Any]) -> None:
+    shapes = payload.get("shapes", {})
+    values = payload.get("values", {})
+    for name, shape in shapes.items():
+        rows, cols = int(shape[0]), int(shape[1])
+        for row, col, _value in values.get(name, []):
+            if not (0 <= int(row) < rows and 0 <= int(col) < cols):
+                raise ValueError(f"sparse delta index out of bounds: {name}")
+
+
+def require_sparse_delta_payload(
+    checkpoint: dict[str, Any],
+    run_dir: str | Path,
+    *,
+    matrix_names: set[str] | None = None,
+) -> dict[str, Any]:
+    entry = _file_entry(checkpoint, "delta")
+    if entry is None or entry.get("format") != "saint_sparse_delta_json":
+        raise ValueError("checkpoint does not contain a sparse delta payload")
+    payload = read_json(Path(run_dir) / entry["path"])
+    _validate_sparse_delta(payload)
+    if matrix_names is None:
+        return payload
+    names = set(matrix_names)
+    return {
+        **payload,
+        "shapes": {
+            name: shape
+            for name, shape in payload.get("shapes", {}).items()
+            if name in names
+        },
+        "values": {
+            name: values
+            for name, values in payload.get("values", {}).items()
+            if name in names
+        },
+    }
+
+
 def read_json(path: str | Path) -> dict[str, Any]:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(data, dict):
@@ -196,7 +235,11 @@ def validate_checkpoint_bundle(
                     f"checkpoint file checksum mismatch: {file_entry['path']}"
                 )
     if validate_payloads and checkpoint.get("has_delta_payload"):
-        require_delta_payload(checkpoint, run_path)
+        entry = _file_entry(checkpoint, "delta")
+        if entry is not None and entry.get("format") == "saint_sparse_delta_json":
+            require_sparse_delta_payload(checkpoint, run_path)
+        else:
+            require_delta_payload(checkpoint, run_path)
     if validate_payloads:
         require_optimizer_state(checkpoint, run_path)
     return checkpoint
@@ -233,6 +276,7 @@ __all__ = [
     "read_json",
     "require_delta_payload",
     "require_optimizer_state",
+    "require_sparse_delta_payload",
     "validate_checkpoint_bundle",
     "write_checkpoint_bundle",
     "write_json",

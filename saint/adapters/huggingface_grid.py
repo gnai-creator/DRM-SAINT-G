@@ -21,7 +21,7 @@ from saint.adapters.huggingface_validation import (
     load_text_corpus,
     split_texts,
 )
-from saint.checkpoints import require_delta_payload, validate_checkpoint_bundle
+from saint.checkpoints import require_sparse_delta_payload, validate_checkpoint_bundle
 
 
 def _label(value: float) -> str:
@@ -58,18 +58,17 @@ def _base_validation(
 
 def _write_saint_delta_only(run_dir: Path, out_path: Path) -> dict[str, Any]:
     checkpoint = validate_checkpoint_bundle(run_dir)
-    payload = require_delta_payload(checkpoint, run_dir)
+    payload = require_sparse_delta_payload(checkpoint, run_dir)
     sparse: dict[str, list[list[float]]] = {}
     value_count = 0
-    for name, matrix in payload.items():
-        entries = []
-        for row_index, row in enumerate(matrix):
-            for col_index, value in enumerate(row):
-                if abs(float(value)) > 0.0:
-                    entries.append([row_index, col_index, float(value)])
-        if entries:
-            sparse[name] = entries
-            value_count += len(entries)
+    for name, entries in payload.get("values", {}).items():
+        kept = []
+        for row_index, col_index, value in entries:
+            if abs(float(value)) > 0.0:
+                kept.append([int(row_index), int(col_index), float(value)])
+        if kept:
+            sparse[name] = kept
+            value_count += len(kept)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(dumps({"format": "saint_sparse_delta", "values": sparse}), encoding="utf-8")
     return {"delta_only_bytes": out_path.stat().st_size, "delta_only_values": value_count}
@@ -165,7 +164,7 @@ def run_hf_phase13_grid(
                 model_dtype=model_dtype,
                 max_cuda_gb=max_cuda_gb,
             )
-            weights = row.pop("merged_weights")
+            delta_payload = row.pop("merged_delta_payload")
             run_path = combo / f"saint_budget_{budget}_seed_{seed}"
             row.update(_write_saint_delta_only(run_path, combo / "saint_delta_only.json"))
             row["learning_rate"] = lr
@@ -185,7 +184,7 @@ def run_hf_phase13_grid(
                             model_path,
                             prompt=prompt,
                             device_name=device_name,
-                            merged_weights=weights,
+                            merged_delta_payload=delta_payload,
                             model_dtype=model_dtype,
                         ),
                     }

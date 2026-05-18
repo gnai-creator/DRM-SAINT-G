@@ -140,17 +140,17 @@ def _loss_value(functional_call, model, params, input_ids, attention_mask) -> fl
     )
 
 
-def _delta_payload(deltas, coordinates, base_weights) -> dict[str, Any]:
+def _target_shapes(model, names: list[str]) -> dict[str, list[int]]:
+    params = dict(model.named_parameters())
+    return {name: [int(params[name].shape[0]), int(params[name].shape[1])] for name in names}
+
+
+def _delta_payload(deltas, coordinates, shapes: dict[str, list[int]]) -> dict[str, Any]:
     sparse = {}
-    shapes = {
-        name: [len(matrix), len(matrix[0]) if matrix else 0]
-        for name, matrix in base_weights.items()
-    }
     for name, delta in deltas.items():
-        if name not in base_weights:
+        if name not in shapes:
             continue
-        rows = len(base_weights[name])
-        cols = len(base_weights[name][0]) if rows else 0
+        rows, cols = int(shapes[name][0]), int(shapes[name][1])
         entries = []
         row_indices, col_indices = coordinates[name]
         for row, col, value in zip(
@@ -188,11 +188,6 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
         else 0
     )
     _check_cuda_budget(torch, device, metadata, "load")
-    from saint.adapters.huggingface import matrices_from_state
-
-    base_weights = matrices_from_state(dict(model.state_dict()), metadata)
-    if not base_weights:
-        raise ValueError("no matching 2D Hugging Face matrices found")
     model.eval()
     for param in model.parameters():
         param.requires_grad_(False)
@@ -226,8 +221,9 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
         device=device,
     )
     names = _target_names(model, metadata)
-    if bool(metadata.get("payload_target_only", True)):
-        base_weights = {name: base_weights[name] for name in names if name in base_weights}
+    if not names:
+        raise ValueError("no matching 2D Hugging Face matrices found")
+    target_shapes = _target_shapes(model, names)
     routing_method = str(metadata.get("routing_method", "gradient"))
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
@@ -241,10 +237,6 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
         attention_mask=routing_mask,
         routing_method=routing_method,
         loss_fn=_loss,
-        score_limits={
-            name: (len(matrix), len(matrix[0]) if matrix else 0)
-            for name, matrix in base_weights.items()
-        },
     )
     routing_cuda_peak = (
         int(torch.cuda.max_memory_allocated(device))
@@ -294,7 +286,7 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
         optimizer_state_values=parameter_count * 2,
         elapsed_s=perf_counter() - start,
         metadata={
-            "delta_payload": _delta_payload(deltas, coordinates, base_weights),
+            "delta_payload": _delta_payload(deltas, coordinates, target_shapes),
             "adapter": "huggingface_causal_lm",
             "autograd": True,
             "real_forward": True,
