@@ -29,7 +29,7 @@ recomposicao final
 ```text
 Fase atual: Fase 13 - Modelos Hugging Face Pequenos
 Fase anterior: Fase 12 concluida
-Proximo marco: Fase 13 Marco 6 - Sweep HF Real Local
+Proximo marco: Fase 13 Marco 7 - Dataset Externo e Validacao
 ```
 
 Resumo do estado:
@@ -1616,16 +1616,51 @@ full: params 4064, loss 3.435688 -> 3.386605, ganho/param 0.00001208
 resume_quality_delta SAINT: 0.0
 ```
 
+### Marco 6 - Sweep HF Real Local
+
+Status: **concluido**.
+
+Entregas:
+
+- modulo `saint/adapters/huggingface_sweep.py`;
+- script `scripts/benchmark_huggingface_phase13.py`;
+- sweep SAINT com budgets `4`, `8` e `16`;
+- sweep LoRA com ranks `1`, `2`, `4` e `8`;
+- resultado salvo em `results.json` e `results.md`;
+- perplexity inicial, final e apos merge;
+- memoria CUDA em run de 6 steps;
+- execucao em `sshleifer/tiny-gpt2` salvo localmente.
+
+Resultado CUDA:
+
+| metodo | budget | rank | params | loss final | ppl merge | ganho/param | pico CUDA |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| SAINT | 4 |  | 4 | 10.824375 | 49923.772119 | 0.00000119 | 31205888 |
+| SAINT | 8 |  | 8 | 10.824288 | 49919.201671 | 0.00001144 | 31205888 |
+| SAINT | 16 |  | 12 | 10.824239 | 49916.583373 | 0.00001176 | 31205888 |
+| LoRA |  | 1 | 12 | 10.818256 | 49923.962564 | 0.00000008 | 43878400 |
+| LoRA |  | 2 | 24 | 10.818254 | 49923.867341 | 0.00000012 | 43878400 |
+| LoRA |  | 4 | 48 | 10.818251 | 49923.676897 | 0.00000014 | 43878400 |
+| LoRA |  | 8 | 96 | 10.818245 | 49923.391233 | 0.00000013 | 43878400 |
+| full |  |  | 102714 | 10.806647 | 49347.742578 | 0.00000012 | 44737024 |
+
+Leitura:
+
+```text
+SAINT ainda perde em loss absoluta contra full fine-tuning,
+mas supera LoRA em ganho por parametro neste sweep curto e usa menos pico CUDA.
+```
+
 ### Proximo Marco
 
-Marco 6 - Sweep HF Real Local:
+Marco 7 - Dataset Externo e Validacao:
 
-- rodar benchmark em modelo pequeno real local;
-- comparar LoRA ranks `1`, `2`, `4` e `8`;
-- variar budgets SAINT;
-- salvar tabela de resultados em JSON/Markdown;
-- avaliar perplexity antes e depois do merge;
-- medir memoria CUDA em runs mais longas.
+- usar dataset textual externo pequeno;
+- separar treino e validacao;
+- acumular gradiente em mais batches;
+- testar learning rates diferentes para SAINT e LoRA;
+- salvar checkpoint SAINT e adaptador LoRA em formatos comparaveis;
+- medir qualidade de geracao curta antes e depois do merge.
 
 ## Fase 14 - Escala 3B
 

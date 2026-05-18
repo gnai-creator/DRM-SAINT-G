@@ -6,6 +6,7 @@ import importlib.util
 from saint.checkpoints import write_json
 from saint.config import RuntimeConfig
 from saint.adapters.huggingface_benchmark import benchmark_hf_saint_vs_full
+from saint.adapters.huggingface_sweep import run_hf_phase13_sweep
 from saint.runtime import inspect_runtime, merge_runtime, resume_runtime, train_runtime
 
 
@@ -265,6 +266,39 @@ class HuggingFacePhase13Tests(unittest.TestCase):
             self.assertTrue(all(row["tokens_per_s"] > 0.0 for row in rows))
             self.assertTrue(all("cuda_peak_bytes" in row for row in rows))
             self.assertTrue(all("gain_per_parameter" in row for row in rows))
+
+    def test_huggingface_phase13_sweep_writes_tables(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            model_dir = Path(tmp) / "tiny_model"
+            run_dir = Path(tmp) / "sweep"
+            if not _write_tiny_hf_model(model_dir):
+                self.skipTest("transformers is not installed")
+
+            result = run_hf_phase13_sweep(
+                model_dir,
+                run_dir,
+                seeds=(31,),
+                saint_budgets=(4, 8),
+                lora_ranks=(1, 2),
+                steps=1,
+                device="cpu",
+                max_length=12,
+            )
+            rows = result["rows"]
+            methods = {row["method"] for row in rows}
+
+            self.assertTrue((run_dir / "results.json").exists())
+            self.assertTrue((run_dir / "results.md").exists())
+            self.assertIn("hf_saint_forward_smoke", methods)
+            self.assertIn("hf_lora_rank_1", methods)
+            self.assertIn("hf_lora_rank_2", methods)
+            self.assertIn("hf_full_finetune", methods)
+            self.assertTrue(
+                all("gain_per_parameter" in row for row in rows)
+            )
+            self.assertTrue(
+                all("merged_perplexity" in row for row in rows)
+            )
 
 
 if __name__ == "__main__":

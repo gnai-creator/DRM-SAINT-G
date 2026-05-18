@@ -267,11 +267,82 @@ memoria e eficiencia por parametro.
 
 ## Proximo Marco
 
-Marco 6 deve tornar a comparacao mais realista:
+## Marco 6 - Sweep HF Real Local
 
-- rodar o benchmark em um modelo HF pequeno real local;
-- testar LoRA ranks `1`, `2`, `4` e `8`;
-- testar budgets SAINT diferentes;
-- salvar tabela de resultados em JSON/Markdown;
-- avaliar perplexity antes e depois do merge;
-- medir memoria CUDA em runs mais longas.
+Status: **concluido**.
+
+Este marco transforma a comparacao do Marco 5 em sweep reproduzivel.
+
+### Entregas
+
+- modulo `saint/adapters/huggingface_sweep.py`;
+- script `scripts/benchmark_huggingface_phase13.py`;
+- sweep de budgets SAINT;
+- sweep de LoRA ranks `1`, `2`, `4` e `8`;
+- exportacao de `results.json`;
+- exportacao de `results.md`;
+- medicao de perplexity inicial, de treino e apos merge;
+- medicao de memoria CUDA em runs mais longas;
+- execucao em modelo HF pequeno real local.
+
+### Modelo Local Real
+
+Foi usado:
+
+```text
+sshleifer/tiny-gpt2
+```
+
+O modelo foi baixado uma vez e salvo localmente em:
+
+```text
+models/sshleifer_tiny_gpt2
+```
+
+A pasta `models/` e ignorada pelo Git.
+
+### Comando
+
+```bash
+python scripts/benchmark_huggingface_phase13.py \
+  --model models/sshleifer_tiny_gpt2 \
+  --out runs/phase13_marco6_sweep \
+  --device cuda \
+  --steps 6 \
+  --saint-budgets 4,8,16 \
+  --lora-ranks 1,2,4,8
+```
+
+### Resultado CUDA
+
+| metodo | budget | rank | parametros | loss final | perplexity apos merge | ganho/param | tokens/s | pico CUDA |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| SAINT | 4 |  | 4 | 10.824375 | 49923.772119 | 0.00000119 | 2201.15 | 31205888 |
+| SAINT | 8 |  | 8 | 10.824288 | 49919.201671 | 0.00001144 | 5283.24 | 31205888 |
+| SAINT | 16 |  | 12 | 10.824239 | 49916.583373 | 0.00001176 | 5214.95 | 31205888 |
+| LoRA |  | 1 | 12 | 10.818256 | 49923.962564 | 0.00000008 | 9722.52 | 43878400 |
+| LoRA |  | 2 | 24 | 10.818254 | 49923.867341 | 0.00000012 | 7673.50 | 43878400 |
+| LoRA |  | 4 | 48 | 10.818251 | 49923.676897 | 0.00000014 | 9589.04 | 43878400 |
+| LoRA |  | 8 | 96 | 10.818245 | 49923.391233 | 0.00000013 | 10402.43 | 43878400 |
+| full |  |  | 102714 | 10.806647 | 49347.742578 | 0.00000012 | 8155.16 | 44737024 |
+
+### Leitura Tecnica
+
+- full fine-tuning ainda reduz mais loss absoluta;
+- LoRA reduz loss com mais throughput, mas usa mais parametros que SAINT nos
+  budgets testados;
+- SAINT teve melhor ganho por parametro que LoRA neste sweep curto;
+- SAINT usou menos pico CUDA que LoRA e full neste modelo;
+- a perplexity apos merge foi registrada para validar que o checkpoint
+  recomponivel continua avaliavel.
+
+## Proximo Marco
+
+Marco 7 deve aproximar a tarefa de um fine-tuning real:
+
+- usar dataset textual externo pequeno;
+- separar treino e validacao;
+- acumular gradiente em mais batches;
+- testar learning rates diferentes para SAINT e LoRA;
+- salvar checkpoint SAINT e adaptador LoRA em formatos comparaveis;
+- medir qualidade de geracao curta antes e depois do merge.
