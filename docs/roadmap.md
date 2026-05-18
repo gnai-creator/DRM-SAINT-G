@@ -27,9 +27,9 @@ recomposicao final
 ## Status Atual
 
 ```text
-Fase atual: Fase 15 - Escala 14B
-Fase anterior: Fase 14 concluida com ressalvas
-Proximo marco: Fase 15 Marco 8 - Roteamento de Validacao Barato
+Fase atual: Fase 16 - Escala 70B
+Fase anterior: Fase 15 concluida com ressalvas
+Proximo marco: Fase 16 Marco 1 - Smoke 70B com Phi Hadamard Rank 8
 ```
 
 Resumo do estado:
@@ -51,7 +51,7 @@ Resumo do estado:
 | 12 | Validacao de Escala de Checkpoint | Concluida |
 | 13 | Modelos Hugging Face Pequenos | Concluida com ressalvas |
 | 14 | Escala 3B | Concluida com ressalvas |
-| 15 | Escala 14B | Em andamento |
+| 15 | Escala 14B | Concluida com ressalvas |
 | 16+ | Modelos reais e escala maior | Pendente |
 
 ## Fase 0 - Fundacao Conceitual
@@ -1787,7 +1787,7 @@ Fase 14 Marco 1 - Ponte HF Maior que Tiny GPT-2:
 
 ## Fase 14 - Escala 3B
 
-Status: **em andamento**.
+Status: **concluida com ressalvas**.
 
 ### Objetivo
 
@@ -2990,6 +2990,66 @@ Proximo marco:
 - testar `gradient_phi_validation_rerank`;
 - comparar `v_proj`, `o_proj` e `v_proj + o_proj`;
 - decidir se Fase 15 fecha com `Phi hadamard rank 8`.
+
+### Marco 15 - Robustez do Phi Rank 8
+
+Status: **concluido com ressalvas**.
+
+Config principal:
+
+```text
+model: Qwen2.5-14B
+target: layer 1 v_proj
+phi_variant: hadamard
+phi_rank: 8
+budget: 32
+steps: 4
+train_texts: 4
+validation_texts: 8
+```
+
+Resultados multi-seed:
+
+| metodo | mean validation delta | mean ganho val/param | params |
+|---|---:|---:|---:|
+| SAINT Phi rank 8 | -0.012927 | 4.309018e-04 | 30 |
+| LoRA rank 1 | -0.006209 | 1.010563e-06 | 6144 |
+
+Outros testes:
+
+| teste | resultado |
+|---|---|
+| steps 8 + lr_decay 0.9 | piorou validacao |
+| gradient_phi_validation_rerank | OOM no routing: 29.672 GB |
+| o_proj | sem ganho |
+| v_proj + o_proj | igualou v_proj, nao melhorou |
+
+Veredito da Fase 15:
+
+```text
+Fase 15 fecha com Phi hadamard rank 8 como baseline 14B para Fase 16.
+```
+
+Ressalva:
+
+```text
+SAINT venceu em ganho por parametro e checkpoint pequeno.
+Ainda nao venceu LoRA como qualidade absoluta geral.
+```
+
+Baseline para Fase 16:
+
+```text
+routing: activation_phi_validation_rerank
+phi_variant: hadamard
+phi_rank: 8
+phi_source: weight
+target: v_proj
+budget: 32
+steps: 4
+train_texts: 4
+validation_texts: 8
+```
 
 ## Fase 16 - Escala 70B
 

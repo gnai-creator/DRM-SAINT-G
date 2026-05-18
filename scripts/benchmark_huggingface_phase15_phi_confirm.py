@@ -36,8 +36,24 @@ def _target(layer: int, suffix: str) -> str:
     return f"model.layers.{layer}.self_attn.{suffix}.weight"
 
 
-def _phi_case(args, *, seed: int, layer: int, rank: int, memory: str) -> dict[str, Any]:
-    target = _target(layer, args.target_suffix)
+def _target_group(layer: int, suffix_group: str) -> str:
+    return ",".join(_target(layer, suffix) for suffix in suffix_group.split("+") if suffix)
+
+
+def _target_label(suffix_group: str) -> str:
+    return suffix_group.replace("+", "_")
+
+
+def _phi_case(
+    args,
+    *,
+    seed: int,
+    layer: int,
+    rank: int,
+    suffix_group: str,
+    memory: str,
+) -> dict[str, Any]:
+    target = _target_group(layer, suffix_group)
     namespace = copy(args)
     namespace.seed = seed
     namespace.target_names = target
@@ -45,7 +61,8 @@ def _phi_case(args, *, seed: int, layer: int, rank: int, memory: str) -> dict[st
     namespace.phi_variant = args.phi_variant
     namespace.phi_rank = rank
     namespace.out = str(
-        Path(args.out) / f"phi_s{seed}_l{layer}_r{rank}_{_safe(memory)}"
+        Path(args.out)
+        / f"phi_s{seed}_l{layer}_{_target_label(suffix_group)}_r{rank}_{_safe(memory)}"
     )
     result = _run_saint_subprocess(namespace, budget=args.budget, max_memory=memory)
     row = _row_from_saint(result, budget=args.budget, max_memory=memory)
@@ -55,6 +72,7 @@ def _phi_case(args, *, seed: int, layer: int, rank: int, memory: str) -> dict[st
             "seed": seed,
             "layer": layer,
             "target": target,
+            "target_group": suffix_group,
             "phi_rank": rank,
             "phi_variant": args.phi_variant,
             "phi_source": args.phi_source,
@@ -64,13 +82,22 @@ def _phi_case(args, *, seed: int, layer: int, rank: int, memory: str) -> dict[st
     return row
 
 
-def _lora_case(args, *, seed: int, layer: int) -> dict[str, Any]:
+def _lora_case(args, *, seed: int, layer: int, suffix_group: str) -> dict[str, Any]:
+    if "+" in suffix_group:
+        raise ValueError("LoRA rank 1 baseline supports one target suffix per run")
     namespace = copy(args)
     namespace.seed = seed
-    namespace.target_names = _target(layer, args.target_suffix)
-    namespace.out = str(Path(args.out) / f"lora_s{seed}_l{layer}")
+    namespace.target_names = _target(layer, suffix_group)
+    namespace.out = str(Path(args.out) / f"lora_s{seed}_l{layer}_{suffix_group}")
     row = _lora_rank(namespace, rank=1)
-    row.update({"seed": seed, "layer": layer, "target": namespace.target_names})
+    row.update(
+        {
+            "seed": seed,
+            "layer": layer,
+            "target": namespace.target_names,
+            "target_group": suffix_group,
+        }
+    )
     return row
 
 
@@ -137,23 +164,35 @@ def run(args) -> dict[str, Any]:
     memory = _memory_items(args.max_memories)[0]
     for seed in _ints(args.seeds):
         for layer in _ints(args.layers):
-            for rank in _ints(args.phi_ranks):
-                rows.append(_phi_case(args, seed=seed, layer=layer, rank=rank, memory=memory))
+            for suffix_group in _items(args.target_suffixes):
+                for rank in _ints(args.phi_ranks):
+                    rows.append(
+                        _phi_case(
+                            args,
+                            seed=seed,
+                            layer=layer,
+                            rank=rank,
+                            suffix_group=suffix_group,
+                            memory=memory,
+                        )
+                    )
     if not args.skip_lora:
         for seed in _ints(args.lora_seeds):
             for layer in _ints(args.layers):
-                try:
-                    rows.append(_lora_case(args, seed=seed, layer=layer))
-                except Exception as exc:  # pragma: no cover - large-model diagnostic.
-                    rows.append(
-                        {
-                            "method": "lora_rank1_train_only",
-                            "seed": seed,
-                            "layer": layer,
-                            "status": "failed",
-                            "error": str(exc),
-                        }
-                    )
+                for suffix_group in _items(args.lora_target_suffixes):
+                    try:
+                        rows.append(_lora_case(args, seed=seed, layer=layer, suffix_group=suffix_group))
+                    except Exception as exc:  # pragma: no cover - large-model diagnostic.
+                        rows.append(
+                            {
+                                "method": "lora_rank1_train_only",
+                                "seed": seed,
+                                "layer": layer,
+                                "target_group": suffix_group,
+                                "status": "failed",
+                                "error": str(exc),
+                            }
+                        )
     summary = _summary(rows)
     result = {"model": args.model, "rows": rows, "summary": summary}
     (root / "phase15_phi_confirm_results.json").write_text(
@@ -177,6 +216,7 @@ def main() -> None:
     parser.add_argument("--seeds", default="31,32,33")
     parser.add_argument("--layers", default="1,2,3")
     parser.add_argument("--target-suffix", default="v_proj")
+    parser.add_argument("--target-suffixes", default="v_proj")
     parser.add_argument("--steps", type=int, default=4)
     parser.add_argument("--budget", type=int, default=32)
     parser.add_argument("--budgets", default="32")
@@ -216,6 +256,7 @@ def main() -> None:
     parser.add_argument("--lora-learning-rate", type=float, default=0.001)
     parser.add_argument("--lora-ranks", default="1")
     parser.add_argument("--lora-seeds", default="31")
+    parser.add_argument("--lora-target-suffixes", default="v_proj")
     parser.add_argument("--lora-b-init-scale", type=float, default=0.0)
     parser.add_argument("--skip-lora", action="store_true")
     args = parser.parse_args()

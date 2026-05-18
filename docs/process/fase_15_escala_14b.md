@@ -1,6 +1,6 @@
 # Fase 15 - Escala 14B
 
-Status: **em andamento**.
+Status: **concluida com ressalvas**.
 
 ## Objetivo
 
@@ -1961,3 +1961,187 @@ Marco 15 deve testar robustez real do `Phi rank 8`:
 - comparar `v_proj`, `o_proj` e `v_proj + o_proj`;
 - decidir se Fase 15 fecha com `Phi hadamard rank 8` como baseline para Fase
   16.
+
+## Marco 15 - Robustez do Phi Rank 8
+
+Status: **concluido com ressalvas**.
+
+### Objetivo
+
+Testar se `Phi hadamard rank 8` continua sendo o melhor candidato quando:
+
+- seeds variam;
+- LoRA rank 1 usa as mesmas seeds;
+- o corpus curto aumenta;
+- o numero de steps aumenta;
+- o roteamento usa gradiente;
+- os alvos mudam para `v_proj`, `o_proj` e `v_proj + o_proj`.
+
+### Seeds 31, 32 e 33
+
+Config:
+
+```text
+model: models/Qwen2.5-14B
+target: layer 1 v_proj
+phi_rank: 8
+budget: 32
+steps: 4
+train_texts: 4
+validation_texts: 8
+max_length: 4
+```
+
+Resultados SAINT Phi:
+
+| seed | validation delta | ganho val/param | params |
+|---:|---:|---:|---:|
+| 31 | -0.012927 | 4.309018e-04 | 30 |
+| 32 | -0.012927 | 4.309018e-04 | 30 |
+| 33 | -0.012927 | 4.309018e-04 | 30 |
+
+Resultados LoRA rank 1:
+
+| seed | validation delta | ganho val/param | params |
+|---:|---:|---:|---:|
+| 31 | -0.014132 | 2.300212e-06 | 6144 |
+| 32 | -0.000898 | 1.462176e-07 | 6144 |
+| 33 | -0.003596 | 5.852586e-07 | 6144 |
+
+Leitura:
+
+```text
+LoRA rank 1 teve validation delta absoluto parecido ou melhor em uma seed, mas
+SAINT Phi venceu com folga em ganho por parametro.
+```
+
+Media:
+
+| metodo | mean validation delta | mean ganho val/param |
+|---|---:|---:|
+| SAINT Phi rank 8 | -0.012927 | 4.309018e-04 |
+| LoRA rank 1 | -0.006209 | 1.010563e-06 |
+
+### Steps 8 e Scheduler
+
+Config:
+
+```text
+steps: 8
+lr_decay: 0.9
+train_texts: 4
+validation_texts: 8
+```
+
+Resultado:
+
+| metodo | validation delta | ganho val/param |
+|---|---:|---:|
+| SAINT Phi rank 8 | +0.008677 | 0.000000e+00 |
+
+Leitura:
+
+```text
+mais steps com scheduler piorou validacao neste regime. O baseline atual deve
+continuar com steps curtos.
+```
+
+### Gradient Phi Routing
+
+Config:
+
+```text
+routing: gradient_phi_validation_rerank
+validation_rerank_max_candidates: 16
+```
+
+Resultado:
+
+```text
+falhou por VRAM:
+CUDA budget exceeded during routing: 29.672 GB
+```
+
+Leitura:
+
+```text
+roteamento por gradiente ainda nao e viavel no limite de 23 GB. O baseline da
+Fase 16 deve continuar usando activation_phi_validation_rerank.
+```
+
+### Alvos
+
+Config:
+
+```text
+seed: 31
+layer: 1
+phi_rank: 8
+targets: o_proj, v_proj + o_proj
+```
+
+Resultados:
+
+| target | validation delta | ganho val/param | params |
+|---|---:|---:|---:|
+| o_proj | +0.000000 | 0.000000e+00 | 30 |
+| v_proj + o_proj | -0.012927 | 4.309018e-04 | 30 |
+
+Leitura:
+
+```text
+o_proj isolado nao ajudou. v_proj + o_proj reproduziu o ganho de v_proj, mas
+nao melhorou o resultado, indicando que o roteador ainda escolhe essencialmente
+o mesmo eixo util.
+```
+
+### Veredito
+
+```text
+Fase 15 fecha com Phi hadamard rank 8 como baseline de 14B para Fase 16,
+mas nao como prova definitiva de qualidade contra LoRA.
+```
+
+O que foi demonstrado:
+
+- roda em Qwen2.5-14B abaixo do limite de VRAM definido;
+- checkpoint do delta fica pequeno, cerca de 12-13 KB nos runs principais;
+- ganho por parametro e muito superior ao LoRA rank 1 neste corpus curto;
+- `v_proj` e o alvo util;
+- `steps=4` e melhor que `steps=8` neste regime;
+- roteamento por ativacao e o caminho viavel;
+- roteamento por gradiente precisa de reducao de memoria antes de virar
+  baseline.
+
+O que nao foi demonstrado:
+
+- superioridade geral de quality/loss absoluta contra LoRA;
+- robustez em corpus maior;
+- vantagem com mais steps;
+- beneficio real de `o_proj` isolado.
+
+Baseline recomendado para Fase 16:
+
+```text
+routing: activation_phi_validation_rerank
+phi_variant: hadamard
+phi_rank: 8
+phi_source: weight
+target: v_proj
+budget: 32
+steps: 4
+train_texts: 4
+validation_texts: 8
+```
+
+## Proxima Fase
+
+Fase 16 deve iniciar a escala 70B com o baseline acima, mas com foco em
+infraestrutura:
+
+- carregar 70B com offload/quantizacao;
+- rodar smoke sem treino;
+- aplicar `Phi hadamard rank 8` em `v_proj`;
+- manter budget pequeno;
+- medir load, routing, train, checkpoint e merge;
+- comparar contra LoRA/QLoRA apenas se couber no mesmo limite.
