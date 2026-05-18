@@ -29,7 +29,7 @@ recomposicao final
 ```text
 Fase atual: Fase 15 - Escala 14B
 Fase anterior: Fase 14 concluida com ressalvas
-Proximo marco: Fase 15 Marco 5 - Qualidade e Avaliacao 14B
+Proximo marco: Fase 15 Marco 6 - Robustez de Qualidade 14B
 ```
 
 Resumo do estado:
@@ -2478,10 +2478,52 @@ Avaliacao posterior separada funciona, mas merge/eval chegou a 29.682 GB.
 
 Proximo marco:
 
-- reduzir pico da avaliacao posterior;
-- medir loss antes/depois com mais steps;
-- comparar ganho por parametro real contra LoRA rank 1;
-- testar targets adicionais.
+- repetir `v_proj` com seeds diferentes;
+- testar camadas 0, 1 e 2;
+- ajustar scheduler/LR para steps maiores;
+- testar `v_proj + o_proj`;
+- medir validacao com mais exemplos.
+
+### Marco 5 - Qualidade e Avaliacao 14B
+
+Status: **concluido**.
+
+Mudancas:
+
+- `train_only` mede `initial_loss`, `loss_delta` e `gain_per_parameter`;
+- avaliacao posterior usa `torch.no_grad()`;
+- LoRA rank 1 usa o mesmo texto do corpus;
+- targets testados: `q_proj`, `v_proj`, `o_proj`.
+
+Reducao do pico de avaliacao:
+
+| checkpoint | validation loss | eval CUDA GB |
+|---|---:|---:|
+| Marco 4 `q_proj` budget 8192 | 6.801508 | 12.487 |
+| Marco 5 `v_proj` budget 16384 | 5.612469 | 12.487 |
+
+Qualidade train-only:
+
+| target | budget | loss delta | ganho/param | train CUDA GB |
+|---|---:|---:|---:|---:|
+| `q_proj` | 8192 | -0.021804 | 2.6616e-06 | 15.821 |
+| `q_proj` | 16384 | -0.012429 | 7.5862e-07 | 15.821 |
+| `v_proj` | 8192 | -0.298339 | 3.6418e-05 | 15.779 |
+| `v_proj` | 16384 | -0.393503 | 2.4017e-05 | 15.779 |
+| `o_proj` | 8192 | -0.055394 | 6.7620e-06 | 15.821 |
+
+Comparacao LoRA rank 1:
+
+| metodo | params | loss delta | ganho/param |
+|---|---:|---:|---:|
+| SAINT `q_proj` budget 8192 | 8192 | -0.021804 | 2.6616e-06 |
+| LoRA rank 1 `q_proj` | 10240 | 0.000000 | 0.0000 |
+
+Veredito:
+
+```text
+Marco 5 passou: SAINT 14B reduziu loss e avaliacao posterior ficou abaixo de 23 GB.
+```
 
 ## Fase 16 - Escala 70B
 

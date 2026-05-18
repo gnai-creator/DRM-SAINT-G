@@ -131,7 +131,8 @@ def _evaluate_merged(
         max_length=max_length,
         texts=validation_texts,
     )
-    loss = float(_loss(model, input_ids, attention_mask).detach().cpu().item())
+    with torch.no_grad():
+        loss = float(_loss(model, input_ids, attention_mask).detach().cpu().item())
     return {"merged_validation_loss": loss, "merged_perplexity": exp(min(loss, 20.0))}
 
 
@@ -176,7 +177,8 @@ def _evaluate_sparse_delta(
         max_length=max_length,
         texts=validation_texts,
     )
-    loss = float(_loss(model, input_ids, attention_mask).detach().cpu().item())
+    with torch.no_grad():
+        loss = float(_loss(model, input_ids, attention_mask).detach().cpu().item())
     eval_cuda_peak = (
         int(torch.cuda.max_memory_allocated(device)) if device.type == "cuda" else 0
     )

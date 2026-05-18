@@ -56,6 +56,7 @@ def _config(args) -> RuntimeConfig:
         "delta_application": "inplace",
         "train_only": True,
         "gradient_checkpointing": args.gradient_checkpointing,
+        "measure_train_only_loss": args.measure_loss,
         "target_names": _target_names(args.target_names),
         "target_device": args.target_device,
         "max_cuda_gb": args.max_cuda_gb,
@@ -124,6 +125,7 @@ def main() -> None:
     parser.add_argument("--target-device", default="cuda")
     parser.add_argument("--max-cuda-gb", type=float, default=23.0)
     parser.add_argument("--gradient-checkpointing", action="store_true")
+    parser.add_argument("--measure-loss", action="store_true")
     parser.add_argument("--hf-device-map", default=None)
     parser.add_argument("--hf-max-memory", default=None)
     parser.add_argument("--hf-offload-folder", default=None)

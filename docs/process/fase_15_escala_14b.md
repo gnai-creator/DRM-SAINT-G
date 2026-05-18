@@ -536,3 +536,123 @@ Marco 5 deve melhorar qualidade e avaliacao:
 - comparar SAINT budget 8192/16384 contra LoRA rank 1 em loss delta;
 - salvar ganho por parametro treinavel real;
 - testar target em `v_proj` e `o_proj`, nao apenas `q_proj`.
+
+## Marco 5 - Qualidade e Avaliacao 14B
+
+Status: **concluido**.
+
+### Mudancas
+
+- o modo `train_only` agora pode medir loss antes/depois no mesmo processo com
+  `--measure-loss`;
+- `initial_loss`, `loss_delta` e `gain_per_parameter` sao registrados para
+  SAINT e LoRA;
+- a avaliacao posterior usa `torch.no_grad()` para evitar grafo de autograd;
+- LoRA rank 1 usa o mesmo texto de treino do corpus, em vez de texto fixo;
+- foram testados targets:
+  - `q_proj`;
+  - `v_proj`;
+  - `o_proj`.
+
+### Avaliacao Posterior
+
+Antes, a avaliacao posterior com `0=16GiB,cpu=64GiB` chegava a:
+
+```text
+merge eval CUDA: 29.682 GB
+```
+
+Depois de `no_grad` e `0=12GiB,cpu=64GiB`:
+
+| checkpoint | validation loss | perplexity | load CUDA GB | eval CUDA GB |
+|---|---:|---:|---:|---:|
+| Marco 4 `q_proj` budget 8192 | 6.801508 | 899.203 | 11.199 | 12.487 |
+| Marco 5 `v_proj` budget 16384 | 5.612469 | 273.819 | 11.199 | 12.487 |
+
+Conclusao:
+
+```text
+o pico de avaliacao posterior caiu para abaixo de 23 GB.
+```
+
+### Qualidade Train-Only
+
+Config comum:
+
+```text
+model: models/Qwen2.5-14B
+max_memory: 0=12GiB,cpu=64GiB
+steps: 4
+max_length: 8
+learning_rate: 0.005
+routing_method: activation
+gradient_checkpointing: true
+```
+
+| target | budget | initial loss | final loss | loss delta | ganho/param | train CUDA GB |
+|---|---:|---:|---:|---:|---:|---:|
+| `q_proj` | 8192 | 6.944987 | 6.923183 | -0.021804 | 2.6616e-06 | 15.821 |
+| `q_proj` | 16384 | 6.944987 | 6.932558 | -0.012429 | 7.5862e-07 | 15.821 |
+| `v_proj` | 8192 | 6.944987 | 6.646648 | -0.298339 | 3.6418e-05 | 15.779 |
+| `v_proj` | 16384 | 6.944987 | 6.551485 | -0.393503 | 2.4017e-05 | 15.779 |
+| `o_proj` | 8192 | 6.944987 | 6.889593 | -0.055394 | 6.7620e-06 | 15.821 |
+
+Leitura:
+
+- `v_proj` foi claramente o melhor alvo nesta tarefa curta;
+- budget 16384 melhorou mais loss absoluta em `v_proj`;
+- budget 8192 teve melhor ganho por parametro que 16384;
+- todos os pontos ficaram abaixo de 23 GB.
+
+### Steps e Janela
+
+Testes adicionais em `q_proj`, budget 8192:
+
+| variacao | final loss | loss delta | train_s | train CUDA GB |
+|---|---:|---:|---:|---:|
+| steps 4, max_length 8 | 6.923183 | -0.021804 | 15.043 | 15.821 |
+| steps 4, max_length 16 | 6.923183 | -0.021804 | 16.009 | 15.821 |
+| steps 8, max_length 8 | 6.951231 | +0.006244 | 30.713 | 15.821 |
+
+Leitura:
+
+```text
+mais steps sem ajuste de LR pode piorar; o proximo sweep deve ajustar scheduler
+ou LR por target.
+```
+
+### LoRA Rank 1
+
+Comparacao justa em `q_proj`, mesmo texto, `steps=4`, `max_length=8`,
+`lr=0.005`:
+
+| metodo | params | initial loss | final loss | loss delta | ganho/param | train CUDA GB |
+|---|---:|---:|---:|---:|---:|---:|
+| SAINT `q_proj` budget 8192 | 8192 | 6.944987 | 6.923183 | -0.021804 | 2.6616e-06 | 15.821 |
+| LoRA rank 1 `q_proj` | 10240 | 6.944987 | 6.944987 | 0.000000 | 0.0000 | 15.813 |
+
+Resultado:
+
+```text
+SAINT venceu LoRA rank 1 neste smoke curto em ganho por parametro treinavel.
+```
+
+### Veredito
+
+```text
+Marco 5 passou.
+```
+
+Agora SAINT 14B nao apenas executa treino, mas tambem mostra reducao de loss em
+targets especificos, com avaliacao posterior abaixo de 23 GB.
+
+## Proximo Marco
+
+Marco 6 deve tornar a qualidade menos acidental:
+
+- repetir `v_proj` com seeds diferentes;
+- testar camadas 0, 1 e 2;
+- adicionar scheduler ou reduzir LR quando `steps` aumenta;
+- comparar LoRA rank 1 com inicializacao B nao-zero ou update in-place mais fiel;
+- testar combinacao de targets `v_proj + o_proj`;
+- medir validacao antes/depois no mesmo corpus com mais exemplos.

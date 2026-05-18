@@ -334,7 +334,13 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
     learning_rate = float(metadata.get("learning_rate", 1e-3))
     named = dict(model.named_parameters())
     initial_loss = 0.0
-    if not train_only and delta_application == "inplace":
+    measure_train_only_loss = bool(metadata.get("measure_train_only_loss", False))
+    if train_only and measure_train_only_loss:
+        with torch.no_grad():
+            initial_loss = float(
+                _plain_loss(model, input_ids, attention_mask).detach().cpu().item()
+            )
+    elif not train_only and delta_application == "inplace":
         initial_loss = _inplace_loss_value(
             torch, model, named, deltas, coordinates, input_ids, attention_mask
         )
@@ -384,7 +390,12 @@ def run_hf_forward(config: RuntimeConfig) -> MiniTransformerResult:
     train_cuda_peak = _cuda_peak(torch, device)
     _check_cuda_budget(torch, device, metadata, "train")
     _clear_cuda(torch, device)
-    if train_only:
+    if train_only and measure_train_only_loss:
+        final_loss = _inplace_loss_value(
+            torch, model, named, deltas, coordinates, input_ids, attention_mask
+        )
+        validation_loss = final_loss
+    elif train_only:
         validation_loss = final_loss
     elif delta_application == "inplace":
         final_loss = _inplace_loss_value(

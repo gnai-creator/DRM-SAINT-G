@@ -27,6 +27,16 @@ def _gb(value: int) -> float:
     return value / 1_000_000_000
 
 
+def _first_text(path: str) -> str:
+    source = Path(path)
+    if not source.exists():
+        return "simple ai node training"
+    for line in source.read_text(encoding="utf-8", errors="ignore").splitlines():
+        if line.strip():
+            return line.strip()
+    return "simple ai node training"
+
+
 def _row_from_saint(result: dict[str, Any], *, budget: int, max_memory: str) -> dict[str, Any]:
     row: dict[str, Any] = {
         "method": "saint_train_only",
@@ -43,8 +53,13 @@ def _row_from_saint(result: dict[str, Any], *, budget: int, max_memory: str) -> 
     row.update(
         {
             "train_loss": checkpoint["train_loss"],
+            "initial_loss": metadata.get("initial_loss", 0.0),
             "parameter_count": checkpoint["parameter_count"],
-            "gain_per_parameter": 0.0,
+            "loss_delta": checkpoint["train_loss"] - metadata.get("initial_loss", 0.0),
+            "gain_per_parameter": max(
+                metadata.get("initial_loss", 0.0) - checkpoint["train_loss"],
+                0.0,
+            ) / max(1, checkpoint["parameter_count"]),
             "tokens_per_s": metadata["tokens_per_s"],
             "load_s": metadata["stage_elapsed"]["load_s"],
             "routing_s": metadata["stage_elapsed"]["routing_s"],
@@ -138,6 +153,7 @@ def _run_saint_subprocess(args, *, budget: int, max_memory: str) -> dict[str, An
     ]
     if values.gradient_checkpointing:
         command.append("--gradient-checkpointing")
+    command.append("--measure-loss")
     completed = subprocess.run(command, capture_output=True, text=True, check=False)
     result_path = Path(values.out) / "phase15_train_only_result.json"
     if result_path.exists():
@@ -194,7 +210,7 @@ def _lora_rank1(args) -> dict[str, Any]:
     tokenizer = AutoTokenizer.from_pretrained(args.model, local_files_only=True)
     input_ids, attention_mask = _load_batch(
         tokenizer,
-        "simple ai node training",
+        _first_text(args.corpus),
         max_length=args.max_length,
         device=device,
     )
@@ -213,6 +229,8 @@ def _lora_rank1(args) -> dict[str, Any]:
     model.train()
     from time import perf_counter
 
+    with torch.no_grad():
+        initial_loss = float(_plain_loss(model, input_ids, attention_mask).cpu().item())
     start = perf_counter()
     update = None
     for _ in range(args.steps):
@@ -228,6 +246,13 @@ def _lora_rank1(args) -> dict[str, Any]:
                 weight.sub_(update)
         optimizer.step()
     elapsed = perf_counter() - start
+    with torch.no_grad():
+        final_update = a @ b
+        weight.add_(final_update)
+        try:
+            final_loss = float(_plain_loss(model, input_ids, attention_mask).cpu().item())
+        finally:
+            weight.sub_(final_update)
     peak = int(torch.cuda.max_memory_allocated(device)) if device.type == "cuda" else 0
     if peak / 1_000_000_000 > args.max_cuda_gb:
         raise RuntimeError(f"CUDA budget exceeded during lora: {peak / 1_000_000_000:.3f} GB")
@@ -238,9 +263,11 @@ def _lora_rank1(args) -> dict[str, Any]:
         "max_memory": args.lora_max_memory,
         "status": "ok",
         "elapsed_s": elapsed,
-        "train_loss": float(loss.detach().cpu().item()),
+        "initial_loss": initial_loss,
+        "train_loss": final_loss,
+        "loss_delta": final_loss - initial_loss,
         "parameter_count": int(a.numel() + b.numel()),
-        "gain_per_parameter": 0.0,
+        "gain_per_parameter": max(initial_loss - final_loss, 0.0) / int(a.numel() + b.numel()),
         "train_cuda_gb": _gb(peak),
     }
 
