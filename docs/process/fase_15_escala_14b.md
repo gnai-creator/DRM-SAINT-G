@@ -401,3 +401,138 @@ Marco 4 deve transformar o smoke em experimento comparavel:
 - testar LoRA 14B rank 1 somente se couber no mesmo limite CUDA;
 - comparar ganho por parametro treinavel contra o primeiro baseline LoRA viavel;
 - manter o criterio de abortar se `train_cuda_peak_bytes` passar de 23 GB.
+
+## Marco 4 - Comparacao Train-Only 14B
+
+Status: **concluido com ressalva na avaliacao posterior**.
+
+### Mudancas
+
+- criado `scripts/benchmark_huggingface_phase15_compare.py`;
+- cada ponto SAINT roda em subprocesso separado para evitar residuos de CUDA;
+- o comparador gera:
+  - `phase15_compare_results.json`;
+  - `phase15_compare_results.md`;
+- criado `scripts/benchmark_huggingface_phase15_eval_checkpoint.py`;
+- a avaliacao posterior roda em processo separado a partir do checkpoint SAINT;
+- LoRA rank 1 foi testado somente depois de SAINT passar no limite de CUDA.
+
+### Resultado SAINT
+
+Modelo:
+
+```text
+models/Qwen2.5-14B
+```
+
+Config comum:
+
+```text
+target: model.layers.0.self_attn.q_proj.weight
+steps: 1
+batch_size: 1
+max_length: 4
+routing_method: activation
+gradient_checkpointing: true
+max_cuda_gb: 23
+```
+
+| max_memory | budget | status | load_s | routing_s | train_s | train CUDA GB | checkpoint bytes |
+|---|---:|---|---:|---:|---:|---:|---:|
+| `0=12GiB,cpu=64GiB` | 1024 | ok | 41.072 | 3.256 | 3.818 | 15.769 | 81981 |
+| `0=12GiB,cpu=64GiB` | 4096 | ok | 40.330 | 3.244 | 3.794 | 15.769 | 330309 |
+| `0=12GiB,cpu=64GiB` | 8192 | ok | 39.971 | 3.298 | 3.774 | 15.769 | 657271 |
+| `0=14GiB,cpu=64GiB` | 1024 | ok | 37.830 | 2.953 | 3.691 | 17.401 | 81981 |
+| `0=14GiB,cpu=64GiB` | 4096 | ok | 37.306 | 2.928 | 3.631 | 17.401 | 330309 |
+| `0=14GiB,cpu=64GiB` | 8192 | ok | 37.163 | 2.850 | 3.486 | 17.401 | 657271 |
+| `0=16GiB,cpu=64GiB` | 1024 | ok | 33.266 | 2.256 | 3.004 | 19.032 | 81981 |
+| `0=16GiB,cpu=64GiB` | 4096 | ok | 33.534 | 2.527 | 3.017 | 19.032 | 330309 |
+| `0=16GiB,cpu=64GiB` | 8192 | ok | 33.494 | 2.492 | 3.052 | 19.033 | 657271 |
+
+Leitura:
+
+- todos os budgets testados passaram abaixo de 23 GB;
+- aumentar `max_memory` reduz load/routing/train, mas aumenta pico de CUDA;
+- o tamanho do checkpoint cresce aproximadamente linear com o budget;
+- o custo dominante ainda e load/offload, nao o step de treino.
+
+### LoRA Rank 1
+
+Configuracao:
+
+```text
+rank: 1
+target: model.layers.0.self_attn.q_proj.weight
+max_memory: 0=14GiB,cpu=64GiB
+gradient_checkpointing: true
+```
+
+Resultado:
+
+| metrica | valor |
+|---|---:|
+| status | ok |
+| train_s | 4.729 |
+| train CUDA GB | 17.453 |
+| parametros treinaveis | 10240 |
+| train_loss | 9.438548 |
+
+Comparacao direta:
+
+```text
+SAINT budget 8192 @ 14GiB: train_s 3.486, train CUDA 17.401 GB
+LoRA rank 1 @ 14GiB:       train_s 4.729, train CUDA 17.453 GB
+```
+
+Ressalva:
+
+```text
+o Marco 4 ainda nao mede ganho real de qualidade, porque o treino usa apenas 1
+step e uma janela curta. O ganho por parametro fica registrado como 0.0 neste
+smoke.
+```
+
+### Avaliacao Posterior Separada
+
+Checkpoint avaliado:
+
+```text
+runs/phase15_marco4_qwen25_14b_compare_isolated/saint_b8192_0_16GiB_cpu_64GiB
+```
+
+Resultado:
+
+| metrica | valor |
+|---|---:|
+| merged_validation_loss | 6.801508 |
+| merged_perplexity | 899.203 |
+| merge load CUDA GB | 15.604 |
+| merge eval CUDA GB | 29.682 |
+
+Conclusao:
+
+```text
+a avaliacao posterior funciona, mas ainda nao respeita o limite de 23 GB.
+```
+
+### Veredito
+
+```text
+Marco 4 passou para treino comparavel train-only.
+```
+
+SAINT agora tem uma curva inicial de budgets em 14B e um primeiro baseline LoRA
+rank 1 no mesmo alvo. A avaliacao posterior existe, mas precisa reduzir pico
+antes de virar criterio de fechamento.
+
+## Proximo Marco
+
+Marco 5 deve melhorar qualidade e avaliacao:
+
+- reduzir pico da avaliacao posterior abaixo de 23 GB;
+- medir loss antes/depois no mesmo processo train-only sem duplicar memoria;
+- repetir com mais steps, por exemplo 4 e 8;
+- testar janela maior, por exemplo `max_length` 8 e 16;
+- comparar SAINT budget 8192/16384 contra LoRA rank 1 em loss delta;
+- salvar ganho por parametro treinavel real;
+- testar target em `v_proj` e `o_proj`, nao apenas `q_proj`.

@@ -29,7 +29,7 @@ recomposicao final
 ```text
 Fase atual: Fase 15 - Escala 14B
 Fase anterior: Fase 14 concluida com ressalvas
-Proximo marco: Fase 15 Marco 4 - Comparacao Train-Only 14B
+Proximo marco: Fase 15 Marco 5 - Qualidade e Avaliacao 14B
 ```
 
 Resumo do estado:
@@ -2428,11 +2428,60 @@ Limite observado:
 
 Proximo marco:
 
-- repetir com budgets 1024, 4096 e 8192;
-- testar `max_memory` 12GiB, 14GiB e 16GiB;
-- medir custo de load separado do custo de treino em runs repetidos;
-- adicionar avaliacao posterior opcional;
-- comparar contra LoRA 14B rank 1 se couber no mesmo budget CUDA.
+- reduzir pico da avaliacao posterior abaixo de 23 GB;
+- medir loss antes/depois sem duplicar memoria;
+- repetir SAINT/LoRA com mais steps;
+- testar targets `v_proj` e `o_proj`.
+
+### Marco 4 - Comparacao Train-Only 14B
+
+Status: **concluido com ressalva na avaliacao posterior**.
+
+Mudancas:
+
+- criado `scripts/benchmark_huggingface_phase15_compare.py`;
+- cada ponto SAINT roda em subprocesso separado;
+- criado `scripts/benchmark_huggingface_phase15_eval_checkpoint.py`;
+- LoRA rank 1 testado no mesmo alvo;
+- resultados salvos em JSON/Markdown.
+
+Resultados SAINT:
+
+| max_memory | budget | status | train_s | train CUDA GB |
+|---|---:|---|---:|---:|
+| `0=12GiB,cpu=64GiB` | 1024 | ok | 3.818 | 15.769 |
+| `0=12GiB,cpu=64GiB` | 4096 | ok | 3.794 | 15.769 |
+| `0=12GiB,cpu=64GiB` | 8192 | ok | 3.774 | 15.769 |
+| `0=14GiB,cpu=64GiB` | 1024 | ok | 3.691 | 17.401 |
+| `0=14GiB,cpu=64GiB` | 4096 | ok | 3.631 | 17.401 |
+| `0=14GiB,cpu=64GiB` | 8192 | ok | 3.486 | 17.401 |
+| `0=16GiB,cpu=64GiB` | 1024 | ok | 3.004 | 19.032 |
+| `0=16GiB,cpu=64GiB` | 4096 | ok | 3.017 | 19.032 |
+| `0=16GiB,cpu=64GiB` | 8192 | ok | 3.052 | 19.033 |
+
+LoRA rank 1:
+
+| metrica | valor |
+|---|---:|
+| status | ok |
+| train_s | 4.729 |
+| train CUDA GB | 17.453 |
+| parametros treinaveis | 10240 |
+
+Avaliacoes:
+
+```text
+SAINT train-only passou abaixo de 23 GB em todos os pontos.
+LoRA rank 1 tambem coube no limite.
+Avaliacao posterior separada funciona, mas merge/eval chegou a 29.682 GB.
+```
+
+Proximo marco:
+
+- reduzir pico da avaliacao posterior;
+- medir loss antes/depois com mais steps;
+- comparar ganho por parametro real contra LoRA rank 1;
+- testar targets adicionais.
 
 ## Fase 16 - Escala 70B
 
