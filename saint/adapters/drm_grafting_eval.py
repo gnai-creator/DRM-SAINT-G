@@ -10,9 +10,11 @@ from saint.adapters.drm_grafting import (
     _import_drm,
     _loss,
     _target_module,
-    _tokens,
+    _consolidation_summary,
     load_drm_baseline_config,
 )
+from saint.adapters.drm_grafting_data import token_batch
+from saint.adapters.drm_grafting_decision import consolidation_payload
 from saint.adapters.drm_grafting_modules import PhiHiddenGraft
 from saint.config import RuntimeConfig
 from saint.transformer.training import MiniTransformerResult
@@ -54,7 +56,7 @@ def run_drm_graft_eval(config: RuntimeConfig) -> MiniTransformerResult:
     device = str(metadata.get("device", "cpu"))
     seed = int(metadata.get("seed", config.seed))
     drm_config = load_drm_baseline_config(metadata, config_cls)
-    eval_inputs, eval_targets = _tokens(
+    eval_inputs, eval_targets = token_batch(
         torch,
         metadata,
         drm_config.vocab_size,
@@ -69,6 +71,8 @@ def run_drm_graft_eval(config: RuntimeConfig) -> MiniTransformerResult:
     graft_loss = _eval_payload(
         torch, model_cls, drm_config, payload, device, eval_inputs, eval_targets, seed
     )
+    consolidation_model = model_cls(drm_config)
+    consolidation = consolidation_payload(torch, consolidation_model, payload)
     gain = base_loss - graft_loss
     params = int(payload.get("trainable_parameters", 0))
     return MiniTransformerResult(
@@ -88,6 +92,8 @@ def run_drm_graft_eval(config: RuntimeConfig) -> MiniTransformerResult:
             "target_module": payload.get("target_module"),
             "projection_init": payload.get("projection_init"),
             "payload_recomposed": True,
+            "consolidation": _consolidation_summary(consolidation),
+            "consolidation_payload": consolidation,
             "marco": "drm_g_marco_3",
         },
     )

@@ -3192,9 +3192,9 @@ melhorou validacao em batch separado e venceu a baseline densa de mesmo budget
 no ponto `blocks.1`. Ainda precisa de mais seeds, mais exemplos e checkpoint
 recomponivel do enxerto antes de fechar a Fase DRM-G.
 
-### Marco 3 - Checkpoint Recomponivel do Enxerto
+### Marco 3 - Checkpoint, Consolidacao e Decisao do Enxerto
 
-Status: **em andamento, recomposicao validada**.
+Status: **infraestrutura implementada; qualidade real ainda rejeitada**.
 
 Implementacao:
 
@@ -3202,6 +3202,11 @@ Implementacao:
 - formato `drm_graft_payload_json`;
 - metodo runtime `drm_g_saint_phi_eval`;
 - config `configs/drm_g_marco3_eval_payload.json`;
+- leitura opcional de tokens reais em `drm_transformer/data/baseline`;
+- estado real do AdamW do enxerto em `optimizer.saintopt`;
+- payload de consolidacao em `consolidation.drm-g.json`;
+- `delta_weight` para alvos lineares compativeis;
+- decisao automatica `approve/reject` por ganho de validacao;
 - sweep `scripts/benchmark_drm_g_marco3.py`.
 
 Resultado de recomposicao:
@@ -3221,11 +3226,19 @@ Melhor ponto do sweep multiseed curto:
 | 32 | `blocks.1` | `gradient` | 0.000933 | -0.000139 |
 | 31 | `blocks.2` | `gradient` | 0.000813 | 0.000028 |
 
+Smoke em dados reais tokenizados:
+
+| config | alvo | consolidacao | validation_gain | decisao |
+|---|---|---|---:|---|
+| `drm_g_marco3_real_tokens.json` | `blocks.1` | hook required | -0.001091 | reject |
+| `drm_g_marco3_consolidated_linear.json` | `blocks.1.attn.out_proj` | state delta | -0.000483 | reject |
+
 Leitura:
 
-O checkpoint do enxerto ja e recomponivel: o eval carregando `A/Phi/B` reproduz
-o ganho do treino. O Marco 3 ainda nao esta fechado porque falta consolidar o
-enxerto permanentemente no estado do DRM, sem depender apenas de hook.
+O checkpoint do enxerto ja e recomponivel e agora tambem salva optimizer real,
+payload de consolidacao e criterio automatico de aprovacao. Em dados reais
+tokenizados, os dois smokes atuais foram rejeitados. O Marco 3 deixa de ser
+apenas "salvar o enxerto" e passa a filtrar enxertos ruins antes de consolidar.
 
 ## Fase 16 - Escala 70B
 

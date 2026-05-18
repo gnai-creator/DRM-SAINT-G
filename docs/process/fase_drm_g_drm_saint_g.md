@@ -180,7 +180,7 @@ Proximo passo:
 
 ### Marco 3 - Consolidacao
 
-Status: **em andamento, checkpoint recomponivel validado**.
+Status: **implementado como infraestrutura, qualidade ainda negativa em dados reais**.
 
 Testar se o enxerto pode ser consolidado no checkpoint sem perder a melhoria de
 validacao.
@@ -192,6 +192,12 @@ Mudancas implementadas:
 - adicionado formato `drm_graft_payload_json`;
 - adicionado metodo runtime `drm_g_saint_phi_eval`;
 - eval recomposto carrega o payload do checkpoint e reaplica o enxerto via hook;
+- `optimizer.saintopt` agora salva o `state_dict` real do AdamW do enxerto;
+- dados reais tokenizados podem ser lidos de `drm_transformer/data/baseline`;
+- checkpoints podem gravar `consolidation.drm-g.json`;
+- alvos lineares compativeis geram `delta_weight` para merge no `state_dict`;
+- alvos nao-lineares, como `blocks.1`, ficam marcados como `hook_required`;
+- cada run calcula `graft_decision` com `approve` ou `reject`;
 - adicionado sweep `scripts/benchmark_drm_g_marco3.py`;
 - sweep testa seeds `31`, `32`, `33`, batch de validacao maior e pontos internos:
   - `blocks.0`;
@@ -240,10 +246,25 @@ ficaram mais fortes neste teste.
 
 Pendencias para fechar Marco 3:
 
-- fazer merge/consolidacao permanente no estado do DRM, nao apenas hook;
-- avaliar o enxerto recomposto em dados reais tokenizados;
-- salvar estado de otimizador real do enxerto;
-- adicionar criterio automatico de aprovar/descartar enxerto.
+- validar que o `delta_weight` consolidado preserva exatamente a loss em alvos
+  lineares;
+- encontrar uma configuracao com ganho positivo em dados reais tokenizados;
+- ampliar validacao real para mais exemplos;
+- expandir a politica `graft_decision` para filas com multiplos enxertos.
+
+Smoke com tokens reais:
+
+| config | alvo | merge | validation_gain | decisao |
+|---|---|---|---:|---|
+| `drm_g_marco3_real_tokens.json` | `blocks.1` | hook required | -0.001091 | reject |
+| `drm_g_marco3_consolidated_linear.json` | `blocks.1.attn.out_proj` | state delta | -0.000483 | reject |
+
+Leitura:
+
+As quatro pendencias tecnicas foram enderecadas no runtime, mas a qualidade
+ainda nao passou em dados reais tokenizados. Isso e um resultado importante:
+o Marco 3 agora consegue rejeitar automaticamente enxertos ruins em vez de
+apenas salvar qualquer delta.
 
 ### Marco 4 - Crescimento Progressivo
 

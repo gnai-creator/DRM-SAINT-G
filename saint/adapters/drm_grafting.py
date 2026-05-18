@@ -9,7 +9,13 @@ from time import perf_counter
 from typing import Any
 
 from saint.config import RuntimeConfig
+from saint.adapters.drm_grafting_data import token_batch
+from saint.adapters.drm_grafting_decision import (
+    consolidation_payload,
+    evaluate_graft_decision,
+)
 from saint.adapters.drm_grafting_modules import DenseBudgetGraft, PhiHiddenGraft
+from saint.adapters.drm_grafting_optimizer import optimizer_to_payload
 from saint.transformer.training import MiniTransformerResult
 
 
@@ -116,21 +122,8 @@ def _freeze(model) -> None:
         param.requires_grad_(False)
 
 
-def _tokens(
-    torch,
-    metadata: dict[str, Any],
-    vocab_size: int,
-    device: str,
-    *,
-    seed_key: str = "data_seed",
-):
-    batch_size = int(metadata.get("batch_size", 1))
-    seq_len = int(metadata.get("seq_len", 16))
-    seed = int(metadata.get(seed_key, metadata.get("data_seed", 991)))
-    generator = torch.Generator(device="cpu")
-    generator.manual_seed(seed)
-    data = torch.randint(0, vocab_size, (batch_size, seq_len + 1), generator=generator)
-    return data[:, :-1].contiguous().to(device), data[:, 1:].contiguous().to(device)
+def _tokens(torch, metadata: dict[str, Any], vocab_size: int, device: str, *, seed_key: str = "data_seed"):
+    return token_batch(torch, metadata, vocab_size, device, seed_key=seed_key)
 
 
 def _loss(model, inputs, targets) -> Any:
@@ -150,7 +143,7 @@ def _train(
     eval_targets,
     steps: int,
     lr: float,
-) -> tuple[float, float]:
+) -> tuple[float, float, dict[str, Any]]:
     optimizer = torch.optim.AdamW(graft.parameters(), lr=lr)
     for _ in range(max(1, steps)):
         optimizer.zero_grad()
@@ -159,7 +152,7 @@ def _train(
         optimizer.step()
     train_loss = float(_loss(model, inputs, targets).detach().cpu().item())
     eval_loss = float(_loss(model, eval_inputs, eval_targets).detach().cpu().item())
-    return train_loss, eval_loss
+    return train_loss, eval_loss, optimizer_to_payload(optimizer)
 
 
 def _target_module(model, target_module: str):
@@ -260,7 +253,7 @@ def _run_one(
     lr: float,
     seed: int,
     target_module: str,
-) -> tuple[float, float]:
+) -> tuple[float, float, dict[str, Any]]:
     torch.manual_seed(seed)
     model = model_cls(drm_config).to(device)
     model.eval()
@@ -269,7 +262,7 @@ def _run_one(
     handle = _target_module(model, target_module).register_forward_hook(graft.hook)
     try:
         initial = float(_loss(model, eval_inputs, eval_targets).detach().cpu().item())
-        _train_final, final = _train(
+        _train_final, final, optimizer_payload = _train(
             model,
             graft,
             torch,
@@ -282,7 +275,7 @@ def _run_one(
         )
     finally:
         handle.remove()
-    return initial, final
+    return initial, final, optimizer_payload
 
 
 def _load_optional_state(model, metadata: dict[str, Any], torch) -> None:
@@ -297,6 +290,10 @@ def _load_optional_state(model, metadata: dict[str, Any], torch) -> None:
                 break
     if isinstance(state, dict):
         model.load_state_dict(state, strict=False)
+
+
+def _consolidation_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in payload.items() if key != "delta_weight"}
 
 
 def inspect_graft_model(config: RuntimeConfig) -> dict:
@@ -352,7 +349,7 @@ def run_drm_graft(config: RuntimeConfig) -> MiniTransformerResult:
     base_loss = float(_loss(base_model, eval_inputs, eval_targets).detach().cpu().item())
     del base_model
 
-    initial_loss, graft_loss = _run_one(
+    initial_loss, graft_loss, optimizer_payload = _run_one(
         torch,
         model_cls,
         drm_config,
@@ -367,7 +364,7 @@ def run_drm_graft(config: RuntimeConfig) -> MiniTransformerResult:
         seed,
         target_module,
     )
-    _dense_initial, dense_loss = _run_one(
+    _dense_initial, dense_loss, _dense_optimizer_payload = _run_one(
         torch,
         model_cls,
         drm_config,
@@ -387,6 +384,15 @@ def run_drm_graft(config: RuntimeConfig) -> MiniTransformerResult:
     dense_gain = base_loss - dense_loss
     projection_mode = str(metadata.get("projection_init", "random"))
     graft_payload = phi.payload(target_module, projection_mode)
+    decision_input = {
+        **metadata,
+        "validation_gain": validation_gain,
+        "validation_gain_per_parameter": validation_gain / max(1, parameter_count),
+        "dense_budget_gain": dense_gain,
+    }
+    graft_decision = evaluate_graft_decision(decision_input)
+    consolidate_model = model_cls(drm_config)
+    consolidation = consolidation_payload(torch, consolidate_model, graft_payload)
     marco = str(
         metadata.get(
             "marco",
@@ -411,6 +417,12 @@ def run_drm_graft(config: RuntimeConfig) -> MiniTransformerResult:
             "dense_budget_gain": dense_gain,
             "dense_budget_gain_per_parameter": dense_gain / max(1, parameter_count),
             "delta_payload": graft_payload,
+            "optimizer_state_payload": optimizer_payload,
+            "graft_decision": graft_decision,
+            "graft_approved": graft_decision["approved"],
+            "graft_decision_status": graft_decision["decision"],
+            "consolidation": _consolidation_summary(consolidation),
+            "consolidation_payload": consolidation,
             "phi_rank": rank,
             "projection_init": projection_mode,
             "graft_scale": scale,

@@ -1,0 +1,28 @@
+{
+  "experiment_name": "drm_g_marco3_consolidated_linear",
+  "task": "drm_transformer",
+  "method": "drm_g_saint_phi_graft",
+  "steps": 3,
+  "seed": 32,
+  "output_dir": "runs/drm_g_marco3_consolidated_linear",
+  "metadata": {
+    "baseline_config": "configs/baselines/small_3.5M.yaml",
+    "device": "cpu",
+    "batch_size": 1,
+    "seq_len": 8,
+    "phi_rank": 8,
+    "graft_scale": 1.0,
+    "learning_rate": 0.005,
+    "target_module": "blocks.1.attn.out_proj",
+    "projection_init": "gradient",
+    "use_real_tokens": true,
+    "real_data_dir": "data/baseline",
+    "validation_split": "val",
+    "data_seed": 32,
+    "validation_seed": 1032,
+    "require_beats_dense": false,
+    "min_validation_gain": 0.0,
+    "min_gain_per_parameter": 0.0,
+    "marco": "drm_g_marco_3_consolidated_linear"
+  }
+}

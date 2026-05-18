@@ -44,6 +44,7 @@ def _run(seed: int, target: str, init: str, batch_size: int) -> dict:
         "validation_gain_per_parameter": meta["validation_gain_per_parameter"],
         "dense_budget_gain": meta["dense_budget_gain"],
         "beats_dense": meta["validation_gain"] > meta["dense_budget_gain"],
+        "decision": meta.get("graft_decision_status", "unknown"),
     }
 
 
@@ -51,13 +52,14 @@ def _markdown(rows: list[dict]) -> str:
     lines = [
         "# DRM-G Marco 3 Sweep",
         "",
-        "| seed | target | init | batch | val_gain | dense_gain | beats_dense |",
-        "|---:|---|---|---:|---:|---:|---|",
+        "| seed | target | init | batch | val_gain | dense_gain | beats_dense | decision |",
+        "|---:|---|---|---:|---:|---:|---|---|",
     ]
     for row in rows:
         lines.append(
             "| {seed} | `{target_module}` | `{projection_init}` | {batch_size} | "
-            "{validation_gain:.6f} | {dense_budget_gain:.6f} | {beats_dense} |".format(**row)
+            "{validation_gain:.6f} | {dense_budget_gain:.6f} | {beats_dense} | "
+            "{decision} |".format(**row)
         )
     return "\n".join(lines) + "\n"
 

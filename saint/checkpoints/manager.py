@@ -52,6 +52,19 @@ def _write_graft_payload(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _write_consolidation_payload(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    write_json(path, payload)
+    return {
+        "path": path.name,
+        "bytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+        "payload": "consolidation",
+        "format": "drm_graft_consolidation_json",
+        "target_module": payload.get("target_module"),
+        "state_dict_merge_supported": payload.get("state_dict_merge_supported", False),
+    }
+
+
 def _expand_sparse_delta(
     payload: dict[str, Any],
     matrix_names: set[str] | None = None,
@@ -134,6 +147,7 @@ def checkpoint_payload(result, config, memory_plan) -> dict[str, Any]:
     metadata = {**dict(config.metadata or {}), **dict(result.metadata)}
     delta_payload = metadata.pop("delta_payload", None)
     optimizer_payload = metadata.pop("optimizer_state_payload", None)
+    consolidation_payload = metadata.pop("consolidation_payload", None)
     payload = {
         "experiment_name": config.experiment_name,
         "method": result.name,
@@ -146,6 +160,7 @@ def checkpoint_payload(result, config, memory_plan) -> dict[str, Any]:
         "has_delta_payload": delta_payload is not None,
         "_delta_payload": delta_payload,
         "_optimizer_state_payload": optimizer_payload,
+        "_consolidation_payload": consolidation_payload,
     }
     return payload
 
@@ -156,6 +171,7 @@ def write_checkpoint_bundle(run_dir: str | Path, payload: dict[str, Any]) -> dic
     manifest = dict(payload)
     delta_payload = manifest.pop("_delta_payload", None)
     optimizer_payload = manifest.pop("_optimizer_state_payload", None)
+    consolidation_payload = manifest.pop("_consolidation_payload", None)
     files = []
     if delta_payload is not None:
         metadata = manifest.get("metadata", {})
@@ -173,6 +189,13 @@ def write_checkpoint_bundle(run_dir: str | Path, payload: dict[str, Any]) -> dic
                     shard_bytes=int(shard_bytes) if shard_bytes else None,
                 )
             )
+    if consolidation_payload is not None:
+        files.append(
+            _write_consolidation_payload(
+                target / "consolidation.drm-g.json",
+                consolidation_payload,
+            )
+        )
     state_payload = optimizer_payload or {
         "optimizer_state_values": manifest["optimizer_state_values"],
         "state": {},
