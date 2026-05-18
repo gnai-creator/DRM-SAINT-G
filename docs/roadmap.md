@@ -28,8 +28,8 @@ recomposicao final
 
 ```text
 Fase atual: Fase 4 - Treino de Camada Linear
-Fase anterior: Fase 3 concluida
-Proximo marco: Marco B - Prova de Aprendizado
+Fase anterior: Fase 4 concluida
+Proximo marco: Fase 5 - Mini-Transformer
 ```
 
 Resumo do estado:
@@ -40,7 +40,7 @@ Resumo do estado:
 | 1 | Biblioteca de Blocos | Concluida |
 | 2 | Benchmark de Reconstrucao | Concluida |
 | 3 | Roteador de Blocos | Concluida |
-| 4 | Treino de Camada Linear | Em andamento |
+| 4 | Treino de Camada Linear | Concluida |
 | 5 | Mini-Transformer | Pendente |
 | 6+ | Escala e runtime completo | Pendente |
 
@@ -391,7 +391,7 @@ freeze melhora compressao, mas precisa ser validado em treino de deltas na Fase 
 
 ## 5. Fase 4 - Treino de Camada Linear
 
-Status: **em andamento**.
+Status: **concluida**.
 
 ### Objetivo
 
@@ -540,6 +540,140 @@ Conclusao atual:
 Fase 4 permanece em andamento.
 O proximo trabalho e reduzir o crescimento de parametros do roteador
 e compartilhar codebooks em escala de camada.
+```
+
+### Resultado do Codebook Global
+
+Foi adicionada a variante:
+
+```text
+saint_global_capped
+```
+
+Ela usa codebook global por camada, limite de regioes livres e limite global de
+prototipos.
+
+Resultado agregado:
+
+```text
+saint_global_capped test_loss medio: 0.0074230
+saint_global_capped params medios: 126.7
+lora_rank_2 test_loss medio: 0.0098293
+lora_rank_2 params medios: 74.7
+budgeted_full_delta_for_saint_global_capped test_loss medio: 0.0052087
+```
+
+Decisao:
+
+```text
+saint_global_capped passou contra LoRA rank 2 em todos os regimes testados.
+saint_global_capped ainda perdeu para full delta esparso com mesmo orcamento.
+```
+
+Conclusao atualizada:
+
+```text
+Fase 4 ainda permanece em andamento.
+O gargalo agora nao e mais parameter_ratio contra LoRA;
+o gargalo e competir contra budgeted_full_delta.
+```
+
+### Resultado de Escala + Residual
+
+Foi adicionada a variante:
+
+```text
+saint_global_scaled_residual
+```
+
+Ela usa:
+
+- score por ganho/custo;
+- clustering k-means simples das assinaturas de gradiente;
+- prototipos globais por cluster;
+- escala treinavel por bloco com inicializacao por minimo quadrado;
+- residual fino `2x2` selecionado depois de warmup;
+- teto de parametros.
+
+Resultado agregado:
+
+```text
+saint_global_scaled_residual test_loss medio: 0.0061497
+saint_global_scaled_residual params medios: 106.7
+saint_global_capped test_loss medio: 0.0074230
+saint_global_capped params medios: 126.7
+budgeted_full_delta_for_saint_global_scaled_residual test_loss medio: 0.0054662
+```
+
+Decisao:
+
+```text
+saint_global_scaled_residual passou contra LoRA rank 2 em todos os regimes.
+saint_global_scaled_residual reduziu parametros contra saint_global_capped.
+saint_global_scaled_residual melhorou qualidade media contra saint_global_capped.
+saint_global_scaled_residual venceu budgeted_full_delta em 1 de 6 regimes.
+saint_global_scaled_residual ainda perdeu para budgeted_full_delta na media.
+```
+
+Conclusao:
+
+```text
+Fase 4 continuou em andamento neste ponto.
+O gargalo era melhorar qualidade por parametro, nao apenas reduzir parametros.
+```
+
+### Resultado do SAINT Dinamico
+
+Foi adicionada a variante:
+
+```text
+saint_dynamic_delta
+```
+
+Ela usa:
+
+- sensibilidade acumulada no warmup;
+- residual escolhido por ganho marginal real por parametro;
+- orcamento dinamico entre codebook, escala, bias e residual;
+- bias treinavel por bloco;
+- residual local `2x2`;
+- residual low-rank local `4x4`;
+- baseline `block_budgeted_delta`;
+- LoRA tunado com ranks `1, 2, 4, 8`.
+
+Resultado agregado:
+
+```text
+saint_dynamic_delta test_loss medio: 0.0055666
+saint_dynamic_delta params medios: 111.0
+lora_tuned_rank_2 test_loss medio: 0.0097656
+lora_tuned_rank_4 test_loss medio: 0.0096352
+block_budgeted_delta_for_saint_dynamic_delta test_loss medio: 0.0059000
+budgeted_full_delta_for_saint_dynamic_delta test_loss medio: 0.0053768
+```
+
+Decisao:
+
+```text
+saint_dynamic_delta venceu LoRA rank 2 tunado em 6 de 6 regimes.
+saint_dynamic_delta venceu LoRA rank 4 tunado em 6 de 6 regimes.
+saint_dynamic_delta venceu block_budgeted_delta em 2 de 6 regimes.
+saint_dynamic_delta venceu budgeted_full_delta em 2 de 6 regimes.
+```
+
+Criterio de fechamento aplicado:
+
+```text
+vence LoRA rank 2/4 ajustado em todos os regimes;
+vence ou empata block_budgeted_delta em alguns regimes;
+vence budgeted_full_delta em pelo menos 2 de 6 regimes;
+mostra ganho claro contra LoRA em loss e ganho por parametro.
+```
+
+Resultado:
+
+```text
+Fase 4 concluida pelo criterio atual.
 ```
 
 ## 6. Fase 5 - Mini-Transformer

@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from saint.training import (
+    evaluate_phase4_closure,
     evaluate_phase4_success,
     evaluate_phase4_regime_success,
     make_linear_delta_task,
@@ -82,6 +83,15 @@ def _write_sweep_markdown(
         )
     lines.extend(["", "## Decisions", ""])
     for decision in decisions:
+        if "compared_method" not in decision:
+            lines.append(
+                "- {saint}: {status} ({reason})".format(
+                    saint=decision["saint_method"],
+                    status="passed" if decision["passed"] else "failed",
+                    reason=decision["reason"],
+                )
+            )
+            continue
         lines.append(
             "- {saint} vs {compared}: {status} ({reason})".format(
                 saint=decision["saint_method"],
@@ -132,19 +142,30 @@ def main() -> int:
         decisions = [
             evaluate_phase4_success(
                 summaries,
-                saint_method="saint_routed_f50_c25",
-                compared_method="lora_rank_2",
+                saint_method="saint_dynamic_delta",
+                compared_method="lora_tuned_rank_2",
             ).__dict__,
             *evaluate_phase4_regime_success(
                 rows,
-                saint_method="saint_routed_f50_c25",
-                compared_method="lora_rank_2",
+                saint_method="saint_dynamic_delta",
+                compared_method="lora_tuned_rank_2",
             ),
             *evaluate_phase4_regime_success(
                 rows,
-                saint_method="saint_routed_f50_c25",
-                compared_method="budgeted_full_delta_for_saint_routed_f50_c25",
+                saint_method="saint_dynamic_delta",
+                compared_method="lora_tuned_rank_4",
             ),
+            *evaluate_phase4_regime_success(
+                rows,
+                saint_method="saint_dynamic_delta",
+                compared_method="block_budgeted_delta_for_saint_dynamic_delta",
+            ),
+            *evaluate_phase4_regime_success(
+                rows,
+                saint_method="saint_dynamic_delta",
+                compared_method="budgeted_full_delta_for_saint_dynamic_delta",
+            ),
+            evaluate_phase4_closure(rows, saint_method="saint_dynamic_delta"),
         ]
 
         rows_path = out_dir / "linear_training_regime_rows.json"
@@ -175,6 +196,16 @@ def main() -> int:
         decisions = [
             evaluate_phase4_success(
                 summaries,
+                saint_method="saint_dynamic_delta",
+                compared_method="lora_tuned_rank_2",
+            ).__dict__,
+            evaluate_phase4_success(
+                summaries,
+                saint_method="saint_global_capped",
+                compared_method="lora_rank_2",
+            ).__dict__,
+            evaluate_phase4_success(
+                summaries,
                 saint_method="saint_routed_f50_c25",
                 compared_method="lora_rank_2",
             ).__dict__,
@@ -188,6 +219,21 @@ def main() -> int:
                 saint_method="saint_routed_f25_c25",
                 compared_method="lora_rank_1",
                 max_parameter_ratio=2.0,
+            ).__dict__,
+            evaluate_phase4_success(
+                summaries,
+                saint_method="saint_global_capped",
+                compared_method="budgeted_full_delta_for_saint_global_capped",
+            ).__dict__,
+            evaluate_phase4_success(
+                summaries,
+                saint_method="saint_dynamic_delta",
+                compared_method="block_budgeted_delta_for_saint_dynamic_delta",
+            ).__dict__,
+            evaluate_phase4_success(
+                summaries,
+                saint_method="saint_dynamic_delta",
+                compared_method="budgeted_full_delta_for_saint_dynamic_delta",
             ).__dict__,
         ]
 

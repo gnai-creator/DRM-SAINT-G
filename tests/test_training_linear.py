@@ -2,13 +2,17 @@ import unittest
 
 from saint.training import (
     evaluate_phase4_success,
+    evaluate_phase4_closure,
     make_linear_delta_task,
     run_linear_phase4_benchmark,
     run_linear_phase4_regime_sweep,
     run_linear_phase4_sweep,
     summarize_phase4_rows,
     train_budgeted_full_delta,
+    train_block_budgeted_delta,
     train_full_delta,
+    train_saint_dynamic_delta,
+    train_saint_global_scaled_residual,
     train_saint_routed_delta,
 )
 
@@ -53,6 +57,34 @@ class LinearTrainingTests(unittest.TestCase):
         self.assertEqual(result.parameter_count, 20)
         self.assertEqual(result.metadata["parameter_budget"], 20)
 
+    def test_block_budgeted_delta_respects_block_budget(self):
+        task = make_linear_delta_task(rows=8, cols=8, train_samples=32, test_samples=12)
+
+        result = train_block_budgeted_delta(task, parameter_budget=20, steps=30)
+
+        self.assertLessEqual(result.parameter_count, 20)
+        self.assertEqual(result.metadata["block_size"], 2)
+
+    def test_saint_dynamic_delta_uses_advanced_router(self):
+        task = make_linear_delta_task(rows=8, cols=8, train_samples=32, test_samples=12)
+
+        result = train_saint_dynamic_delta(task, parameter_budget=44, steps=30)
+
+        self.assertEqual(result.metadata["residual_selection"], "real_marginal_gain_per_parameter")
+        self.assertEqual(result.metadata["budget_allocator"], "dynamic_greedy")
+        self.assertTrue(result.metadata["has_accumulated_sensitivity"])
+        self.assertTrue(result.metadata["has_block_bias"])
+
+    def test_saint_global_scaled_residual_uses_phase4_improvements(self):
+        task = make_linear_delta_task(rows=8, cols=8, train_samples=32, test_samples=12)
+
+        result = train_saint_global_scaled_residual(task, steps=30)
+
+        self.assertEqual(result.metadata["scale_initialization"], "least_squares")
+        self.assertTrue(result.metadata["residual_selected_after_warmup"])
+        self.assertEqual(result.metadata["codebook_assignment"], "kmeans_gradient_signature")
+        self.assertEqual(result.metadata["router"], "gain_per_parameter")
+
     def test_phase4_benchmark_returns_named_results(self):
         task = make_linear_delta_task(rows=6, cols=6, train_samples=48, test_samples=16)
 
@@ -78,6 +110,10 @@ class LinearTrainingTests(unittest.TestCase):
         self.assertIn("lora_rank_1", methods)
         self.assertIn("lora_rank_4", methods)
         self.assertIn("saint_routed_f25_c50", methods)
+        self.assertIn("saint_global_capped", methods)
+        self.assertIn("saint_global_scaled_residual", methods)
+        self.assertIn("saint_dynamic_delta", methods)
+        self.assertIn("lora_tuned_rank_2", methods)
         self.assertTrue(all("gain_per_parameter" in row for row in rows))
 
     def test_phase4_regime_sweep_includes_sizes_and_delta_modes(self):
@@ -117,6 +153,22 @@ class LinearTrainingTests(unittest.TestCase):
         self.assertEqual(decision.compared_method, "lora_rank_2")
         self.assertIsInstance(decision.passed, bool)
         self.assertTrue(decision.reason)
+
+    def test_phase4_closure_returns_decision(self):
+        rows = run_linear_phase4_regime_sweep(
+            seeds=(1,),
+            sizes=(6,),
+            delta_modes=("repeated",),
+            train_samples=24,
+            test_samples=8,
+            steps=30,
+            lora_steps=40,
+        )
+
+        decision = evaluate_phase4_closure(rows)
+
+        self.assertEqual(decision["saint_method"], "saint_dynamic_delta")
+        self.assertIn("budgeted_full_delta_passes", decision)
 
 
 if __name__ == "__main__":

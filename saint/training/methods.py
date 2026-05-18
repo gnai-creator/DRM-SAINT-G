@@ -145,6 +145,11 @@ def block_signature_from_gradient(
     return tuple(round((value / norm) / quantization_step) for value in values)
 
 
+def _signature_bucket(signature: tuple[int, ...], bucket_count: int) -> int:
+    value = sum((index + 1) * item for index, item in enumerate(signature))
+    return abs(value) % bucket_count
+
+
 def train_codebook_delta(
     task: LinearTask,
     *,
@@ -280,6 +285,9 @@ def train_saint_routed_delta(
     steps: int = 260,
     learning_rate: float = 0.35,
     name: str = "saint_routed_delta",
+    max_free_regions: int | None = None,
+    max_codebook_regions: int | None = None,
+    max_prototypes: int | None = None,
 ) -> TrainingResult:
     """Train deltas with freeze + codebook + free regions selected by sensitivity."""
 
@@ -298,6 +306,10 @@ def train_saint_routed_delta(
     regions.sort(reverse=True)
     free_count = max(1, int(len(regions) * free_region_fraction))
     codebook_count = max(1, int(len(regions) * codebook_region_fraction))
+    if max_free_regions is not None:
+        free_count = min(free_count, max_free_regions)
+    if max_codebook_regions is not None:
+        codebook_count = min(codebook_count, max_codebook_regions)
     free_regions = {(row, col) for _s, row, col in regions[:free_count]}
     codebook_regions = {
         (row, col)
@@ -318,9 +330,21 @@ def train_saint_routed_delta(
                     block_size,
                     quantization_step,
                 )
-                signature_to_id.setdefault(signature, len(signature_to_id))
-                assignments[(row, col)] = signature_to_id[signature]
-    prototypes = [zeros(block_size, block_size) for _ in signature_to_id]
+                if signature in signature_to_id:
+                    prototype_id = signature_to_id[signature]
+                elif max_prototypes is None or len(signature_to_id) < max_prototypes:
+                    prototype_id = len(signature_to_id)
+                    signature_to_id[signature] = prototype_id
+                else:
+                    prototype_id = _signature_bucket(signature, max_prototypes)
+                    signature_to_id[signature] = prototype_id
+                assignments[(row, col)] = prototype_id
+    prototype_count = (
+        max(signature_to_id.values()) + 1
+        if signature_to_id
+        else 0
+    )
+    prototypes = [zeros(block_size, block_size) for _ in range(prototype_count)]
 
     def is_free(row: int, col: int) -> bool:
         return ((row // region_size) * region_size, (col // region_size) * region_size) in free_regions
@@ -377,6 +401,9 @@ def train_saint_routed_delta(
             "frozen_regions": len(regions) - len(free_regions) - len(codebook_regions),
             "free_region_fraction": free_region_fraction,
             "codebook_region_fraction": codebook_region_fraction,
+            "max_free_regions": max_free_regions,
+            "max_codebook_regions": max_codebook_regions,
+            "max_prototypes": max_prototypes,
             "prototype_count": len(prototypes),
         },
     )

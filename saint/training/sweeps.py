@@ -9,10 +9,16 @@ from saint.training.methods import (
     train_codebook_delta,
     train_full_delta,
     train_lora_delta,
-    train_saint_routed_delta,
     train_sparse_sensitivity_delta,
 )
+from saint.training.advanced_saint import train_saint_dynamic_delta
+from saint.training.budgeted import train_block_budgeted_delta
+from saint.training.lora_tuning import train_tuned_lora_delta
 from saint.training.ops import TrainingResult
+from saint.training.saint_delta import (
+    train_saint_global_scaled_residual,
+    train_saint_routed_delta,
+)
 
 
 def run_linear_phase4_benchmark(task: LinearTask | None = None) -> list[TrainingResult]:
@@ -67,9 +73,28 @@ def run_linear_phase4_sweep(
 
     rows_out = []
     saint_budgets = (
-        ("saint_routed_f25_c50", 0.25, 0.50),
-        ("saint_routed_f25_c25", 0.25, 0.25),
-        ("saint_routed_f50_c25", 0.50, 0.25),
+        {
+            "name": "saint_routed_f25_c50",
+            "free_region_fraction": 0.25,
+            "codebook_region_fraction": 0.50,
+        },
+        {
+            "name": "saint_routed_f25_c25",
+            "free_region_fraction": 0.25,
+            "codebook_region_fraction": 0.25,
+        },
+        {
+            "name": "saint_routed_f50_c25",
+            "free_region_fraction": 0.50,
+            "codebook_region_fraction": 0.25,
+        },
+        {
+            "name": "saint_global_capped",
+            "free_region_fraction": 0.125,
+            "codebook_region_fraction": 0.375,
+            "max_free_regions": 4,
+            "max_prototypes": 16,
+        },
     )
     lora_learning_rates = {1: 0.45, 2: 0.55, 4: 0.35}
     for seed in seeds:
@@ -101,6 +126,16 @@ def run_linear_phase4_sweep(
                 steps=lora_steps,
                 learning_rate=lora_learning_rates[4],
             ),
+            train_lora_delta(
+                task,
+                rank=8,
+                steps=lora_steps,
+                learning_rate=0.2,
+            ),
+            train_tuned_lora_delta(task, rank=1),
+            train_tuned_lora_delta(task, rank=2),
+            train_tuned_lora_delta(task, rank=4),
+            train_tuned_lora_delta(task, rank=8),
             train_block_scalar_delta(task, block_size=2, steps=steps),
             train_codebook_delta(task, block_size=2, steps=steps),
             train_sparse_sensitivity_delta(task, trainable_fraction=0.25, steps=steps),
@@ -108,13 +143,23 @@ def run_linear_phase4_sweep(
         saint_results = [
             train_saint_routed_delta(
                 task,
-                name=name,
-                free_region_fraction=free_fraction,
-                codebook_region_fraction=codebook_fraction,
+                name=config["name"],
+                free_region_fraction=config["free_region_fraction"],
+                codebook_region_fraction=config["codebook_region_fraction"],
+                max_free_regions=config.get("max_free_regions"),
+                max_codebook_regions=config.get("max_codebook_regions"),
+                max_prototypes=config.get("max_prototypes"),
                 steps=steps,
             )
-            for name, free_fraction, codebook_fraction in saint_budgets
+            for config in saint_budgets
         ]
+        saint_results.append(
+            train_saint_global_scaled_residual(
+                task,
+                steps=steps,
+            )
+        )
+        saint_results.append(train_saint_dynamic_delta(task, steps=steps))
         results.extend(saint_results)
         results.extend(
             train_budgeted_full_delta(
@@ -122,6 +167,15 @@ def run_linear_phase4_sweep(
                 parameter_budget=result.parameter_count,
                 steps=steps,
                 name=f"budgeted_full_delta_for_{result.name}",
+            )
+            for result in saint_results
+        )
+        results.extend(
+            train_block_budgeted_delta(
+                task,
+                parameter_budget=result.parameter_count,
+                steps=steps,
+                name=f"block_budgeted_delta_for_{result.name}",
             )
             for result in saint_results
         )

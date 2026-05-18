@@ -104,3 +104,50 @@ def evaluate_phase4_regime_success(
             }
         )
     return decisions
+
+
+def evaluate_phase4_closure(
+    rows: list[dict],
+    *,
+    saint_method: str = "saint_dynamic_delta",
+) -> dict:
+    """Evaluate the stricter phase-4 closure rule across regimes."""
+
+    lora_rank_2 = evaluate_phase4_regime_success(
+        rows,
+        saint_method=saint_method,
+        compared_method="lora_tuned_rank_2",
+    )
+    lora_rank_4 = evaluate_phase4_regime_success(
+        rows,
+        saint_method=saint_method,
+        compared_method="lora_tuned_rank_4",
+    )
+    block_budgeted = evaluate_phase4_regime_success(
+        rows,
+        saint_method=saint_method,
+        compared_method=f"block_budgeted_delta_for_{saint_method}",
+    )
+    full_budgeted = evaluate_phase4_regime_success(
+        rows,
+        saint_method=saint_method,
+        compared_method=f"budgeted_full_delta_for_{saint_method}",
+    )
+    block_passes = sum(1 for decision in block_budgeted if decision["passed"])
+    full_passes = sum(1 for decision in full_budgeted if decision["passed"])
+    passed = (
+        all(decision["passed"] for decision in lora_rank_2)
+        and all(decision["passed"] for decision in lora_rank_4)
+        and block_passes >= 1
+        and full_passes >= 2
+    )
+    return {
+        "passed": passed,
+        "saint_method": saint_method,
+        "lora_rank_2_all_passed": all(decision["passed"] for decision in lora_rank_2),
+        "lora_rank_4_all_passed": all(decision["passed"] for decision in lora_rank_4),
+        "block_budgeted_passes": block_passes,
+        "budgeted_full_delta_passes": full_passes,
+        "required_budgeted_full_delta_passes": 2,
+        "reason": "passed" if passed else "phase 4 closure thresholds not met",
+    }
