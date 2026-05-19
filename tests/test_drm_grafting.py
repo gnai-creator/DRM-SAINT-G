@@ -121,6 +121,17 @@ class DRMGraftingTests(unittest.TestCase):
 
         self.assertEqual(status, "defer")
 
+    def test_consolidated_artifact_state_dict_reader_rejects_bad_payload(self):
+        from saint.adapters.drm_grafting_artifact import _state_dict_from_file
+
+        class TorchStub:
+            @staticmethod
+            def load(_path, map_location=None, weights_only=False):
+                return {"not_state": 1}
+
+        with self.assertRaises(ValueError):
+            _state_dict_from_file(TorchStub, Path("missing.pt"))
+
 
 if __name__ == "__main__":
     unittest.main()

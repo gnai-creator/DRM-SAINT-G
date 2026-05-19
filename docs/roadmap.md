@@ -3331,6 +3331,44 @@ tokens reais em mais de um batch, sequencia linear consolidavel, politica
 parametro contra baseline full-budget linear. O merge permanente em memoria
 reproduz a loss via hook exatamente e o smoke CUDA mede picos por etapa.
 
+### Marco 5 - Validacao Robusta e Artefato Consolidado
+
+Status: **iniciado**.
+
+Subfases:
+
+| subfase | foco | saida esperada |
+|---|---|---|
+| 5A | artefato consolidado em disco | `.pt` salvo, recarregado e avaliado |
+| 5B | retencao e dados maiores | mais batches, offsets e regressao antiga |
+| 5C | baseline full mais forte | full-budget/full-module mais justo |
+| 5D | segundo tamanho DRM | repeticao fora do DRM 3.5M |
+| 5E | criterio automatico final | `phase_decision` JSON/Markdown |
+| 5F | relatorio final DRM-G | recomendacao para proxima fase |
+
+Criterio final:
+
+```text
+treinar -> aprovar -> consolidar -> salvar .pt -> recarregar -> avaliar -> decidir
+```
+
+O Marco 5 fecha quando o artefato consolidado for reproduzivel, a retencao for
+medida em mais exemplos, o baseline full for mais forte e houver uma decisao
+automatica para avancar ou segurar a fase.
+
+Marco 5A inicial:
+
+| metrica | valor |
+|---|---:|
+| artifact_bytes | 13902349 |
+| saved_loss_abs_diff | 0.0 |
+| validation_gain | 0.000495 |
+| state_dict_merge_supported | true |
+
+O `.pt` consolidado foi salvo em
+`runs/drm_g_marco5a_consolidate_linear/consolidated_model.pt` e reproduziu a
+loss do caminho por hook.
+
 ## Fase 16 - Escala 70B
 
 Status: **pendente**.

@@ -406,6 +406,166 @@ exemplos antigos. A sequencia linear tambem foi consolidada em memoria no
 `state_dict` e reproduziu exatamente a loss via hook. A medicao CUDA passou no
 DRM 3.5M com pico abaixo de 72 MB neste smoke.
 
+### Marco 5 - Validacao Robusta e Artefato Consolidado
+
+Status: **iniciado**.
+
+Objetivo:
+
+Transformar o ciclo progressivo em um fluxo reproduzivel:
+
+```text
+treinar enxerto -> aprovar -> consolidar -> salvar .pt -> recarregar -> avaliar -> decidir
+```
+
+#### Marco 5A - Artefato Consolidado em Disco
+
+Objetivo:
+
+Persistir a consolidacao linear em um checkpoint PyTorch real do DRM.
+
+Entregas:
+
+- carregar DRM base;
+- carregar `drm_graft_sequence_payload`;
+- aplicar merge permanente no `state_dict`;
+- salvar `consolidated_model.pt`;
+- recarregar o `.pt`;
+- avaliar o modelo salvo;
+- comparar loss do hook, loss do merge em memoria e loss do `.pt` salvo.
+
+Criterio:
+
+Passa se:
+
+- `merge_loss_abs_diff <= 1e-6`;
+- `saved_loss_abs_diff <= 1e-6`;
+- o arquivo `.pt` existe;
+- o manifest ou relatorio registra caminho, bytes e checksum.
+
+Resultado inicial:
+
+```text
+config: configs/drm_g_marco5a_consolidate_linear.json
+artifact: runs/drm_g_marco5a_consolidate_linear/consolidated_model.pt
+artifact_bytes: 13902349
+artifact_sha256: 68544e26197a4a83b1c3789cdd2dc92d599b745213f25e48ad8da41d73e8642e
+base_loss: 10.805441
+hook_loss: 10.804946
+saved_loss: 10.804946
+saved_loss_abs_diff: 0.0
+state_dict_merge_supported: true
+```
+
+Veredito:
+
+5A passou no criterio inicial: o artefato `.pt` consolidado foi salvo,
+recarregado e avaliou com a mesma loss do caminho por hook.
+
+#### Marco 5B - Retencao e Dados Maiores
+
+Objetivo:
+
+Reduzir o risco de overfit ao fixture curto.
+
+Entregas:
+
+- aumentar `validation_batches`;
+- usar offsets separados para treino, validacao e retencao;
+- medir `old_regression` em mais batches;
+- salvar tabela por seed;
+- reprovar enxerto que melhora validacao nova mas degrada retencao.
+
+Criterio:
+
+Passa se `sequence_gain > 0` e `old_regression` fica dentro do limite configurado.
+
+#### Marco 5C - Baseline Full Mais Forte
+
+Objetivo:
+
+Comparar contra um controle treinavel mais honesto.
+
+Entregas:
+
+- full-budget linear com mais steps;
+- full fine-tuning pequeno do mesmo modulo/camada;
+- comparacao por parametro treinavel;
+- comparacao por bytes de checkpoint;
+- comparacao por tempo.
+
+Criterio:
+
+Passa se DRM-SAINT-G vencer pelo menos um eixo relevante:
+
+- maior ganho por parametro;
+- menor checkpoint;
+- menor memoria;
+- melhor retencao;
+- ganho positivo quando full-budget falha.
+
+#### Marco 5D - Segundo Tamanho DRM
+
+Objetivo:
+
+Testar se o resultado nao e exclusivo do DRM 3.5M.
+
+Entregas:
+
+- detectar configs em `drm_transformer/configs/baselines`;
+- selecionar pelo menos um segundo tamanho viavel;
+- repetir o ciclo progressivo linear;
+- registrar diferencas de perda, memoria e tempo.
+
+Criterio:
+
+Passa se o runtime executa em outro tamanho e produz metricas comparaveis, mesmo
+que a qualidade ainda nao supere o melhor run 3.5M.
+
+#### Marco 5E - Criterio Automatico Final
+
+Objetivo:
+
+Transformar o veredito da fase em regra programavel.
+
+Entregas:
+
+- funcao `evaluate_drm_g_phase_success`;
+- JSON `phase_decision`;
+- limites configuraveis:
+  - ganho minimo;
+  - regressao maxima;
+  - diferenca maxima hook/merge;
+  - budget CUDA maximo;
+  - minimo de seeds positivos;
+- Markdown com aprovado/reprovado e razoes.
+
+Criterio:
+
+Passa se a decisao automatica bater com a leitura manual do benchmark.
+
+#### Marco 5F - Relatorio Final DRM-G
+
+Objetivo:
+
+Fechar a fase DRM-G com uma recomendacao tecnica.
+
+Entregas:
+
+- resumo dos Marcos 1 a 5;
+- melhor configuracao atual;
+- limites conhecidos;
+- recomendacao para proxima fase;
+- lista de riscos antes de escalar.
+
+Criterio:
+
+Passa se o projeto tiver resposta clara para:
+
+- DRM-G deve avancar?
+- Qual baseline carregar para a proxima fase?
+- O foco deve ser qualidade, escala ou infraestrutura?
+
 ## Metricas
 
 - validation loss antes/depois;

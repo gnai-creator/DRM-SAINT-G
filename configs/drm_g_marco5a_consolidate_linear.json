@@ -1,0 +1,21 @@
+{
+  "experiment_name": "drm_g_marco5a_consolidate_linear",
+  "task": "drm_transformer",
+  "method": "drm_g_saint_phi_consolidate",
+  "steps": 1,
+  "seed": 33,
+  "output_dir": "runs/drm_g_marco5a_consolidate_linear",
+  "metadata": {
+    "baseline_config": "configs/baselines/small_3.5M.yaml",
+    "device": "cpu",
+    "batch_size": 4,
+    "seq_len": 8,
+    "use_real_tokens": true,
+    "real_data_dir": "data/baseline",
+    "validation_split": "val",
+    "validation_batches": 3,
+    "validation_seed": 2033,
+    "graft_run": "runs/drm_g_marco4_linear_progressive_real_tokens",
+    "artifact_name": "consolidated_model.pt"
+  }
+}
