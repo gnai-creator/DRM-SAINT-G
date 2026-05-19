@@ -217,6 +217,132 @@ Criterio:
 
 Passa se o grafted melhora a base 5M e gera checkpoint recomponivel.
 
+Status inicial:
+
+```text
+implementado como smoke inicial
+script: scripts/benchmark_drm_g_phase16_5m_graft.py
+relatorio: docs/reports/phase16_marco4_5m_graft.md
+```
+
+Resultado inicial:
+
+- checkpoint base: `drm_transformer/checkpoints/multilingual_5m/smoke_819k/final.pt`;
+- dataset: `drm_transformer/data/multilingual_125m`;
+- melhor alvo inicial: `blocks.5.ffn.down_proj`;
+- melhor familia media: `phi_ls_full_rank`;
+- ganho medio de validacao: `0.000114`;
+- positivo em `3/3` seeds;
+- parametros treinaveis: `9.216`;
+- controle `full_module_linear`: `36.864` parametros e ganho medio negativo.
+
+Interpretacao:
+
+O Marco 4 tem sinal positivo inicial, mas ainda fraco. Ele prova que o caminho
+5M + enxerto roda no mesmo dataset e consegue melhorar validacao em um alvo
+especifico. Ainda nao prova que o modelo grafted chega perto do full 125M.
+
+### Marco 4B - GraftBlock 5M Repetivel
+
+Objetivo:
+
+Testar explicitamente a ideia:
+
+```text
+DRM 5M + enxerto de aproximadamente 5M * 24 ~= DRM 125M
+```
+
+Esta variante usa um bloco residual enxertado na saida de blocos do DRM:
+
+```text
+h_out = h + scale * down(silu(up(h)))
+```
+
+Para o DRM multilingual 5M:
+
+```text
+d_model = 96
+hidden por enxerto de 5M ~= 26k
+24 enxertos ~= 119.3M parametros adicionados
+total efetivo ~= 125.0M parametros
+```
+
+Status:
+
+```text
+implementado como smoke operacional
+script: scripts/benchmark_drm_g_phase16_graftblock.py
+relatorio: docs/reports/phase16_marco4b_graftblock_5m.md
+```
+
+Resultados iniciais:
+
+- 1 enxerto de 5M: ganho de validacao `0.000141`, pico CUDA `381 MB`;
+- 2 enxertos de 5M: ganho de validacao `0.000334`, pico CUDA `495 MB`;
+- 4 enxertos de 5M: ganho de validacao `0.000811`, pico CUDA `755 MB`;
+- 24 enxertos, total efetivo `124,995,595` parametros: ganho de validacao
+  `0.000261`, pico CUDA `3.43 GB`.
+
+Interpretacao:
+
+O caminho `5M + 24 enxertos ~= 125M` esta tecnicamente validado em smoke: roda
+em CUDA, nao estoura memoria e melhora levemente a validacao. Ainda nao e uma
+comparacao de qualidade contra o full 125M, porque o treino foi curto e o
+empilhamento ingenuo de 24 enxertos nao superou o caso de 4 enxertos.
+
+Proximo passo:
+
+- treinar 24 enxertos por mais steps;
+- fazer crescimento progressivo em vez de ativar todos os enxertos de uma vez;
+- salvar checkpoint recomponivel dos enxertos;
+- comparar 4/8/16/24 enxertos com o mesmo budget de tokens;
+- medir distancia real contra a loss do full 125M.
+
+### Marco 4C - Treinabilidade dos 24 Enxertos
+
+Objetivo:
+
+Transformar o smoke `5M + 24 enxertos` em um experimento comparavel.
+
+Status:
+
+```text
+implementado
+relatorio: docs/reports/phase16_marco4c_graftblock_training.md
+```
+
+Entregas concluidas:
+
+- `--graft-counts 4 8 16 24`;
+- treino progressivo por quantidade ativa de enxertos;
+- decaimento de learning rate por enxerto;
+- warmup de escala por enxerto;
+- checkpoint recomponivel;
+- avaliacao do checkpoint recarregado;
+- distancia para a loss do full 125M smoke.
+
+Resultado principal:
+
+```text
+full 125M smoke loss: 9.049912
+melhor 4-graft loss: 10.415268
+24-graft checkpoint positivo loss: 10.415910
+distancia 24-graft -> full 125M: 1.365997
+recompose_abs_diff: 0.0
+```
+
+Veredito:
+
+O Marco 4C passa na infraestrutura, mas ainda nao passa em qualidade. O caminho
+24-graft e recomponivel e cabe em CUDA, mas o treino progressivo ingenuo piorou
+validacao quando aumentamos steps. O melhor ponto curto ainda foi 4 enxertos.
+
+Proximo passo:
+
+O Marco 4D deve selecionar e aceitar enxertos por ganho de validacao, congelar os
+aceitos e so entao adicionar novos grupos. Nao devemos continuar apenas
+empilhando 24 enxertos por indice.
+
 ### Marco 5 - Comparacao Full vs Grafted
 
 Objetivo:

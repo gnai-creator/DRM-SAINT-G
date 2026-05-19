@@ -31,7 +31,9 @@ def real_token_batch(
     split_dir = data_dir / split
     shards = sorted(split_dir.glob("*.npy"))
     if not shards:
-        raise FileNotFoundError(f"no .npy token shards found in {split_dir}")
+        shards = sorted(data_dir.glob("shard_*.npy"))
+    if not shards:
+        raise FileNotFoundError(f"no .npy token shards found in {split_dir} or {data_dir}")
 
     batch_size = int(metadata.get("batch_size", 1))
     seq_len = int(metadata.get("seq_len", 16))

@@ -47,6 +47,8 @@ def orthogonal_basis(torch, signal, rank: int):
 
 
 def least_squares_phi(torch, activation, gradient, left, right, step_scale: float):
+    left = left.to(activation.device)
+    right = right.to(activation.device)
     projected = activation.float().matmul(left.float())
     target = -float(step_scale) * gradient.float()
     try:
@@ -137,6 +139,7 @@ def make_phi_variant(
     if init == "least_squares_gradient":
         phi = least_squares_phi(torch, activation, gradient, left, right, step_scale)
     elif init == "gradient_diag":
+        left = left.to(activation.device)
         scores = (activation.float() * gradient.float()).mean(dim=0)
         phi = torch.diag(left.transpose(0, 1).matmul(-scores))
     elif init == "zero":

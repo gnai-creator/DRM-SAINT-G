@@ -3534,6 +3534,74 @@ perplexity, nao como prova direta.
 6. Comparacao externa contra GPT/OPT pequenos.
 7. Decisao de entrada para 70B.
 
+Marco 4 inicial:
+
+```text
+script: scripts/benchmark_drm_g_phase16_5m_graft.py
+relatorio: docs/reports/phase16_marco4_5m_graft.md
+melhor alvo: blocks.5.ffn.down_proj
+melhor media: phi_ls_full_rank
+ganho medio: 0.000114
+positivo: 3/3 seeds
+params Phi: 9.216
+controle full_module_linear: 36.864 params, ganho medio negativo
+```
+
+Veredito: o caminho grafted 5M esta operacional e tem sinal positivo inicial,
+mas o ganho ainda e pequeno frente ao gap para o full 125M.
+
+Marco 4B - `5M + 5M graft * 24`:
+
+```text
+script: scripts/benchmark_drm_g_phase16_graftblock.py
+relatorio: docs/reports/phase16_marco4b_graftblock_5m.md
+base params: 5.699.059
+24 grafts: 119.296.536 params
+total efetivo: 124.995.595 params
+pico CUDA smoke: 3.43 GB
+ganho validacao smoke: 0.000261
+```
+
+Veredito: a forma correta do experimento `5M + enxertos ate 125M` agora existe
+e roda. O sinal inicial e positivo, mas pequeno. O caso com 4 grafts teve maior
+ganho no smoke curto, entao o proximo marco deve treinar 24 grafts de forma
+progressiva e comparar 4/8/16/24 com o mesmo budget de tokens.
+
+Marco 4C - treinabilidade 24-graft:
+
+```text
+script: scripts/benchmark_drm_g_phase16_graftblock.py
+relatorio: docs/reports/phase16_marco4c_graftblock_training.md
+full 125M smoke loss: 9.049912
+melhor 4-graft loss: 10.415268
+24-graft checkpoint positivo loss: 10.415910
+24-graft distance to full 125M: 1.365997
+checkpoint recomponivel: recompose_abs_diff 0.0
+```
+
+Veredito: infraestrutura aprovada, qualidade ainda nao. O 24-graft cabe em CUDA
+e gera checkpoint recomponivel, mas mais steps com progressivo ingenuo pioraram
+a validacao. Proximo passo: selecao/aceite de enxertos por ganho de validacao,
+congelando grupos aceitos antes de adicionar novos.
+
+Nota de eficiencia:
+
+Mesmo sem vencer o full 125M em loss absoluta, o resultado ja e uma vitoria de
+eficiencia operacional. O full 125M smoke levou horas para 100 steps, enquanto o
+caminho `DRM 5M + 24 grafts ~= 125M` executa o smoke em poucos minutos ou menos,
+com pico CUDA de aproximadamente `3.43 GB`, checkpoint recomponivel e perda de
+validacao controlada em testes curtos. O gap contra o full 125M ainda existe,
+mas a diferenca de custo justifica um teste longo de mesmo tempo de parede:
+
+```text
+comparar full 125M 100 steps em ~4h
+vs
+DRM 5M + 24 grafts treinado por ~4h
+```
+
+Esse teste deve medir se a vantagem de velocidade transforma o grafted em uma
+alternativa competitiva quando ambos recebem o mesmo tempo real de treino.
+
 ### Criterio de sucesso
 
 Sucesso minimo:
