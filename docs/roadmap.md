@@ -3341,8 +3341,8 @@ Subfases:
 |---|---|---|
 | 5A | artefato consolidado em disco | concluido: `.pt` salvo, recarregado e avaliado |
 | 5B | retencao e dados maiores | concluido: 4/4 seeds passaram retencao |
-| 5C | baseline full mais forte | implementado: full-module venceu SAINT-G mesmo com 4096 params |
-| 5D | segundo tamanho DRM | repeticao fora do DRM 3.5M |
+| 5C | baseline full mais forte | concluido parcial: competitivo na media, perdeu melhor caso |
+| 5D | segundo tamanho DRM | concluido parcial: multilingual 5M |
 | 5E | criterio automatico final | `phase_decision` JSON/Markdown |
 | 5F | relatorio final DRM-G | recomendacao para proxima fase |
 
@@ -3418,6 +3418,35 @@ Phi ficaram competitivas na media multiseed e tiveram ganho positivo em 4/4
 seeds, mas o melhor caso absoluto ainda foi `full_module_linear` na seed 33.
 O resultado sugere continuar a parametrizacao `A Phi B`, mas com criterio
 separando media multiseed, melhor caso e custo de memoria.
+
+Status formal: 5C fica como **implementado e parcialmente suportado**. Nao houve
+vitoria absoluta contra `full_module_linear`, mas houve sinal positivo em media
+multiseed, estabilidade 4/4 nas variantes Phi e vantagem contra
+`full_budget_linear_4096`.
+
+Proximos pontos levados para 5E/5F:
+
+- separar `best_case_win`, `mean_multiseed_win` e `stability_win`;
+- medir `checkpoint_size_win`, `memory_win` e `compression_win`;
+- testar `phi_train_ab` com orcamento capado em 4096;
+- testar Phi multi-stage `A1 Phi1 B1 + A2 Phi2 B2`;
+- medir retencao das variantes Phi como no Marco 5B.
+
+Marco 5D inicial no DRM multilingual 5M:
+
+| metodo | mean_gain | mean_gain/param | positivos | params |
+|---|---:|---:|---:|---:|
+| `phi_ls_train_ab_half_rank` | 0.009759 | 8.471776e-07 | 3 / 4 | 11520 |
+| `phi_zero_full_rank` | 0.009285 | 1.007526e-06 | 3 / 4 | 9216 |
+| `phi_ls_full_rank` | 0.009093 | 9.866231e-07 | 3 / 4 | 9216 |
+| `phi_ls_residual_full_rank` | 0.009078 | 9.952688e-07 | 3 / 4 | 9121 |
+| `full_module_linear` | 0.003337 | 3.621034e-07 | 2 / 4 | 9216 |
+
+O Marco 5D usa `drm_transformer/configs/scaling/multilingual/5m.yaml`. O
+benchmark passou operacionalmente e mostrou Phi vencendo `full_module_linear` na
+media multiseed e em estabilidade de runs positivos. O melhor caso individual
+ainda foi `full_module_linear`, entao o status continua parcialmente suportado,
+nao vitoria total.
 
 ## Fase 16 - Escala 70B
 

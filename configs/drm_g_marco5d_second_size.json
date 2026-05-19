@@ -1,0 +1,17 @@
+{
+  "benchmark": "scripts/benchmark_drm_g_marco5d.py",
+  "output_dir": "runs/drm_g_marco5d_second_size",
+  "seeds": [31, 32, 33, 34],
+  "validation_batches": 8,
+  "batch_size": 4,
+  "steps": 8,
+  "baseline_config": "configs/scaling/multilingual/5m.yaml",
+  "target_module": "blocks.1.attn.out_proj",
+  "variants": [
+    "phi_zero_full_rank",
+    "phi_ls_full_rank",
+    "phi_ls_residual_full_rank",
+    "phi_ls_train_ab_half_rank",
+    "full_module_linear"
+  ]
+}

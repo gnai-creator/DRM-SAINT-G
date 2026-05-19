@@ -516,7 +516,7 @@ separados.
 
 #### Marco 5C - Baseline Full Mais Forte
 
-Status: **implementado; criterio de qualidade nao passou**.
+Status: **implementado; parcialmente suportado**.
 
 Objetivo:
 
@@ -671,6 +671,15 @@ do full-module, entao o criterio de fechamento permanece exigente, mas a direcao
 sinal mais forte veio de estabilidade multiseed e de permitir mais liberdade em
 `A/B`.
 
+Status formal do 5C:
+
+5C fica fechado como **implementado e parcialmente suportado**. Nao ha vitoria
+absoluta contra `full_module_linear`, porque o melhor caso individual ainda foi
+do full-module. Ao mesmo tempo, DRM-SAINT-G venceu ou empatou eixos relevantes:
+media multiseed, estabilidade de ganhos positivos e vantagem contra
+`full_budget_linear_4096`. A conclusao correta e que `A Phi B` continua viavel,
+mas precisa de criterio multi-eixo e nao apenas "melhor caso absoluto".
+
 Nota de memoria:
 
 Least-squares pode prejudicar memoria se for implementado sobre uma matriz grande
@@ -690,6 +699,8 @@ delta denso global.
 
 #### Marco 5D - Segundo Tamanho DRM
 
+Status: **concluido operacionalmente; suporte parcial**.
+
 Objetivo:
 
 Testar se o resultado nao e exclusivo do DRM 3.5M.
@@ -705,6 +716,46 @@ Criterio:
 
 Passa se o runtime executa em outro tamanho e produz metricas comparaveis, mesmo
 que a qualidade ainda nao supere o melhor run 3.5M.
+
+Resultado inicial:
+
+```text
+config: configs/drm_g_marco5d_second_size.json
+benchmark: scripts/benchmark_drm_g_marco5d.py
+output: runs/drm_g_marco5d_second_size
+base YAML: configs/scaling/multilingual/5m.yaml
+seeds: 31, 32, 33, 34
+validation_batches: 8
+steps: 8
+phase_5d_passed: true
+```
+
+Observacao:
+
+`drm_transformer/configs/baselines` so tinha dois YAMLs equivalentes ao tamanho
+3.5M. O segundo tamanho real estava em
+`drm_transformer/configs/scaling/multilingual/5m.yaml`, entao o 5D usa esse
+baseline de scaling em vez de um override sintetico.
+
+Resumo multiseed:
+
+| metodo | mean_gain | mean_gain/param | positivos | params |
+|---|---:|---:|---:|---:|
+| `phi_ls_train_ab_half_rank` | 0.009759 | 8.471776e-07 | 3 / 4 | 11520 |
+| `phi_zero_full_rank` | 0.009285 | 1.007526e-06 | 3 / 4 | 9216 |
+| `phi_ls_full_rank` | 0.009093 | 9.866231e-07 | 3 / 4 | 9216 |
+| `phi_ls_residual_full_rank` | 0.009078 | 9.952688e-07 | 3 / 4 | 9121 |
+| `full_module_linear` | 0.003337 | 3.621034e-07 | 2 / 4 | 9216 |
+
+Veredito:
+
+5D passou no criterio operacional e trouxe suporte cientifico melhor que o
+override sintetico: no DRM multilingual 5M, as variantes Phi venceram
+`full_module_linear` na media multiseed e em estabilidade de runs positivos. O
+melhor caso individual ainda foi `full_module_linear` (`validation_gain:
+0.033398`), mas o melhor Phi ficou muito proximo (`phi_zero_full_rank`,
+`validation_gain: 0.032653`). Isto reforca a leitura multi-eixo: SAINT-G/Phi nao
+domina o melhor caso, mas compete melhor em media e estabilidade.
 
 #### Marco 5E - Criterio Automatico Final
 
