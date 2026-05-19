@@ -2,9 +2,10 @@ Copyright (c) 2026 DRM-SAINT-G Contributors.
 
 DRM-SAINT-G - DRM por Enxerto com DRM-SAINT-G-Phi.
 
-All rights reserved unless a separate license file explicitly grants additional
-permissions.
+This repository is available under a dual-license model:
 
-This repository is currently an experimental research codebase. Do not assume
-that code, documentation, datasets, model weights, checkpoints, or generated
-artifacts are open-source licensed unless a license file states so.
+- AGPL-3.0-or-later for open-source use compatible with AGPL obligations.
+- Commercial license for use without AGPL obligations.
+
+Do not assume datasets, model weights, checkpoints, or generated artifacts are
+covered by the software license unless their own license file states so.

@@ -5,13 +5,14 @@
 </p>
 
 <p align="center">
-  <a href="COPYRIGHT"><img src="https://img.shields.io/badge/Copyright-All%20Rights%20Reserved-blue.svg" alt="Copyright"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-blue.svg" alt="License: AGPL-3.0"></a>
+  <a href="LICENSE-COMMERCIAL.md"><img src="https://img.shields.io/badge/License-Commercial-orange.svg" alt="Commercial License"></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.10%2B-3776ab.svg" alt="Python 3.10+"></a>
   <a href="pyproject.toml"><img src="https://img.shields.io/badge/PyTorch-2.11%2B-ee4c2c.svg" alt="PyTorch 2.11+"></a>
   <a href="#architecture"><img src="https://img.shields.io/badge/Runtime-DRM--SAINT--G-blueviolet.svg" alt="Runtime DRM-SAINT-G"></a>
   <a href="#core-idea"><img src="https://img.shields.io/badge/Grafting-A%20Phi%20B-green.svg" alt="Grafting A Phi B"></a>
   <a href="https://github.com/gnai-creator/drm_transformer"><img src="https://img.shields.io/badge/Backbone-drm__transformer-orange.svg" alt="Backbone drm_transformer"></a>
-  <a href="docs/roadmap.md"><img src="https://img.shields.io/badge/Scaling-125M%2F350M%20to%2070B-yellow.svg" alt="Scaling 125M/350M to 70B"></a>
+  <a href="docs/roadmap.md"><img src="https://img.shields.io/badge/Roadmap-125M%2F350M%20to%2070B-yellow.svg" alt="Roadmap 125M/350M to 70B"></a>
   <a href="#scalability"><img src="https://img.shields.io/badge/Cluster-GPU%20graft%20search-0f766e.svg" alt="GPU cluster graft search"></a>
 </p>
 
@@ -26,7 +27,7 @@
   <a href="SECURITY.md">Security</a>
 </p>
 
-DRM-SAINT-G is an experimental runtime for growing and adapting neural models
+DRM-SAINT-G is an experimental runtime for testing model growth and adaptation
 with compact, routed, recomposable grafts.
 
 The project asks a direct research question:
@@ -93,7 +94,7 @@ This is not just fine-tuning. The long-term goal is controlled model growth:
 
 ## Core Idea
 
-The current strongest family is Phi grafting:
+The current strongest internal candidate is Phi grafting:
 
 ```text
 Delta W = A Phi B
@@ -107,7 +108,7 @@ Where:
 - `B` projects back to the target matrix;
 - `Delta W` is applied by hook, sparse update, or permanent consolidation.
 
-This lets the system train a small relational operator instead of a dense matrix.
+This is intended to train a small structured operator instead of a dense matrix.
 
 Variants explored so far include:
 
@@ -302,7 +303,7 @@ python scripts/train_distributed.py `
 
 ## Scalability
 
-DRM-SAINT-G is designed to scale in two different ways.
+DRM-SAINT-G is being designed to scale in two different ways.
 
 ### Single GPU
 
@@ -355,7 +356,7 @@ The honest claim is narrower:
 
 ```text
 DRM-SAINT-G is a research system for testing whether structured grafts can add
-useful capacity more efficiently than dense updates under tight budgets.
+useful capacity more efficiently than dense updates under stated budgets.
 ```
 
 ## Roadmap
@@ -387,9 +388,18 @@ docs/process/
 
 ## License
 
+DRM-SAINT-G is available under a dual-license model:
+
+- **AGPL-3.0** for open-source use compatible with AGPL obligations.
+- **Commercial license** for proprietary, closed-source, SaaS, OEM, or other
+  deployments that need different terms.
+
+For commercial licensing, contact `felipe@truthagi.ai`.
+
 See:
 
 - `LICENSE`
+- `LICENSE-COMMERCIAL.md`
 - `COPYRIGHT`
 - `CLA.md`
 - `CONTRIBUTING.md`
