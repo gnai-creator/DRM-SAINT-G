@@ -138,7 +138,7 @@ learning_rate: 0.005
 steps: 2
 ```
 
-Resultado oficial:
+Resultado inicial:
 
 | metrica | valor |
 |---|---:|
@@ -323,11 +323,65 @@ baseline densa local de mesmo budget neste smoke.
 
 Pendencias:
 
-- repetir com mais seeds;
-- usar mais textos reais de treino/validacao;
-- testar sequencias com alvos lineares consolidaveis;
-- salvar politica de fila para aprovar, rejeitar ou adiar enxertos;
-- medir conflito quando mais de dois enxertos sao acumulados.
+- aumentar a escala dos textos reais alem de `batch_size=4` e `validation_batches=3`;
+- validar CUDA em hardware alvo;
+- implementar merge permanente da sequencia linear, nao apenas hooks;
+- comparar contra um baseline full treinavel real no mesmo budget.
+
+Benchmark multiseed:
+
+```text
+script: scripts/benchmark_drm_g_marco4.py
+seeds: 31, 32, 33, 34
+sequencias: activation_stack, linear_stack
+validation_batches: 3
+batch_size: 4
+```
+
+Resumo:
+
+| metrica | valor |
+|---|---:|
+| runs | 8 |
+| runs positivos | 4 |
+| runs com 2+ enxertos aprovados | 2 |
+| melhor sequence_gain | 0.000495 |
+| melhor gain/param | 3.8669e-06 |
+| checkpoint melhor run | 78739 bytes |
+| cuda_peak_bytes | 0 |
+| routing_s | 0.2159 |
+| train_s | 0.4846 |
+| eval_s | 1.3374 |
+
+Melhor run:
+
+| seed | sequencia | aprovados | rejeitados | adiados | old_regression |
+|---:|---|---:|---:|---:|---:|
+| 33 | `linear_stack` | 2 | 0 | 1 | -0.000495 |
+
+Etapas do melhor run:
+
+| etapa | alvo | init | validation_gain | dense_gain | decisao |
+|---:|---|---|---:|---:|---|
+| 1 | `blocks.1.attn.out_proj` | `gradient` | 0.000293 | -0.042033 | approve |
+| 2 | `blocks.2.attn.out_proj` | `gradient` | 0.000202 | -0.041803 | approve |
+| 3 | `blocks.3.attn.out_proj` | `gradient` | -0.000020 | -0.041906 | defer |
+
+O checkpoint recomposto da melhor sequencia reproduziu a media de validacao:
+
+```text
+base_loss: 10.805441
+graft_loss: 10.804946
+validation_gain: 0.000495
+```
+
+Leitura atualizada:
+
+O Marco 4 agora cobre as pendencias principais: multiseed, mais exemplos reais,
+fila `approve/reject/defer`, alvos lineares consolidaveis, tres candidatos por
+fila, metrica de conflito, tamanho de checkpoint, tempo separado e regressao em
+exemplos antigos. A memoria CUDA ainda aparece como `0` porque o benchmark foi
+executado em CPU.
 
 ## Metricas
 

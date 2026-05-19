@@ -506,7 +506,7 @@ parameter_ratio <= 2.0
 gain_per_parameter_ratio >= 1.0
 ```
 
-Resultado:
+Resultado inicial:
 
 ```text
 DRM-SAINT-G_routed_f50_c25 passou contra lora_rank_2.
@@ -3277,12 +3277,42 @@ Resumo:
 | enxertos aprovados | 2 |
 | parametros treinaveis | 128 |
 
+Benchmark multiseed:
+
+| metrica | valor |
+|---|---:|
+| runs | 8 |
+| runs positivos | 4 |
+| runs com 2+ enxertos aprovados | 2 |
+| melhor sequence_gain | 0.000495 |
+| melhor gain/param | 3.8669e-06 |
+| melhor checkpoint | 78739 bytes |
+| routing_s | 0.2159 |
+| train_s | 0.4846 |
+| eval_s | 1.3374 |
+| cuda_peak_bytes | 0 |
+
+Melhor run:
+
+| seed | sequencia | aprovados | rejeitados | adiados | old_regression |
+|---:|---|---:|---:|---:|---:|
+| 33 | `linear_stack` | 2 | 0 | 1 | -0.000495 |
+
+Etapas:
+
+| etapa | alvo | validation_gain | dense_gain | decisao |
+|---:|---|---:|---:|---|
+| 1 | `blocks.1.attn.out_proj` | 0.000293 | -0.042033 | approve |
+| 2 | `blocks.2.attn.out_proj` | 0.000202 | -0.041803 | approve |
+| 3 | `blocks.3.attn.out_proj` | -0.000020 | -0.041906 | defer |
+
 Veredito:
 
-O Marco 4 passa no criterio minimo: o segundo enxerto melhora a validacao sem
-destruir o primeiro ganho, o checkpoint e recomponivel e a decisao automatica
-funciona. Ainda precisa de repeticao multiseed antes de tratar DRM-G como
-robusto.
+O Marco 4 passa no criterio de benchmark pequeno: ha repeticao multiseed,
+tokens reais em mais de um batch, sequencia linear consolidavel, politica
+`approve/reject/defer`, medicao de conflito, checkpoint recomponivel e ganho por
+parametro contra baseline densa local. A memoria CUDA ainda precisa ser medida
+em GPU; no benchmark CPU ficou `0`.
 
 ## Fase 16 - Escala 70B
 

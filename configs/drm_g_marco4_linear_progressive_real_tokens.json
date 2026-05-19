@@ -1,10 +1,10 @@
 {
-  "experiment_name": "drm_g_marco4_progressive_real_tokens",
+  "experiment_name": "drm_g_marco4_linear_progressive_real_tokens",
   "task": "drm_transformer",
   "method": "drm_g_saint_phi_progressive",
   "steps": 2,
-  "seed": 34,
-  "output_dir": "runs/drm_g_marco4_progressive_real_tokens",
+  "seed": 33,
+  "output_dir": "runs/drm_g_marco4_linear_progressive_real_tokens",
   "metadata": {
     "baseline_config": "configs/baselines/small_3.5M.yaml",
     "device": "cpu",
@@ -16,22 +16,26 @@
     "use_real_tokens": true,
     "real_data_dir": "data/baseline",
     "validation_split": "val",
-    "data_seed": 34,
-    "validation_seed": 2034,
-    "old_validation_seed": 1034,
     "validation_batches": 3,
+    "data_seed": 33,
+    "validation_seed": 2033,
+    "old_validation_seed": 1033,
     "require_beats_dense": true,
     "min_validation_gain": 0.0,
     "min_gain_per_parameter": 0.0,
     "defer_gain_floor": -0.00005,
     "grafts": [
       {
-        "target_module": "blocks.2",
-        "projection_init": "activation"
+        "target_module": "blocks.1.attn.out_proj",
+        "projection_init": "gradient"
       },
       {
-        "target_module": "final_norm",
-        "projection_init": "activation"
+        "target_module": "blocks.2.attn.out_proj",
+        "projection_init": "gradient"
+      },
+      {
+        "target_module": "blocks.3.attn.out_proj",
+        "projection_init": "gradient"
       }
     ]
   }

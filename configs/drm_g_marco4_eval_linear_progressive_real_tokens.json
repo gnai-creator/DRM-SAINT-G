@@ -1,0 +1,20 @@
+{
+  "experiment_name": "drm_g_marco4_eval_linear_progressive_real_tokens",
+  "task": "drm_transformer",
+  "method": "drm_g_saint_phi_eval",
+  "steps": 1,
+  "seed": 33,
+  "output_dir": "runs/drm_g_marco4_eval_linear_progressive_real_tokens",
+  "metadata": {
+    "baseline_config": "configs/baselines/small_3.5M.yaml",
+    "device": "cpu",
+    "batch_size": 4,
+    "seq_len": 8,
+    "use_real_tokens": true,
+    "real_data_dir": "data/baseline",
+    "validation_split": "val",
+    "validation_batches": 3,
+    "validation_seed": 2033,
+    "graft_run": "runs/drm_g_marco4_linear_progressive_real_tokens"
+  }
+}

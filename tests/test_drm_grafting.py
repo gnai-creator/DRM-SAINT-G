@@ -110,6 +110,17 @@ class DRMGraftingTests(unittest.TestCase):
         self.assertEqual(candidates[1]["target_module"], "blocks.2")
         self.assertEqual(candidates[2]["target_module"], "final_norm")
 
+    def test_progressive_queue_can_defer(self):
+        from saint.adapters.drm_grafting_progressive import _queue_decision
+
+        status = _queue_decision(
+            {"approved": False},
+            gain=-0.00001,
+            metadata={"defer_gain_floor": -0.00005},
+        )
+
+        self.assertEqual(status, "defer")
+
 
 if __name__ == "__main__":
     unittest.main()

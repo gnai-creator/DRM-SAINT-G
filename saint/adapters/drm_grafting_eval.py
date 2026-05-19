@@ -51,6 +51,40 @@ def _eval_payload(
             handle.remove()
 
 
+def _mean_eval_payload(
+    torch,
+    model_cls,
+    drm_config,
+    payload: dict,
+    metadata: dict,
+    device: str,
+    seed: int,
+) -> tuple[float, float]:
+    total_base = 0.0
+    total_graft = 0.0
+    batches = max(1, int(metadata.get("validation_batches", 1)))
+    for index in range(batches):
+        local = dict(metadata)
+        split = str(local.get("validation_split", "val"))
+        local[f"{split}_token_offset"] = int(local.get(f"{split}_token_offset", 0)) + index * 4096
+        eval_inputs, eval_targets = token_batch(
+            torch,
+            local,
+            drm_config.vocab_size,
+            device,
+            seed_key="validation_seed",
+        )
+        torch.manual_seed(seed)
+        base = model_cls(drm_config).to(device)
+        base.eval()
+        total_base += float(_loss(base, eval_inputs, eval_targets).detach().cpu().item())
+        total_graft += _eval_payload(
+            torch, model_cls, drm_config, payload, device, eval_inputs, eval_targets, seed
+        )
+        del base
+    return total_base / batches, total_graft / batches
+
+
 def run_drm_graft_eval(config: RuntimeConfig) -> MiniTransformerResult:
     start = perf_counter()
     metadata = dict(config.metadata or {})
@@ -65,20 +99,8 @@ def run_drm_graft_eval(config: RuntimeConfig) -> MiniTransformerResult:
     device = str(metadata.get("device", "cpu"))
     seed = int(metadata.get("seed", config.seed))
     drm_config = load_drm_baseline_config(metadata, config_cls)
-    eval_inputs, eval_targets = token_batch(
-        torch,
-        metadata,
-        drm_config.vocab_size,
-        device,
-        seed_key="validation_seed",
-    )
-    torch.manual_seed(seed)
-    base = model_cls(drm_config).to(device)
-    base.eval()
-    base_loss = float(_loss(base, eval_inputs, eval_targets).detach().cpu().item())
-    del base
-    graft_loss = _eval_payload(
-        torch, model_cls, drm_config, payload, device, eval_inputs, eval_targets, seed
+    base_loss, graft_loss = _mean_eval_payload(
+        torch, model_cls, drm_config, payload, metadata, device, seed
     )
     grafts = payload.get("grafts") if payload.get("format") == "drm_graft_sequence_payload" else [payload]
     if payload.get("format") == "drm_graft_sequence_payload":
