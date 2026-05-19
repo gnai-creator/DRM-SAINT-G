@@ -2884,7 +2884,7 @@ Proximo marco:
 - implementar `DRM-SAINT-G_phi_delta`;
 - comparar contra `layer 1 v_proj budget 32`;
 - medir ganho por parametro, tamanho de checkpoint e pico CUDA;
-- decidir se a Fase 16 escala o formato atual ou o formato `Phi`.
+- decidir se a proxima escala usa o formato atual ou o formato `Phi`.
 
 ### Marco 13 - DRM-SAINT-G Phi Delta
 
@@ -3028,7 +3028,7 @@ Outros testes:
 Veredito da Fase 15:
 
 ```text
-Fase 15 fecha com Phi hadamard rank 8 como baseline 14B para Fase 16.
+Fase 15 fecha com Phi hadamard rank 8 como baseline historico para a proxima escala.
 ```
 
 Ressalva:
@@ -3116,8 +3116,8 @@ modelo DRM pequeno
   -> consolidacao sem regressao clara
 ```
 
-Com isso, a Fase 16 pode escalar a ideia de enxerto para modelos maiores, em vez
-de tentar apenas adaptar pesos existentes.
+Com isso, a nova Fase 16 pode comparar um full controlado contra grafting antes
+da Fase 17 de 70B.
 
 ### Marco 1 - Enxerto Phi no DRM 3.5M
 
@@ -3481,7 +3481,84 @@ O Marco 5F fecha a fase DRM-G com recomendacao tecnica clara: seguir para Fase
 16, usando Phi como familia principal, mas mantendo `full_module_linear` como
 baseline obrigatorio e sem declarar vitoria absoluta de qualidade.
 
-## Fase 16 - Escala 70B
+## Fase 16 - DRM Full 125M/350M vs DRM-SAINT-G Grafted
+
+Status: **pendente**.
+
+### Objetivo
+
+Criar uma ponte cientifica antes da escala 70B: treinar um DRM full que caiba em
+uma RTX 4090 e comparar contra um DRM menor crescido por grafting.
+
+Esta fase existe porque a comparacao full em 70B nao e viavel no hardware alvo.
+O baseline full precisa existir em uma escala menor usando configs reais do
+`drm_transformer`: 125M primeiro, 350M se couber.
+
+### Hipotese
+
+```text
+DRM full 125M
+DRM full 350M, se couber
+vs
+DRM 5M + DRM-SAINT-G grafted ate capacidade/budget semelhante
+vs
+modelos externos pequenos quando aplicavel
+```
+
+Nao criar uma config artificial de 250M nesta fase. A comparacao deve usar os
+YAMLs existentes `125m.yaml` e `350m.yaml`, com datasets separados derivados do
+mesmo superset multilingual.
+
+### Comparacoes
+
+- DRM full controlado;
+- DRM 5M congelado;
+- DRM 5M + `phi_zero_full_rank`;
+- DRM 5M + `phi_ls_residual`;
+- DRM 5M + `phi_ls_train_ab` com budget capado;
+- GPT-2 124M e/ou GPT-2 Medium 355M quando couber;
+- OPT-125M e/ou OPT-350M quando couber.
+
+Observacao:
+
+A comparacao externa deve ser por faixa de tamanho e usada como calibracao de
+perplexity, nao como prova direta.
+
+### Marcos
+
+1. Memory planner para DRM full 125M/350M.
+2. Config DRM full controlada no maior tamanho que couber na RTX 4090.
+3. Treino full curto com loss/perplexity/checkpoint.
+4. DRM 5M + grafts ate budget/capacidade alvo.
+5. Comparacao full vs grafted.
+6. Comparacao externa contra GPT/OPT pequenos.
+7. Decisao de entrada para 70B.
+
+### Criterio de sucesso
+
+Sucesso minimo:
+
+```text
+treinar DRM full controlado na RTX 4090
+treinar DRM 5M + grafts
+comparar loss/perplexity/memoria/checkpoint
+gerar relatorio final
+```
+
+Sucesso forte:
+
+```text
+DRM 5M + grafts fica competitivo contra DRM full controlado
+em perplexity por byte, memoria ou parametro treinavel
+```
+
+### Documento
+
+```text
+docs/process/fase_16_full_125m_350m_vs_grafted.md
+```
+
+## Fase 17 - Escala 70B
 
 Status: **pendente**.
 
@@ -3526,7 +3603,108 @@ com checkpoint recomponivel
 e alguma melhoria mensuravel na loss
 ```
 
-## Fase 17 - Otimizacoes
+### Documento
+
+```text
+docs/process/fase_17_escala_70b.md
+```
+
+## Trilha Transversal - Escalabilidade em Clusters de GPU
+
+Status: **pendente**.
+
+### Objetivo
+
+Projetar DRM-SAINT-G para escalar alem de uma unica RTX 4090, usando clusters
+de GPU de forma parecida com laboratorios grandes e big techs, mas preservando a
+ideia central do projeto: treinar capacidade nova por partes, nao todo o modelo
+de uma vez.
+
+### Hipotese
+
+DRM-SAINT-G pode aproveitar clusters de GPU em dois niveis:
+
+```text
+paralelismo de modelo/dados
+e
+paralelismo de busca por enxertos
+```
+
+O primeiro e o caminho classico:
+
+- DDP;
+- FSDP;
+- ZeRO/offload quando disponivel;
+- gradient checkpointing;
+- mixed precision;
+- sharding de checkpoints;
+- pipeline de dados por shards.
+
+O segundo e especifico do DRM-SAINT-G:
+
+- varias GPUs testam candidatos de graft em paralelo;
+- cada job mede ganho de validacao por parametro/byte/tempo;
+- uma fila central aprova, rejeita ou adia enxertos;
+- enxertos aprovados sao consolidados em checkpoints recomponiveis;
+- conflitos entre enxertos sao medidos antes do merge permanente.
+
+### Escala Tecnica
+
+Em uma GPU consumer:
+
+- micro-batch 1;
+- roteamento barato;
+- deltas esparsos;
+- modelo base congelado;
+- checkpoint compacto.
+
+Em cluster pequeno:
+
+- uma GPU por candidato de enxerto;
+- agregacao de metricas em CPU;
+- validacao multiseed paralela;
+- sweep de budgets e `Phi` em paralelo.
+
+Em cluster grande:
+
+- FSDP para modelos base grandes;
+- shard de optimizer/checkpoints;
+- offload CPU/NVMe;
+- fila de jobs por camada/matriz;
+- merge/consolidacao por etapas;
+- relatorio global de eficiencia.
+
+### Metricas
+
+- throughput de tokens/s por GPU;
+- tempo de roteamento por candidato;
+- tempo de treino por enxerto;
+- taxa de candidatos aprovados;
+- ganho de validacao por GPU-hora;
+- ganho por parametro treinavel;
+- ganho por byte de checkpoint;
+- memoria maxima por GPU;
+- custo de comunicacao;
+- regressao apos consolidacao.
+
+### Criterio de Sucesso
+
+A trilha passa quando o projeto demonstrar:
+
+```text
+o mesmo experimento DRM-SAINT-G rodando em 1 GPU e N GPUs
+com ganho claro de tempo ou cobertura de busca
+sem perder recomponibilidade de checkpoint
+e com metricas comparaveis por candidato
+```
+
+### Risco
+
+Escalar mal tambem e um resultado importante. Se comunicacao, I/O ou roteamento
+custarem mais que o treino dos enxertos, DRM-SAINT-G deve priorizar eficiencia
+single-GPU antes de perseguir clusters.
+
+## Fase 18 - Otimizacoes
 
 Status: **pendente**.
 
@@ -3551,7 +3729,7 @@ Reduzir overhead.
 
 O overhead do DRM-SAINT-G deve ficar pequeno o bastante para ser pratico em experimentos reais.
 
-## Fase 18 - Avaliacao
+## Fase 19 - Avaliacao
 
 Status: **pendente**.
 
@@ -3578,7 +3756,7 @@ Medir qualidade alem da loss.
 - DRM-SAINT-G escala com modelo maior?
 - DRM-SAINT-G depende demais do dataset?
 
-## Fase 19 - Produto de Pesquisa
+## Fase 20 - Produto de Pesquisa
 
 Status: **pendente**.
 
@@ -3608,7 +3786,7 @@ DRM-SAINT-G compare --run runs/DRM-SAINT-G001 --baseline runs/lora001
 drm-saint-g merge --run runs/DRM-SAINT-G001 --out merged/
 ```
 
-## 18. Ordem Recomendada
+## 21. Ordem Recomendada
 
 Prioridade pratica:
 
@@ -3626,10 +3804,12 @@ Prioridade pratica:
 10. modelos HF pequenos
 11. 3B
 12. 14B
-13. 70B
+13. full controlado 125M/350M vs grafted
+14. 70B
+15. escalabilidade em clusters de GPU
 ```
 
-## 18.1 Proxima Acao Imediata
+## 21.1 Proxima Acao Imediata
 
 Criar a base de implementacao da Fase 1:
 

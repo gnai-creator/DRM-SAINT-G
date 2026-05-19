@@ -866,7 +866,8 @@ Resposta curta:
 
 O Marco 5F fecha a fase dizendo que DRM-SAINT-G/Phi e competitivo em media
 multiseed e estabilidade, mas ainda perde o melhor caso absoluto para
-`full_module_linear`. A Fase 16 deve preservar essa honestidade cientifica.
+`full_module_linear`. A Fase 16 deve preservar essa honestidade cientifica com
+um baseline full controlado antes de qualquer salto para 70B.
 
 ## Metricas
 
@@ -891,8 +892,22 @@ A fase passa se pelo menos um ciclo completo demonstrar:
 
 ## Relacao com Fase 16
 
-Fase 16 deve escalar a estrategia que sair daqui.
+Fase 16 deve escalar a estrategia que sair daqui para uma comparacao full
+controlada.
 
-Se DRM-SAINT-G funcionar, a escala 70B nao deve ser tratada apenas como adaptacao
-de pesos existentes. Ela deve ser tratada como crescimento controlado por
-enxertos, com o nucleo congelado e capacidade nova adicionada em partes.
+Antes da escala 70B, o projeto deve comparar:
+
+```text
+DRM full 125M
+DRM full 350M, se couber na RTX 4090
+vs
+DRM 5M + DRM-SAINT-G grafted ate capacidade/budget semelhante
+```
+
+Esses tamanhos devem vir dos YAMLs ja existentes do `drm_transformer`, usando
+datasets separados `data/multilingual_125m` e `data/multilingual_350m`.
+
+Se DRM-SAINT-G funcionar nessa ponte, a Fase 17 de 70B nao deve ser tratada
+apenas como adaptacao de pesos existentes. Ela deve ser tratada como crescimento
+controlado por enxertos, com o nucleo congelado e capacidade nova adicionada em
+partes.

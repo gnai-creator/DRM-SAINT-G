@@ -2120,7 +2120,7 @@ O que nao foi demonstrado:
 - vantagem com mais steps;
 - beneficio real de `o_proj` isolado.
 
-Baseline recomendado para Fase 16:
+Baseline historico de 14B para a antiga Fase 16:
 
 ```text
 routing: activation_phi_validation_rerank
@@ -2136,7 +2136,10 @@ validation_texts: 8
 
 ## Proxima Fase
 
-Fase 16 deve iniciar a escala 70B com o baseline acima, mas com foco em
+Com a reorganizacao, a nova Fase 16 deve primeiro criar uma comparacao full
+controlada que caiba na RTX 4090. A escala 70B passa para a Fase 17.
+
+A Fase 17 deve iniciar a escala 70B com o baseline acima, mas com foco em
 infraestrutura:
 
 - carregar 70B com offload/quantizacao;
