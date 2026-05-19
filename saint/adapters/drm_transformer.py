@@ -250,6 +250,10 @@ def run_method(config: RuntimeConfig) -> MiniTransformerResult:
         from saint.adapters.drm_grafting import run_drm_graft
 
         return run_drm_graft(config)
+    if config.method == "drm_g_saint_phi_progressive":
+        from saint.adapters.drm_grafting_progressive import run_drm_graft_progressive
+
+        return run_drm_graft_progressive(config)
     if config.method == "drm_saint_autograd_smoke":
         from saint.adapters.drm_autograd import run_drm_autograd
 
@@ -260,7 +264,7 @@ def run_method(config: RuntimeConfig) -> MiniTransformerResult:
 
 
 def inspect_model(config: RuntimeConfig) -> dict:
-    if config.method == "drm_g_saint_phi_graft":
+    if config.method in {"drm_g_saint_phi_graft", "drm_g_saint_phi_progressive"}:
         from saint.adapters.drm_grafting import inspect_graft_model
 
         return inspect_graft_model(config)

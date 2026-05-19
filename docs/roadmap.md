@@ -3240,6 +3240,50 @@ payload de consolidacao e criterio automatico de aprovacao. Em dados reais
 tokenizados, os dois smokes atuais foram rejeitados. O Marco 3 deixa de ser
 apenas "salvar o enxerto" e passa a filtrar enxertos ruins antes de consolidar.
 
+### Marco 4 - Crescimento Progressivo
+
+Status: **passou no criterio minimo em smoke real**.
+
+Objetivo:
+
+```text
+DRM base -> DRM + G1 -> DRM + G1 + G2
+```
+
+Implementado:
+
+- metodo `drm_g_saint_phi_progressive`;
+- config `configs/drm_g_marco4_progressive_real_tokens.json`;
+- checkpoint com `drm_graft_sequence_payload`;
+- decisao `approve/reject` por enxerto;
+- reaplicacao acumulada de enxertos aprovados;
+- eval recomposto de sequencia com `drm_g_saint_phi_eval`;
+- comparacao por etapa contra `DenseBudgetGraft`.
+
+Resultado:
+
+| etapa | alvo | init | validation_gain | dense_gain | decisao |
+|---:|---|---|---:|---:|---|
+| 1 | `blocks.2` | `activation` | 0.000338 | -0.000303 | approve |
+| 2 | `final_norm` | `activation` | 0.000477 | -0.000107 | approve |
+
+Resumo:
+
+| metrica | valor |
+|---|---:|
+| base_loss | 10.792871 |
+| final_loss | 10.792057 |
+| sequence_gain | 0.000814 |
+| enxertos aprovados | 2 |
+| parametros treinaveis | 128 |
+
+Veredito:
+
+O Marco 4 passa no criterio minimo: o segundo enxerto melhora a validacao sem
+destruir o primeiro ganho, o checkpoint e recomponivel e a decisao automatica
+funciona. Ainda precisa de repeticao multiseed antes de tratar DRM-G como
+robusto.
+
 ## Fase 16 - Escala 70B
 
 Status: **pendente**.

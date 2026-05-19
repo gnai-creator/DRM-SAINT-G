@@ -101,6 +101,15 @@ class DRMGraftingTests(unittest.TestCase):
         self.assertEqual(tuple(inputs.shape), (1, 8))
         self.assertEqual(tuple(targets.shape), (1, 8))
 
+    def test_default_progressive_candidates(self):
+        from saint.adapters.drm_grafting_progressive import _default_candidates
+
+        candidates = _default_candidates({})
+
+        self.assertEqual(candidates[0]["target_module"], "blocks.1")
+        self.assertEqual(candidates[1]["target_module"], "blocks.2")
+        self.assertEqual(candidates[2]["target_module"], "final_norm")
+
 
 if __name__ == "__main__":
     unittest.main()

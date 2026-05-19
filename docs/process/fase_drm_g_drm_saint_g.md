@@ -268,6 +268,8 @@ apenas salvar qualquer delta.
 
 ### Marco 4 - Crescimento Progressivo
 
+Status: **passou no criterio minimo em smoke com tokens reais**.
+
 Repetir o ciclo mais de uma vez:
 
 ```text
@@ -276,6 +278,56 @@ DRM-1 -> DRM-1+G1 -> DRM-1+G1+G2
 
 O objetivo e medir se multiplos enxertos acumulam capacidade ou entram em
 conflito.
+
+Implementacao:
+
+- novo metodo runtime `drm_g_saint_phi_progressive`;
+- config `configs/drm_g_marco4_progressive_real_tokens.json`;
+- payload sequencial `drm_graft_sequence_payload`;
+- reaplicacao acumulada dos enxertos aprovados como hooks;
+- rejeicao automatica por `graft_decision`;
+- eval recomposto de sequencias via `drm_g_saint_phi_eval`;
+- comparacao por candidato contra `DenseBudgetGraft` no mesmo ponto.
+
+Resultado oficial:
+
+| etapa | alvo | init | loss antes | loss depois | dense gain | decisao |
+|---:|---|---|---:|---:|---:|---|
+| 1 | `blocks.2` | `activation` | 10.792871 | 10.792534 | -0.000303 | approve |
+| 2 | `final_norm` | `activation` | 10.792534 | 10.792057 | -0.000107 | approve |
+
+Resumo:
+
+| metrica | valor |
+|---|---:|
+| base_loss | 10.792871 |
+| final_loss | 10.792057 |
+| sequence_gain | 0.000814 |
+| enxertos aprovados | 2 |
+| parametros treinaveis | 128 |
+| gain/param recomposto | 6.3628e-06 |
+
+O eval recomposto do checkpoint sequencial reproduziu:
+
+```text
+base_loss: 10.792871
+graft_loss: 10.792057
+validation_gain: 0.000814
+```
+
+Leitura:
+
+O Marco 4 demonstra o primeiro ciclo `G1 -> G2` em que o segundo enxerto melhora
+a validacao sem destruir o ganho anterior. Os dois candidatos tambem venceram a
+baseline densa local de mesmo budget neste smoke.
+
+Pendencias:
+
+- repetir com mais seeds;
+- usar mais textos reais de treino/validacao;
+- testar sequencias com alvos lineares consolidaveis;
+- salvar politica de fila para aprovar, rejeitar ou adiar enxertos;
+- medir conflito quando mais de dois enxertos sao acumulados.
 
 ## Metricas
 

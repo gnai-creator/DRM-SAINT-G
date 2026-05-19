@@ -41,6 +41,12 @@ def _write_sparse_delta(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
 
 def _write_graft_payload(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
     write_json(path, payload)
+    trainable = payload.get("trainable_parameters", 0)
+    if payload.get("format") == "drm_graft_sequence_payload":
+        trainable = sum(
+            int(item.get("trainable_parameters", 0))
+            for item in payload.get("grafts", [])
+        )
     return {
         "path": path.name,
         "bytes": path.stat().st_size,
@@ -48,7 +54,7 @@ def _write_graft_payload(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
         "payload": "delta",
         "format": "drm_graft_payload_json",
         "target_module": payload.get("target_module"),
-        "trainable_parameters": payload.get("trainable_parameters", 0),
+        "trainable_parameters": trainable,
     }
 
 
@@ -175,7 +181,7 @@ def write_checkpoint_bundle(run_dir: str | Path, payload: dict[str, Any]) -> dic
     files = []
     if delta_payload is not None:
         metadata = manifest.get("metadata", {})
-        if delta_payload.get("format") == "drm_graft_payload":
+        if delta_payload.get("format") in {"drm_graft_payload", "drm_graft_sequence_payload"}:
             files.append(_write_graft_payload(target / "graft.drm-g.json", delta_payload))
         elif delta_payload.get("format") == "saint_sparse_delta":
             files.append(_write_sparse_delta(target / "deltas.saintdelta.json", delta_payload))

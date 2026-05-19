@@ -34,12 +34,21 @@ def _eval_payload(
     model = model_cls(drm_config).to(device)
     model.eval()
     _freeze(model)
-    graft = PhiHiddenGraft.from_payload(torch, payload).to(device)
-    handle = _target_module(model, str(payload["target_module"])).register_forward_hook(graft.hook)
+    graft_payloads = payload.get("grafts") if payload.get("format") == "drm_graft_sequence_payload" else [payload]
+    handles = []
+    grafts = []
+    for graft_payload in graft_payloads:
+        graft = PhiHiddenGraft.from_payload(torch, graft_payload).to(device)
+        handle = _target_module(
+            model, str(graft_payload["target_module"])
+        ).register_forward_hook(graft.hook)
+        grafts.append(graft)
+        handles.append(handle)
     try:
         return float(_loss(model, eval_inputs, eval_targets).detach().cpu().item())
     finally:
-        handle.remove()
+        for handle in handles:
+            handle.remove()
 
 
 def run_drm_graft_eval(config: RuntimeConfig) -> MiniTransformerResult:
@@ -71,10 +80,19 @@ def run_drm_graft_eval(config: RuntimeConfig) -> MiniTransformerResult:
     graft_loss = _eval_payload(
         torch, model_cls, drm_config, payload, device, eval_inputs, eval_targets, seed
     )
-    consolidation_model = model_cls(drm_config)
-    consolidation = consolidation_payload(torch, consolidation_model, payload)
+    grafts = payload.get("grafts") if payload.get("format") == "drm_graft_sequence_payload" else [payload]
+    if payload.get("format") == "drm_graft_sequence_payload":
+        consolidation = {
+            "format": "drm_graft_sequence_consolidation",
+            "graft_count": len(grafts),
+            "state_dict_merge_supported": False,
+            "merge_kind": "sequence_hooks",
+        }
+    else:
+        consolidation_model = model_cls(drm_config)
+        consolidation = consolidation_payload(torch, consolidation_model, payload)
     gain = base_loss - graft_loss
-    params = int(payload.get("trainable_parameters", 0))
+    params = sum(int(item.get("trainable_parameters", 0)) for item in grafts)
     return MiniTransformerResult(
         name="drm_g_saint_phi_eval",
         train_loss=graft_loss,
@@ -91,6 +109,7 @@ def run_drm_graft_eval(config: RuntimeConfig) -> MiniTransformerResult:
             "validation_gain_per_parameter": gain / max(1, params),
             "target_module": payload.get("target_module"),
             "projection_init": payload.get("projection_init"),
+            "graft_count": len(grafts),
             "payload_recomposed": True,
             "consolidation": _consolidation_summary(consolidation),
             "consolidation_payload": consolidation,
