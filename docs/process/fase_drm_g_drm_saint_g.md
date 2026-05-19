@@ -516,6 +516,8 @@ separados.
 
 #### Marco 5C - Baseline Full Mais Forte
 
+Status: **implementado; criterio de qualidade nao passou**.
+
 Objetivo:
 
 Comparar contra um controle treinavel mais honesto.
@@ -537,6 +539,154 @@ Passa se DRM-SAINT-G vencer pelo menos um eixo relevante:
 - menor memoria;
 - melhor retencao;
 - ganho positivo quando full-budget falha.
+
+Resultado inicial:
+
+```text
+config: configs/drm_g_marco5c_full_baselines.json
+benchmark: scripts/benchmark_drm_g_marco5c.py
+output: runs/drm_g_marco5c_full_baselines
+seeds: 31, 32, 33, 34
+validation_batches: 8
+baseline_steps: 8
+saint_ranks: 8, 64
+full_budgets: 128, 4096
+target_module: blocks.1.attn.out_proj
+saint_runs: 8
+baseline_runs: 12
+phase_5c_passed: false
+```
+
+Melhor DRM-SAINT-G por ganho/parametro:
+
+```text
+method: drm_saint_g_64
+seed: 33
+validation_gain: 0.000075
+gain_per_parameter: 1.166016e-06
+trainable_parameters: 64
+checkpoint_bytes: 39456
+train_s: 0.194
+```
+
+Melhor DRM-SAINT-G com 4096 parametros:
+
+```text
+method: drm_saint_g_4096
+seed: 33
+validation_gain: 0.000400
+gain_per_parameter: 9.770156e-08
+trainable_parameters: 4096
+checkpoint_bytes: 309067
+train_s: 0.156
+```
+
+Melhor baseline full com 4096 parametros:
+
+```text
+method: full_module_linear
+seed: 33
+target_module: blocks.1.attn.out_proj
+validation_gain: 0.025951
+gain_per_parameter: 6.335787e-06
+trainable_parameters: 4096
+checkpoint_bytes_estimate: 16384
+train_s: 0.081
+```
+
+Baseline full-budget 4096:
+
+```text
+best method: full_budget_linear_4096
+best seed: 32
+best validation_gain: -0.005331
+best gain_per_parameter: -1.301611e-06
+```
+
+Veredito:
+
+5C agora compara tambem `DRM-SAINT-G` com 4096 parametros contra baselines de
+4096 parametros. O resultado continuou reprovando o criterio de qualidade:
+`drm_saint_g_4096` melhorou mais que `full_budget_linear_4096`, mas perdeu por
+margem grande para `full_module_linear`. Portanto o problema nao e apenas
+orcamento; o caminho full-module direto otimiza melhor esse modulo no regime
+testado. O proximo passo precisa melhorar a parametrizacao/otimizacao do enxerto
+ou aceitar que DRM-SAINT-G, nesse marco, e uma tecnica de compressao extrema e
+nao uma substituta direta de full-module no mesmo orcamento.
+
+Teste de hipoteses A Phi B:
+
+```text
+config: configs/drm_g_marco5c_phi_variants.json
+benchmark: scripts/benchmark_drm_g_marco5c_phi_variants.py
+output: runs/drm_g_marco5c_phi_variants
+seeds: 31, 32, 33, 34
+steps: 8
+validation_batches: 8
+target_module: blocks.1.attn.out_proj
+```
+
+Hipoteses testadas:
+
+- `phi_ls_4096`: `Phi` inicializado por least-squares/projecao de gradiente;
+- `phi_ls_residual_4096`: `Phi` least-squares com residual esparso;
+- `phi_ls_train_ab`: `Phi` least-squares com `A/B` parcialmente treinaveis;
+- `phi_zero_4096`: controle `A Phi B` com `Phi` zero;
+- `full_module_linear`: baseline full-module.
+
+Resultado por media multiseed:
+
+| metodo | mean_gain | mean_gain/param | wins positivos |
+|---|---:|---:|---:|
+| `phi_zero_4096` | 0.017202 | 4.199748e-06 | 4 / 4 |
+| `phi_ls_train_ab` | 0.016895 | 3.299810e-06 | 4 / 4 |
+| `full_module_linear` | 0.016382 | 3.999550e-06 | 3 / 4 |
+| `phi_ls_residual_4096` | 0.015902 | 3.943040e-06 | 4 / 4 |
+| `phi_ls_4096` | 0.015894 | 3.880414e-06 | 4 / 4 |
+
+Melhor caso absoluto:
+
+```text
+full_module_linear seed 33
+validation_gain: 0.058620
+gain_per_parameter: 1.431155e-05
+```
+
+Melhor Phi:
+
+```text
+phi_ls_train_ab seed 33
+validation_gain: 0.041351
+gain_per_parameter: 8.076336e-06
+trainable_parameters: 5120
+```
+
+Veredito do teste de hipoteses:
+
+As hipoteses melhoraram o quadro. Em media, `phi_zero_4096` e
+`phi_ls_train_ab` ficaram competitivos ou melhores que `full_module_linear`, e as
+variantes Phi tiveram ganho positivo em 4/4 seeds. O melhor caso absoluto ainda e
+do full-module, entao o criterio de fechamento permanece exigente, mas a direcao
+`A Phi B` nao esta descartada. Least-squares sozinho nao foi o maior ganho; o
+sinal mais forte veio de estabilidade multiseed e de permitir mais liberdade em
+`A/B`.
+
+Nota de memoria:
+
+Least-squares pode prejudicar memoria se for implementado sobre uma matriz grande
+inteira. A versao testada estima `Phi` no espaco reduzido, usando ativacao e
+gradiente do batch:
+
+```text
+X = activation @ A
+target = -step_scale * gradient
+Phi = pinv(X) target pinv(B)
+```
+
+O custo principal fica em `batch_tokens x rank` e `batch_tokens x d_model`, nao
+em `parametros_do_modelo`. Para modelos grandes, esta inicializacao deve usar
+micro-batches, amostragem de tokens e possivelmente blocos por camada, nunca um
+delta denso global.
 
 #### Marco 5D - Segundo Tamanho DRM
 

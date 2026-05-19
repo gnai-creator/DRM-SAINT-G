@@ -1,0 +1,16 @@
+{
+  "benchmark": "scripts/benchmark_drm_g_marco5c_phi_variants.py",
+  "output_dir": "runs/drm_g_marco5c_phi_variants",
+  "seeds": [31, 32, 33, 34],
+  "validation_batches": 8,
+  "batch_size": 4,
+  "steps": 8,
+  "target_module": "blocks.1.attn.out_proj",
+  "variants": [
+    "phi_zero_4096",
+    "phi_ls_4096",
+    "phi_ls_residual_4096",
+    "phi_ls_train_ab",
+    "full_module_linear"
+  ]
+}

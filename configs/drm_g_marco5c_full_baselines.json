@@ -1,0 +1,20 @@
+{
+  "benchmark": "scripts/benchmark_drm_g_marco5c.py",
+  "output_dir": "runs/drm_g_marco5c_full_baselines",
+  "seeds": [31, 32, 33, 34],
+  "validation_batches": 8,
+  "batch_size": 4,
+  "baseline_steps": 8,
+  "saint_ranks": [8, 64],
+  "full_budgets": [128, 4096],
+  "targets": [
+    "blocks.1.attn.out_proj"
+  ],
+  "baselines": [
+    "drm_saint_g_64",
+    "drm_saint_g_4096",
+    "full_budget_linear_128",
+    "full_budget_linear_4096",
+    "full_module_linear"
+  ]
+}

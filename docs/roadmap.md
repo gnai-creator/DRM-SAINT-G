@@ -3341,7 +3341,7 @@ Subfases:
 |---|---|---|
 | 5A | artefato consolidado em disco | concluido: `.pt` salvo, recarregado e avaliado |
 | 5B | retencao e dados maiores | concluido: 4/4 seeds passaram retencao |
-| 5C | baseline full mais forte | full-budget/full-module mais justo |
+| 5C | baseline full mais forte | implementado: full-module venceu SAINT-G mesmo com 4096 params |
 | 5D | segundo tamanho DRM | repeticao fora do DRM 3.5M |
 | 5E | criterio automatico final | `phase_decision` JSON/Markdown |
 | 5F | relatorio final DRM-G | recomendacao para proxima fase |
@@ -3384,6 +3384,40 @@ O benchmark `scripts/benchmark_drm_g_marco5b.py` confirmou ganho positivo em
 todas as seeds testadas e `old_regression` negativa em todos os runs. O resultado
 fortalece a retencao no fixture tokenizado, mas ainda nao fecha a escala de dados
 exigida para encerrar o Marco 5 inteiro.
+
+Marco 5C inicial:
+
+| metrica | DRM-SAINT-G 4096 | full_budget 4096 | full_module 4096 |
+|---|---:|---:|---:|
+| validation_gain | 0.000400 | -0.005331 | 0.025951 |
+| gain_per_parameter | 9.770156e-08 | -1.301611e-06 | 6.335787e-06 |
+| trainable_parameters | 4096 | 4096 | 4096 |
+| train_s | 0.156 | 0.114 | 0.081 |
+
+O benchmark `scripts/benchmark_drm_g_marco5c.py` tornou o controle mais forte:
+`DRM-SAINT-G` tambem foi testado com 4096 parametros (`phi_rank=64`). Ele venceu
+o `full_budget_linear_4096`, mas perdeu por margem grande para
+`full_module_linear` no mesmo alvo e com o mesmo numero nominal de parametros.
+O Marco 5C ficou implementado, mas nao passou no criterio de qualidade contra
+full-module.
+
+Marco 5C - teste de hipoteses A Phi B:
+
+| metodo | mean_gain | mean_gain/param | wins |
+|---|---:|---:|---:|
+| `phi_zero_4096` | 0.017202 | 4.199748e-06 | 4 / 4 |
+| `phi_ls_train_ab` | 0.016895 | 3.299810e-06 | 4 / 4 |
+| `full_module_linear` | 0.016382 | 3.999550e-06 | 3 / 4 |
+| `phi_ls_residual_4096` | 0.015902 | 3.943040e-06 | 4 / 4 |
+| `phi_ls_4096` | 0.015894 | 3.880414e-06 | 4 / 4 |
+
+O benchmark `scripts/benchmark_drm_g_marco5c_phi_variants.py` testou:
+least-squares/projecao de gradiente, `Phi + sparse_residual`, `A/B`
+parcialmente treinaveis e grid 4096 contra `full_module_linear`. As variantes
+Phi ficaram competitivas na media multiseed e tiveram ganho positivo em 4/4
+seeds, mas o melhor caso absoluto ainda foi `full_module_linear` na seed 33.
+O resultado sugere continuar a parametrizacao `A Phi B`, mas com criterio
+separando media multiseed, melhor caso e custo de memoria.
 
 ## Fase 16 - Escala 70B
 
