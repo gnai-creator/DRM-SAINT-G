@@ -3344,7 +3344,7 @@ Subfases:
 | 5C | baseline full mais forte | concluido parcial: competitivo na media, perdeu melhor caso |
 | 5D | segundo tamanho DRM | concluido parcial: multilingual 5M |
 | 5E | criterio automatico final | concluido: `partial_pass`, 7/8 eixos |
-| 5F | relatorio final DRM-G | recomendacao para proxima fase |
+| 5F | relatorio final DRM-G | concluido: avancar para Fase 16 com ressalvas |
 
 Criterio final:
 
@@ -3466,6 +3466,20 @@ O avaliador `scripts/benchmark_drm_g_marco5e.py` gerou
 `partial_pass`: 7 eixos passaram, com falha explicita em `best_case_win`. Este e
 o veredito correto para o Marco 5 ate agora: avancar como evidencia parcial, sem
 alegar dominancia absoluta contra full-module.
+
+Marco 5F final:
+
+```text
+relatorio: docs/reports/drm_g_marco5f_relatorio_final.md
+status: concluido
+veredito: avancar para Fase 16 como partial_pass
+baseline recomendado: drm_transformer/configs/scaling/multilingual/5m.yaml
+foco recomendado: infraestrutura e escala controlada
+```
+
+O Marco 5F fecha a fase DRM-G com recomendacao tecnica clara: seguir para Fase
+16, usando Phi como familia principal, mas mantendo `full_module_linear` como
+baseline obrigatorio e sem declarar vitoria absoluta de qualidade.
 
 ## Fase 16 - Escala 70B
 

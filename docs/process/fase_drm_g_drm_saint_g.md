@@ -825,6 +825,8 @@ deve avancar com ressalva cientifica, nao com alegacao de dominancia total.
 
 #### Marco 5F - Relatorio Final DRM-G
 
+Status: **concluido**.
+
 Objetivo:
 
 Fechar a fase DRM-G com uma recomendacao tecnica.
@@ -844,6 +846,27 @@ Passa se o projeto tiver resposta clara para:
 - DRM-G deve avancar?
 - Qual baseline carregar para a proxima fase?
 - O foco deve ser qualidade, escala ou infraestrutura?
+
+Resultado:
+
+```text
+relatorio: docs/reports/drm_g_marco5f_relatorio_final.md
+status: concluido com avanco condicional
+veredito: partial_pass
+proxima fase: Fase 16
+baseline recomendado: configs/scaling/multilingual/5m.yaml
+```
+
+Resposta curta:
+
+- DRM-G deve avancar? Sim, como evidencia parcial/suportiva.
+- Qual baseline carregar? `drm_transformer/configs/scaling/multilingual/5m.yaml`.
+- Foco da proxima fase? Infraestrutura e escala controlada primeiro; qualidade
+  continua medida, mas sem alegacao de dominancia absoluta.
+
+O Marco 5F fecha a fase dizendo que DRM-SAINT-G/Phi e competitivo em media
+multiseed e estabilidade, mas ainda perde o melhor caso absoluto para
+`full_module_linear`. A Fase 16 deve preservar essa honestidade cientifica.
 
 ## Metricas
 
