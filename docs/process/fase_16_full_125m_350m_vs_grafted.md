@@ -1,6 +1,6 @@
 # Fase 16 - DRM Full 125M/350M vs DRM-SAINT-G Grafted
 
-Status: **pendente**.
+Status: **implementado, validado em dry-run**.
 
 ## Objetivo
 
@@ -395,6 +395,163 @@ Veredito:
 O Marco 4D passa na infraestrutura de controle de treino. As proximas
 comparacoes de qualidade devem usar `best_eval_loss` e o artefato
 `best_graft_checkpoint`, nao apenas `final_loss`.
+
+Resultado adicional 4-graft:
+
+```text
+graft_count: 4
+trainable_parameters: 19.882.756
+cuda_peak: 746 MB
+best_eval_step: 5.000
+best_eval_loss: 10.414828
+best_eval_gain: 0.001346
+best_checkpoint_size: 79.536.323 bytes
+best_recompose_abs_diff: 0.0
+```
+
+Esse resultado confirma que grupos menores treinam melhor que 24 enxertos
+simultaneos. O ponto final do treino ainda piorou, mas o melhor checkpoint foi
+salvo e recomposto exatamente.
+
+### Marco 4E - Staged Graft Growth
+
+Status: **pendente**.
+
+Objetivo:
+
+Treinar crescimento por estagios aceitos, em vez de ativar 24 enxertos de uma
+vez.
+
+Procedimento:
+
+```text
+1. treinar G1 com 4 enxertos
+2. aceitar G1 somente se best_eval_gain > 0
+3. congelar G1 aceito
+4. adicionar G2 com mais 4 enxertos
+5. treinar G2 com G1 ativo e congelado
+6. aceitar G2 somente se nao destruir G1
+7. repetir ate 24 enxertos
+```
+
+Motivacao:
+
+Os resultados atuais sugerem:
+
+```text
+24 enxertos simultaneos -> instavel ou sem ganho
+4 enxertos com best checkpoint -> ganho positivo
+```
+
+Logo, o caminho correto e crescimento incremental aprovado por validacao.
+
+Entregas:
+
+- script ou modo para treinar grupos de 4 enxertos por estagio;
+- checkpoint composto com todos os grupos aceitos;
+- politica `approve/reject/defer`;
+- congelamento de grupos aceitos;
+- validacao apos cada estagio;
+- relatorio G1, G1+G2, G1+G2+G3 ... ate 24;
+- comparacao contra melhor 4-graft isolado.
+
+Implementado:
+
+```text
+--training-mode staged
+--stage-size
+--max-stages
+--freeze-accepted-stages
+--stage-accept-min-gain
+```
+
+Artefatos:
+
+```text
+stage_metrics.json
+stage_training_metrics.jsonl
+composed_graft_checkpoint.pt
+summary.json
+results.md
+```
+
+Dry-run:
+
+```text
+runs/phase16_marco4e_staged_dryrun
+recompose_abs_diff: 0.0
+```
+
+Resultado 24-graft staged:
+
+```text
+runs/phase16_marco4e_staged_24graft
+base_loss: 10.416174
+composed_loss: 10.414818
+accumulated_gain: 0.001357
+accepted_stages: 1
+accepted_grafts: 4
+cuda_peak: 1.30 GB
+recompose_abs_diff: 0.0
+```
+
+Decisoes:
+
+```text
+stage 1, grafts 0-3: approved, gain 0.001357
+stage 2, grafts 4-7: rejected, gain 0.000000
+```
+
+Interpretacao:
+
+O Marco 4E se comportou como esperado: aceitou o grupo que melhorou validacao,
+rejeitou o grupo que nao acrescentou ganho e preservou o checkpoint composto. O
+ganho acumulado ficou ligeiramente acima do melhor 4-graft isolado.
+
+Criterio:
+
+```text
+G1 melhora validacao
+G1+G2 nao destroi G1
+checkpoint composto recompoe
+ganho acumulado > melhor 4-graft isolado
+```
+
+### Marco 4F - Validation-Routed Staged Grafts
+
+Status: **pendente**.
+
+Objetivo:
+
+Escolher os proximos grupos de enxertos por ganho de validacao, nao por ordem
+fixa de indice.
+
+Motivacao:
+
+O Marco 4E aprovou `grafts 0-3` e rejeitou `grafts 4-7`. Isso indica que o
+problema agora e selecao de candidatos. O proximo grupo nao deve ser simplesmente
+o proximo indice; deve ser o grupo que demonstra maior ganho em validacao.
+
+Procedimento:
+
+```text
+1. gerar candidatos em blocks.0..5
+2. treinar cada candidato por budget curto
+3. medir best_eval_gain
+4. rankear candidatos
+5. aceitar o top grupo se gain > threshold
+6. congelar grupo aceito
+7. repetir ate budget alvo ou sem candidatos positivos
+```
+
+Criterio:
+
+```text
+selecionar grupo melhor que ordem fixa
+ganho acumulado > Marco 4E
+checkpoint composto recompÃµe
+VRAM permanece controlada
+```
 
 ### Marco 5 - Comparacao Full vs Grafted
 

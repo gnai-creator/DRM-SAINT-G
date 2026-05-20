@@ -3638,6 +3638,85 @@ Veredito: os proximos testes longos devem comparar `best_eval_loss`, nao apenas
 `final_loss`. O treino longo provou eficiencia, mas tambem mostrou que
 checkpoint final sem validacao nao e criterio suficiente.
 
+Resultado adicional 4-graft com Marco 4D:
+
+```text
+graft_count: 4
+best_eval_loss: 10.414828
+best_eval_gain: 0.001346
+best_eval_step: 5.000
+cuda_peak: 746 MB
+best_checkpoint: 79.5 MB
+best_recompose_abs_diff: 0.0
+```
+
+Veredito: grupos pequenos funcionam melhor que 24 enxertos simultaneos. Isso
+cria o Marco 4E.
+
+Marco 4E - staged graft growth:
+
+```text
+status: implementado, validado em dry-run
+objetivo: treinar 4 grafts por estagio
+criterio de aceite: best_eval_gain > 0
+politica: aceitar, congelar, adicionar proximo grupo
+alvo: repetir ate 24 grafts
+```
+
+Implementado no benchmark:
+
+```text
+--training-mode staged
+--stage-size
+--max-stages
+--freeze-accepted-stages
+--stage-accept-min-gain
+```
+
+Dry-run:
+
+```text
+runs/phase16_marco4e_staged_dryrun
+artefatos: stage_metrics.json, composed_graft_checkpoint.pt, results.md
+recompose_abs_diff: 0.0
+```
+
+Resultado 24-graft staged:
+
+```text
+runs/phase16_marco4e_staged_24graft
+base_loss: 10.416174
+composed_loss: 10.414818
+accumulated_gain: 0.001357
+accepted_stages: 1
+accepted_grafts: 4
+stage 1: approved, gain 0.001357
+stage 2: rejected, gain 0.000000
+recompose_abs_diff: 0.0
+```
+
+Veredito: Marco 4E confirma que crescimento por estagios preserva ganho e
+rejeita grupos improdutivos. O ganho acumulado supera ligeiramente o melhor
+4-graft isolado. O proximo gargalo e escolher melhores grupos candidatos.
+
+Marco 4F - validation-routed staged grafts:
+
+```text
+status: pendente
+objetivo: selecionar grupos por best_eval_gain
+metodo: testar candidatos em blocks.0..5, rankear e aceitar top grupo
+criterio: ganho acumulado > Marco 4E
+```
+
+Criterio:
+
+```text
+G1 melhora validacao
+G1+G2 nao destroi G1
+checkpoint composto recompoe
+ganho acumulado > melhor 4-graft isolado
+```
+
 ### Criterio de sucesso
 
 Sucesso minimo:

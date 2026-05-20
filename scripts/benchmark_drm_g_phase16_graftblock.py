@@ -421,8 +421,16 @@ def main() -> int:
     parser.add_argument("--hidden-size", type=int, default=0)
     parser.add_argument("--init-scale", type=float, default=0.01)
     parser.add_argument("--activation", choices=["silu", "gelu", "relu"], default="silu")
-    parser.add_argument("--training-mode", choices=["simultaneous", "progressive"], default="simultaneous")
+    parser.add_argument(
+        "--training-mode",
+        choices=["simultaneous", "progressive", "staged"],
+        default="simultaneous",
+    )
     parser.add_argument("--scale-warmup-grafts", type=int, default=2)
+    parser.add_argument("--stage-size", type=int, default=4)
+    parser.add_argument("--max-stages", type=int, default=6)
+    parser.add_argument("--freeze-accepted-stages", action="store_true")
+    parser.add_argument("--stage-accept-min-gain", type=float, default=0.0)
     parser.add_argument("--full-125m-smoke-loss", type=float, default=9.049912414550782)
     parser.add_argument("--save-graft-checkpoint", action="store_true")
     parser.add_argument("--save-best-checkpoint", action="store_true")
@@ -445,6 +453,18 @@ def main() -> int:
     drm_config = load_drm_baseline_config(metadata, config_cls)
     temp_model = model_cls(drm_config)
     plan_rows = _plan_rows(_base_params(temp_model), args.target_total_parameters, int(drm_config.d_model))
+    if args.training_mode == "staged":
+        from saint.adapters.drm_grafting_graftblock_staged import run_staged_graft_growth
+
+        if not args.hidden_size:
+            args.hidden_size = plan_graft_blocks(
+                base_parameters=_base_params(temp_model),
+                target_total_parameters=args.target_total_parameters,
+                d_model=int(drm_config.d_model),
+                graft_count=args.graft_count,
+            ).hidden_size
+        run_staged_graft_growth(torch, config_cls, model_cls, drm_config, metadata, args, out_dir)
+        return 0
     graft_counts = args.graft_counts or [args.graft_count]
     rows = [
         _train_one(args, seed, graft_count, out_dir)
