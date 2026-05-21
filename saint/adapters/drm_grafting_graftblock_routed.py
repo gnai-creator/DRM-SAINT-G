@@ -137,12 +137,22 @@ def _candidate_args(args, candidate: dict[str, Any]):
 
 
 def _marco_name(args) -> str:
+    if int(getattr(args, "post_first_stage_size", 0) or 0) > 0:
+        return "4h_fine_grained_second_stage"
     grid_args = (
         args.candidate_learning_rates,
         args.candidate_init_scales,
         args.candidate_activations,
     )
     return "4g_candidate_grid_routed_grafts" if any(grid_args) else "4f_validation_routed_staged_grafts"
+
+
+def _stage_indices(args, start: int, stage: int) -> tuple[list[int], int]:
+    size = int(args.stage_size)
+    if stage > 1 and int(getattr(args, "post_first_stage_size", 0) or 0) > 0:
+        size = int(args.post_first_stage_size)
+    end = min(start + max(1, size), int(args.graft_count))
+    return list(range(start, end)), end
 
 
 def _train_current(torch, model, drm_config, metadata, grafts, indices, accepted, args, out_dir, stage, tag):
@@ -284,12 +294,11 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
     stage_metrics = []
     candidate_metrics = []
     candidates = _candidate_grid(args)
+    start = 0
     for stage in range(1, int(args.max_stages) + 1):
-        start = (stage - 1) * int(args.stage_size)
-        end = min(start + int(args.stage_size), int(args.graft_count))
         if start >= int(args.graft_count):
             break
-        indices = list(range(start, end))
+        indices, end = _stage_indices(args, start, stage)
         previous_composed_loss = current_composed_loss
         probes = []
         best_payload = None
@@ -370,6 +379,7 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
         })
         if decision != "approved":
             break
+        start = end
     final_model = _new_model(torch, model_cls, drm_config, metadata)
     _set_state(accepted_states, accepted, set())
     handles = _attach_target_map(final_model, accepted_states, accepted_target_map)

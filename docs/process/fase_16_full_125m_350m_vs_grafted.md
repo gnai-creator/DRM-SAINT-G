@@ -701,7 +701,7 @@ Marco 4G passou como melhoria incremental.
 
 ### Marco 4H - Fine-Grained Second Stage
 
-Status: **pendente**.
+Status: **implementado, validado em dry-run**.
 
 Objetivo:
 
@@ -724,6 +724,28 @@ Criterio:
 composed_loss < 10.414729
 accepted_grafts > 4
 recompose_abs_diff = 0.0
+```
+
+Implementado:
+
+```text
+--post-first-stage-size
+```
+
+Dry-run:
+
+```text
+runs/phase16_marco4h_adaptive_stage_dryrun
+marco: 4h_fine_grained_second_stage
+stage 1 size: 2
+stage 2 size: 1
+recompose_abs_diff: 0.0
+```
+
+Documento:
+
+```text
+docs/reports/phase16_marco4h_fine_grained_second_stage.md
 ```
 
 ### Marco 5 - Comparacao Full vs Grafted

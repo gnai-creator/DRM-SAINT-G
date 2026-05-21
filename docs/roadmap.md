@@ -3633,9 +3633,18 @@ destravou G2.
 Marco 4H - fine-grained second stage:
 
 ```text
-status: pendente
+status: implementado, validado em dry-run
 objetivo: testar stage_size menor depois de G1
 criterio: composed_loss < 10.414729 e accepted_grafts > 4
+```
+
+Implementado:
+
+```text
+--post-first-stage-size
+runs/phase16_marco4h_adaptive_stage_dryrun
+marco: 4h_fine_grained_second_stage
+recompose_abs_diff: 0.0
 ```
 
 Correcao implementada:

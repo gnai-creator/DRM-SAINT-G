@@ -428,6 +428,7 @@ def main() -> int:
     )
     parser.add_argument("--scale-warmup-grafts", type=int, default=2)
     parser.add_argument("--stage-size", type=int, default=4)
+    parser.add_argument("--post-first-stage-size", type=int, default=0)
     parser.add_argument("--max-stages", type=int, default=6)
     parser.add_argument("--freeze-accepted-stages", action="store_true")
     parser.add_argument("--stage-accept-min-gain", type=float, default=0.0)
