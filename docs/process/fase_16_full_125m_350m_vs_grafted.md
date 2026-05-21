@@ -679,6 +679,53 @@ Documento:
 docs/reports/phase16_marco4g_candidate_grid_routed_grafts.md
 ```
 
+Resultado light probe:
+
+```text
+runs/phase16_marco4g_light_probe_24graft
+base_loss: 10.416174
+composed_loss: 10.414729
+accumulated_gain: 0.001446
+accepted_groups: 1
+accepted_grafts: 4
+selected_target: blocks.2
+learning_rate: 1e-7
+recompose_abs_diff: 0.0
+```
+
+Veredito:
+
+```text
+Marco 4G passou como melhoria incremental.
+```
+
+### Marco 4H - Fine-Grained Second Stage
+
+Status: **pendente**.
+
+Objetivo:
+
+Verificar se G2 falha por falta de ganho restante ou por granularidade grossa
+demais com `stage_size=4`.
+
+Procedimento:
+
+```text
+1. manter G1 com a melhor configuracao do Marco 4G
+2. para G2 em diante, reduzir stage_size para 1 ou 2
+3. testar grid local de targets/lr/init_scale
+4. aceitar somente por composed validation gain
+5. parar apos candidatos sem ganho positivo
+```
+
+Criterio:
+
+```text
+composed_loss < 10.414729
+accepted_grafts > 4
+recompose_abs_diff = 0.0
+```
+
 ### Marco 5 - Comparacao Full vs Grafted
 
 Objetivo:

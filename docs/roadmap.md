@@ -3614,6 +3614,30 @@ problema: treino 24-graft por 4h sem controle piorou loss
 recompose_abs_diff: 0.0
 ```
 
+Resultado light probe:
+
+```text
+runs/phase16_marco4g_light_probe_24graft
+base_loss: 10.416174
+composed_loss: 10.414729
+accumulated_gain: 0.001446
+accepted_groups: 1
+accepted_grafts: 4
+selected_target: blocks.2
+learning_rate: 1e-7
+```
+
+Veredito: Marco 4G passou como melhoria incremental sobre o 4F, mas ainda nao
+destravou G2.
+
+Marco 4H - fine-grained second stage:
+
+```text
+status: pendente
+objetivo: testar stage_size menor depois de G1
+criterio: composed_loss < 10.414729 e accepted_grafts > 4
+```
+
 Correcao implementada:
 
 ```text
