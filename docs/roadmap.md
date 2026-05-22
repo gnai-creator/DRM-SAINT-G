@@ -3632,6 +3632,25 @@ recompose_abs_diff: 0.0
 Veredito: Marco 4H passou. O gargalo de G2 era granularidade; `stage_size=1`
 destravou um enxerto incremental sem regressao composta.
 
+Marco 4I - residual/orthogonal routing:
+
+```text
+status: implementado, validado em dry-run
+objetivo: penalizar candidatos redundantes com targets ja aceitos
+criterio: composed_loss < 10.414671 e accepted_grafts > 5
+```
+
+Implementado:
+
+```text
+--candidate-score-mode composed_gain_orthogonal
+--orthogonal-penalty
+runs/phase16_marco4i_orthogonal_strict_dryrun
+stage_gain: 0.0
+decision: rejected
+recompose_abs_diff: 0.0
+```
+
 Resultado light probe:
 
 ```text

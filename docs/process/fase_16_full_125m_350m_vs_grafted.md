@@ -773,6 +773,60 @@ O resultado confirma que G2 nao era impossivel. O `stage_size=4` era grosso
 demais depois de G1. Com granularidade 1, o roteador aceitou um enxerto
 incremental em `blocks.3` sem regressao composta.
 
+### Marco 4I - Residual/Orthogonal Routing
+
+Status: **implementado, validado em dry-run**.
+
+Objetivo:
+
+Testar se o estagio 3 falha porque candidatos posteriores repetem targets ja
+explorados.
+
+Implementado:
+
+```text
+--candidate-score-mode composed_gain
+--candidate-score-mode composed_gain_orthogonal
+--orthogonal-penalty
+```
+
+Regra:
+
+```text
+candidate_score = candidate_composed_gain - redundancy_penalty
+redundancy_penalty = orthogonal_penalty * accepted_grafts_on_same_target
+```
+
+O aceite continua estrito:
+
+```text
+candidate_composed_gain > stage_accept_min_gain
+```
+
+Dry-run:
+
+```text
+runs/phase16_marco4i_orthogonal_strict_dryrun
+candidate_score_mode: composed_gain_orthogonal
+stage_gain: 0.0
+decision: rejected
+recompose_abs_diff: 0.0
+```
+
+Criterio:
+
+```text
+composed_loss < 10.414671
+accepted_grafts > 5
+recompose_abs_diff = 0.0
+```
+
+Documento:
+
+```text
+docs/reports/phase16_marco4i_residual_orthogonal_routing.md
+```
+
 ### Marco 5 - Comparacao Full vs Grafted
 
 Objetivo:

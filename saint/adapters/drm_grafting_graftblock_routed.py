@@ -137,6 +137,8 @@ def _candidate_args(args, candidate: dict[str, Any]):
 
 
 def _marco_name(args) -> str:
+    if getattr(args, "candidate_score_mode", "composed_gain") == "composed_gain_orthogonal":
+        return "4i_residual_orthogonal_routing"
     if int(getattr(args, "post_first_stage_size", 0) or 0) > 0:
         return "4h_fine_grained_second_stage"
     grid_args = (
@@ -145,6 +147,19 @@ def _marco_name(args) -> str:
         args.candidate_activations,
     )
     return "4g_candidate_grid_routed_grafts" if any(grid_args) else "4f_validation_routed_staged_grafts"
+
+
+def _candidate_score(args, target: str, gain: float, accepted_target_map: dict[int, str]) -> tuple[float, float]:
+    if getattr(args, "candidate_score_mode", "composed_gain") != "composed_gain_orthogonal":
+        return float(gain), 0.0
+    overlap = sum(1 for accepted_target in accepted_target_map.values() if accepted_target == target)
+    penalty = float(getattr(args, "orthogonal_penalty", 0.0)) * float(overlap)
+    return float(gain) - penalty, penalty
+
+
+def _candidate_rank(row: dict[str, Any], min_gain: float) -> tuple[int, float]:
+    positive = row["candidate_composed_gain"] > float(min_gain)
+    return (1 if positive else 0, float(row["candidate_score"]))
 
 
 def _stage_indices(args, start: int, stage: int) -> tuple[list[int], int]:
@@ -264,7 +279,7 @@ def _recompose_loss(torch, model_cls, drm_config, metadata, artifact: Path, args
 
 def _markdown(summary: dict[str, Any]) -> str:
     lines = [
-        "# Phase 16 Marco 4F - Validation-Routed Staged Grafts",
+        f"# Phase 16 {summary['marco']}",
         "",
         f"- base_loss: {summary['base_loss']:.6f}",
         f"- composed_loss: {summary['composed_loss']:.6f}",
@@ -334,6 +349,14 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
             )
             result["candidate_composed_loss"] = candidate_composed_loss
             result["candidate_composed_gain"] = current_composed_loss - candidate_composed_loss
+            score, penalty = _candidate_score(
+                args,
+                target,
+                result["candidate_composed_gain"],
+                accepted_target_map,
+            )
+            result["candidate_score"] = score
+            result["redundancy_penalty"] = penalty
             result["previous_composed_loss"] = current_composed_loss
             result["candidate_target_by_graft"] = {
                 str(key): value for key, value in sorted(candidate_target_map.items())
@@ -349,10 +372,11 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
             })
             probes.append(result)
             candidate_metrics.append(result)
-            if best_gain is None or result["candidate_composed_gain"] > best_gain:
+            rank = _candidate_rank(result, float(args.stage_accept_min_gain))
+            if best_gain is None or rank > best_gain:
                 best_payload = state_payload
-                best_gain = result["candidate_composed_gain"]
-        best = max(probes, key=lambda row: row["candidate_composed_gain"])
+                best_gain = rank
+        best = max(probes, key=lambda row: _candidate_rank(row, float(args.stage_accept_min_gain)))
         decision = "approved" if best["candidate_composed_gain"] > float(args.stage_accept_min_gain) else "rejected"
         if decision == "approved":
             _load_payload(accepted_states, best_payload, str(metadata["device"]))
@@ -368,6 +392,8 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
             "graft_end": end,
             "stage_best_loss": best["best_loss"],
             "stage_gain": best["candidate_composed_gain"],
+            "stage_score": best["candidate_score"],
+            "redundancy_penalty": best["redundancy_penalty"],
             "learning_rate": best["learning_rate"],
             "init_scale": best["init_scale"],
             "activation": best["activation"],
@@ -398,6 +424,8 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
         "accepted_grafts": len(accepted),
         "accepted_graft_ids": sorted(accepted),
         "target_by_graft": {str(key): value for key, value in sorted(accepted_target_map.items())},
+        "candidate_score_mode": getattr(args, "candidate_score_mode", "composed_gain"),
+        "orthogonal_penalty": float(getattr(args, "orthogonal_penalty", 0.0)),
         "stage_metrics": stage_metrics,
     }
     checkpoint = _save_composed(torch, out_dir, accepted_states, accepted_target_map, args, summary)
