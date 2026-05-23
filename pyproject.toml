@@ -1,7 +1,7 @@
 [project]
-name = "drm-saint-g-training"
+name = "saint-g-training"
 version = "0.1.0"
-description = "DRM-SAINT-G experimental runtime for DRM grafting with DRM-SAINT-G-Phi"
+description = "SAINT-G experimental runtime for scalable auditable intelligence through neural grafting"
 requires-python = ">=3.10"
 license = {text = "AGPL-3.0-or-later OR Commercial"}
 dependencies = []
@@ -17,7 +17,7 @@ hf = [
 
 [project.scripts]
 saint = "saint.cli:main"
-drm-saint-g = "saint.cli:main"
+saint-g = "saint.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["saint*"]

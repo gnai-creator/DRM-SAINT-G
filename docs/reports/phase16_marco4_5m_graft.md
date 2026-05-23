@@ -11,7 +11,7 @@ DRM full 125M smoke
 vs
 DRM 5M smoke
 vs
-DRM 5M + DRM-SAINT-G Phi graft
+DRM 5M + SAINT-G Phi graft
 ```
 
 The full 125M baseline is not a complete pretraining run. It is a 100-step

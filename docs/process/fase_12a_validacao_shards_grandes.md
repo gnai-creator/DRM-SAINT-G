@@ -4,7 +4,7 @@ Status: **concluida**.
 
 ## Objetivo
 
-Validar se o formato shardado do checkpoint DRM-SAINT-G continua correto quando o
+Validar se o formato shardado do checkpoint SAINT-G continua correto quando o
 payload cresce e quando uma matriz individual precisa ser dividida em partes.
 
 ## Implementado
@@ -36,7 +36,7 @@ value_count: 524288
 Resultado:
 
 ```text
-format: DRM-SAINT-G_matrix_shards
+format: SAINT-G_matrix_shards
 shard_count: 16
 payload_bytes: 1052000
 write_elapsed_s: 0.1800

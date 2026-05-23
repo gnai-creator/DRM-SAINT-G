@@ -1,13 +1,13 @@
-# Criterios de Sucesso e Falha DRM-SAINT-G
+# Criterios de Sucesso e Falha SAINT-G
 
-Este documento define como avaliar se o DRM-SAINT-G esta funcionando ou falhando.
+Este documento define como avaliar se o SAINT-G esta funcionando ou falhando.
 
-DRM-SAINT-G significa **DRM por Enxerto com DRM-SAINT-G-Phi**.
+SAINT-G significa **DRM por Enxerto com SAINT-G-Phi**.
 
 Definicao:
 
 ```text
-DRM-SAINT-G = sparse multi-scale block-codebook delta training
+SAINT-G = sparse multi-scale block-codebook delta training
 ```
 
 Em portugues:
@@ -18,7 +18,7 @@ treino de deltas esparsos por dicionario multi-escala de blocos
 
 ## 1. Principio de Avaliacao
 
-DRM-SAINT-G nao deve ser avaliado por promessa, mas por comparacao.
+SAINT-G nao deve ser avaliado por promessa, mas por comparacao.
 
 Toda fase precisa ter:
 
@@ -36,7 +36,7 @@ nao escalar antes de provar
 
 ## 2. Sucesso Conceitual
 
-DRM-SAINT-G tem sucesso conceitual se a definicao ficar clara e testavel:
+SAINT-G tem sucesso conceitual se a definicao ficar clara e testavel:
 
 ```text
 loss global
@@ -145,7 +145,7 @@ Falha se:
 
 ## 7. Sucesso em Camada Linear
 
-Sucesso se DRM-SAINT-G aprender uma funcao alvo com:
+Sucesso se SAINT-G aprender uma funcao alvo com:
 
 - menos parametros que treino full;
 - menor optimizer state;
@@ -175,8 +175,8 @@ Sucesso se:
 
 - loss global com atualizacao local convergir;
 - consolidacao reduzir conflito;
-- DRM-SAINT-G superar head-only;
-- DRM-SAINT-G se aproximar de LoRA em qualidade ou vencer em memoria;
+- SAINT-G superar head-only;
+- SAINT-G se aproximar de LoRA em qualidade ou vencer em memoria;
 - checkpoints forem menores que baselines relevantes.
 
 Falha se:
@@ -191,7 +191,7 @@ Falha se:
 
 Sucesso se:
 
-- DRM-SAINT-G roda de ponta a ponta;
+- SAINT-G roda de ponta a ponta;
 - melhora loss ou perplexity;
 - salva checkpoint recomponivel;
 - compara com LoRA/QLoRA;
@@ -250,13 +250,13 @@ Falha:
 
 ## 12. Sucesso em 70B
 
-DRM-SAINT-G nao promete treino full de 70B.
+SAINT-G nao promete treino full de 70B.
 
 Sucesso minimo em 70B:
 
 ```text
 modelo base quantizado/congelado
-deltas DRM-SAINT-G esparsos
+deltas SAINT-G esparsos
 micro-batch 1
 offload agressivo
 ciclo completo de treino parcial
@@ -296,7 +296,7 @@ Reavaliar o projeto se:
 
 ## 14. Criterios de Sucesso Global
 
-DRM-SAINT-G e promissor se demonstrar pelo menos uma vantagem clara:
+SAINT-G e promissor se demonstrar pelo menos uma vantagem clara:
 
 - menor memoria;
 - menor checkpoint;
@@ -402,7 +402,7 @@ Proxima acao:
 
 ## 19. Resumo
 
-DRM-SAINT-G so deve escalar se provar valor em pequeno.
+SAINT-G so deve escalar se provar valor em pequeno.
 
 O criterio final nao e "funcionou uma vez".
 

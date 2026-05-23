@@ -4,8 +4,8 @@ Status: **em andamento**.
 
 ## Objetivo
 
-Testar DRM-SAINT-G em modelos Hugging Face pequenos, com checkpoints locais e fluxo
-compatível com o runtime DRM-SAINT-G.
+Testar SAINT-G em modelos Hugging Face pequenos, com checkpoints locais e fluxo
+compatível com o runtime SAINT-G.
 
 ## Marco 1 - Adaptador Local Dependency-Optional
 
@@ -22,8 +22,8 @@ de modelo nem dependencia obrigatoria de `transformers`.
 - tentativa opcional de `AutoModelForCausalLM.from_pretrained(..., local_files_only=True)`;
 - listagem de matrizes 2D por keywords;
 - filtro por `max_dim` e `max_matrices`;
-- metodo `hf_DRM-SAINT-G_delta_smoke`;
-- deltas DRM-SAINT-G por blocos de maior magnitude;
+- metodo `hf_SAINT-G_delta_smoke`;
+- deltas SAINT-G por blocos de maior magnitude;
 - checkpoint robusto com dtype/shards;
 - resume e merge pelo runtime existente;
 - config exemplo `configs/huggingface_smoke.json`;
@@ -35,7 +35,7 @@ Campos principais:
 
 ```text
 task: huggingface_causal_lm
-method: hf_DRM-SAINT-G_delta_smoke
+method: hf_SAINT-G_delta_smoke
 metadata.model_name_or_path: caminho local do modelo ou state_dict JSON
 metadata.max_dim: recorte maximo por matriz
 metadata.max_matrices: numero maximo de matrizes
@@ -70,13 +70,13 @@ model.layers.0.mlp.down_proj.weight
 
 Status: **concluido**.
 
-Este marco adiciona o caminho `hf_DRM-SAINT-G_autograd_smoke`, que usa PyTorch
-autograd para treinar deltas DRM-SAINT-G sobre matrizes extraidas de um checkpoint
+Este marco adiciona o caminho `hf_SAINT-G_autograd_smoke`, que usa PyTorch
+autograd para treinar deltas SAINT-G sobre matrizes extraidas de um checkpoint
 Hugging Face local.
 
 ### Entregas
 
-- metodo `hf_DRM-SAINT-G_autograd_smoke`;
+- metodo `hf_SAINT-G_autograd_smoke`;
 - modulo `saint/adapters/huggingface_autograd.py`;
 - selecao de parametros por magnitude;
 - deltas treinaveis com PyTorch autograd;
@@ -111,13 +111,13 @@ cuda: NVIDIA GeForce RTX 4090
 
 Status: **concluido**.
 
-Este marco adiciona `hf_DRM-SAINT-G_forward_smoke`, que carrega um modelo local via
+Este marco adiciona `hf_SAINT-G_forward_smoke`, que carrega um modelo local via
 `AutoModelForCausalLM`, carrega tokenizer local, executa `model.forward` real
-com `labels`, treina deltas DRM-SAINT-G por autograd e salva checkpoint avaliavel.
+com `labels`, treina deltas SAINT-G por autograd e salva checkpoint avaliavel.
 
 ### Entregas
 
-- metodo `hf_DRM-SAINT-G_forward_smoke`;
+- metodo `hf_SAINT-G_forward_smoke`;
 - modulo `saint/adapters/huggingface_forward.py`;
 - carregamento local com `AutoModelForCausalLM.from_pretrained`;
 - carregamento local com `AutoTokenizer.from_pretrained`;
@@ -136,7 +136,7 @@ com `labels`, treina deltas DRM-SAINT-G por autograd e salva checkpoint avaliave
 ### Fluxo Validado
 
 ```text
-modelo local -> tokenizer local -> forward real -> treino DRM-SAINT-G -> checkpoint -> merge
+modelo local -> tokenizer local -> forward real -> treino SAINT-G -> checkpoint -> merge
 ```
 
 O teste cria um GPT-2 minimo local com tokenizer `WordLevel`, sem baixar nada da
@@ -146,19 +146,19 @@ internet.
 
 Status: **concluido**.
 
-Este marco compara DRM-SAINT-G contra full fine-tuning pequeno no mesmo modelo GPT-2
+Este marco compara SAINT-G contra full fine-tuning pequeno no mesmo modelo GPT-2
 minimo local, repetindo seeds e medindo throughput, memoria CUDA e checkpoint.
 
 ### Entregas
 
 - modulo `saint/adapters/huggingface_benchmark.py`;
-- benchmark `benchmark_hf_DRM-SAINT-G_vs_full`;
-- comparacao `hf_DRM-SAINT-G_forward_smoke` vs `hf_full_finetune`;
+- benchmark `benchmark_hf_SAINT-G_vs_full`;
+- comparacao `hf_SAINT-G_forward_smoke` vs `hf_full_finetune`;
 - repeticao com seeds `31` e `32`;
 - medicao de `tokens_per_s`;
 - medicao de `cuda_peak_bytes`;
 - contagem de parametros treinaveis;
-- checkpoint e merge para DRM-SAINT-G;
+- checkpoint e merge para SAINT-G;
 - teste automatizado sem rede.
 
 ### Resultado CUDA
@@ -170,23 +170,23 @@ modelo: GPT-2 minimo local
 device: cuda
 seeds: 31, 32
 steps: 1
-parameter_budget DRM-SAINT-G: 8
+parameter_budget SAINT-G: 8
 ```
 
 Resultado:
 
 | metodo | seed | parametros | loss inicial | loss final | delta loss | tokens/s | pico CUDA |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| DRM-SAINT-G | 31 | 8 | 2.792639 | 2.792619 | -0.000021 | 393.51 | 18230784 |
+| SAINT-G | 31 | 8 | 2.792639 | 2.792619 | -0.000021 | 393.51 | 18230784 |
 | full | 31 | 3824 | 2.790193 | 2.749064 | -0.041129 | 2915.51 | 18239488 |
-| DRM-SAINT-G | 32 | 8 | 2.792639 | 2.792619 | -0.000021 | 5873.83 | 18230784 |
+| SAINT-G | 32 | 8 | 2.792639 | 2.792619 | -0.000021 | 5873.83 | 18230784 |
 | full | 32 | 3824 | 2.767291 | 2.769696 | 0.002405 | 4872.50 | 18239488 |
 
 Leitura:
 
-- DRM-SAINT-G treinou apenas 8 parametros e reduziu pouco a loss;
+- SAINT-G treinou apenas 8 parametros e reduziu pouco a loss;
 - full fine-tuning teve mais capacidade, usando 3824 parametros;
-- o checkpoint/merge DRM-SAINT-G passou nas duas seeds;
+- o checkpoint/merge SAINT-G passou nas duas seeds;
 - a memoria CUDA foi parecida nesse modelo minimo porque o peso base domina o
   custo e o modelo e muito pequeno.
 
@@ -207,14 +207,14 @@ Este marco melhora a comparacao contra baselines no mesmo forward real de
 - benchmark com mais steps no teste automatizado;
 - medicao de `resume_quality_delta` apos `resume`;
 - medicao de `gain_per_parameter`;
-- comparacao DRM-SAINT-G vs LoRA vs full fine-tuning;
+- comparacao SAINT-G vs LoRA vs full fine-tuning;
 - suporte ao mesmo caminho `model_name_or_path` local para testar modelos HF
   reais ja presentes na maquina.
 
 ### Baselines
 
 ```text
-hf_DRM-SAINT-G_forward_smoke
+hf_SAINT-G_forward_smoke
 hf_lora_rank_2
 hf_full_finetune
 ```
@@ -243,7 +243,7 @@ modelo: GPT-2 minimo local
 device: cuda
 seed: 31
 steps: 2
-parameter_budget DRM-SAINT-G: 8
+parameter_budget SAINT-G: 8
 LoRA rank: 2
 ```
 
@@ -251,17 +251,17 @@ Resultado:
 
 | metodo | parametros | loss inicial | loss final | delta loss | ganho/param | tokens/s | pico CUDA |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| DRM-SAINT-G | 8 | 3.425533 | 3.425443 | -0.000090 | 0.00001124 | 647.89 | 18240000 |
+| SAINT-G | 8 | 3.425533 | 3.425443 | -0.000090 | 0.00001124 | 647.89 | 18240000 |
 | LoRA r2 | 192 | 3.432518 | 3.432486 | -0.000032 | 0.00000017 | 9403.80 | 18340352 |
 | full | 4064 | 3.435688 | 3.386605 | -0.049083 | 0.00001208 | 6108.98 | 18395136 |
 
-O `resume_quality_delta` do DRM-SAINT-G foi `0.0`, confirmando que a qualidade
+O `resume_quality_delta` do SAINT-G foi `0.0`, confirmando que a qualidade
 registrada no checkpoint foi preservada apos `resume`.
 
 ### Leitura Tecnica
 
 O Marco 5 ainda nao prova vantagem contra LoRA. Ele fecha a lacuna de
-instrumentacao: agora DRM-SAINT-G, LoRA e full fine-tuning rodam no mesmo forward real,
+instrumentacao: agora SAINT-G, LoRA e full fine-tuning rodam no mesmo forward real,
 com o mesmo dataset curto e metricas comparaveis de qualidade, throughput,
 memoria e eficiencia por parametro.
 
@@ -277,7 +277,7 @@ Este marco transforma a comparacao do Marco 5 em sweep reproduzivel.
 
 - modulo `saint/adapters/huggingface_sweep.py`;
 - script `scripts/benchmark_huggingface_phase13.py`;
-- sweep de budgets DRM-SAINT-G;
+- sweep de budgets SAINT-G;
 - sweep de LoRA ranks `1`, `2`, `4` e `8`;
 - exportacao de `results.json`;
 - exportacao de `results.md`;
@@ -317,9 +317,9 @@ python scripts/benchmark_huggingface_phase13.py \
 
 | metodo | budget | rank | parametros | loss final | perplexity apos merge | ganho/param | tokens/s | pico CUDA |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| DRM-SAINT-G | 4 |  | 4 | 10.824375 | 49923.772119 | 0.00000119 | 2201.15 | 31205888 |
-| DRM-SAINT-G | 8 |  | 8 | 10.824288 | 49919.201671 | 0.00001144 | 5283.24 | 31205888 |
-| DRM-SAINT-G | 16 |  | 12 | 10.824239 | 49916.583373 | 0.00001176 | 5214.95 | 31205888 |
+| SAINT-G | 4 |  | 4 | 10.824375 | 49923.772119 | 0.00000119 | 2201.15 | 31205888 |
+| SAINT-G | 8 |  | 8 | 10.824288 | 49919.201671 | 0.00001144 | 5283.24 | 31205888 |
+| SAINT-G | 16 |  | 12 | 10.824239 | 49916.583373 | 0.00001176 | 5214.95 | 31205888 |
 | LoRA |  | 1 | 12 | 10.818256 | 49923.962564 | 0.00000008 | 9722.52 | 43878400 |
 | LoRA |  | 2 | 24 | 10.818254 | 49923.867341 | 0.00000012 | 7673.50 | 43878400 |
 | LoRA |  | 4 | 48 | 10.818251 | 49923.676897 | 0.00000014 | 9589.04 | 43878400 |
@@ -329,10 +329,10 @@ python scripts/benchmark_huggingface_phase13.py \
 ### Leitura Tecnica
 
 - full fine-tuning ainda reduz mais loss absoluta;
-- LoRA reduz loss com mais throughput, mas usa mais parametros que DRM-SAINT-G nos
+- LoRA reduz loss com mais throughput, mas usa mais parametros que SAINT-G nos
   budgets testados;
-- DRM-SAINT-G teve melhor ganho por parametro que LoRA neste sweep curto;
-- DRM-SAINT-G usou menos pico CUDA que LoRA e full neste modelo;
+- SAINT-G teve melhor ganho por parametro que LoRA neste sweep curto;
+- SAINT-G usou menos pico CUDA que LoRA e full neste modelo;
 - a perplexity apos merge foi registrada para validar que o checkpoint
   recomponivel continua avaliavel.
 
@@ -352,9 +352,9 @@ e separa treino de validacao.
 - script `scripts/benchmark_huggingface_validation_phase13.py`;
 - split treino/validacao;
 - acumulacao de gradiente em multiplos batches;
-- learning rates separados para DRM-SAINT-G, LoRA e full fine-tuning;
-- checkpoint DRM-SAINT-G e artefato LoRA salvos para comparacao;
-- qualidade de geracao curta antes e depois do merge DRM-SAINT-G;
+- learning rates separados para SAINT-G, LoRA e full fine-tuning;
+- checkpoint SAINT-G e artefato LoRA salvos para comparacao;
+- qualidade de geracao curta antes e depois do merge SAINT-G;
 - resultados em `validation_results.json` e `validation_results.md`.
 
 ### Comando
@@ -384,24 +384,24 @@ batch_size: 3
 
 | metodo | budget | rank | parametros | val loss | perplexity merge | artefato bytes | ganho/param |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| DRM-SAINT-G | 8 |  | 8 | 10.825989 | 50311.490508 | 27679 | 0.00000894 |
+| SAINT-G | 8 |  | 8 | 10.825989 | 50311.490508 | 27679 | 0.00000894 |
 | LoRA |  | 4 | 48 | 10.825988 | 50311.442528 | 2757 | 0.00000230 |
 | full |  |  | 102714 | 10.823018 | 50162.252171 | 0 | 0.00000004 |
 
 Geracao curta:
 
 ```text
-prompt: DRM-SAINT-G
-base: DRM-SAINT-G stairs stairs stairs stairs stairs stairs stairs stairs
-DRM-SAINT-G_merged: DRM-SAINT-G stairs stairs stairs stairs stairs stairs stairs stairs
+prompt: SAINT-G
+base: SAINT-G stairs stairs stairs stairs stairs stairs stairs stairs
+SAINT-G_merged: SAINT-G stairs stairs stairs stairs stairs stairs stairs stairs
 ```
 
 ### Leitura Tecnica
 
 - full fine-tuning ainda vence em validation loss absoluta;
-- DRM-SAINT-G manteve melhor ganho por parametro que LoRA rank 4 neste run;
+- SAINT-G manteve melhor ganho por parametro que LoRA rank 4 neste run;
 - LoRA tem artefato menor no formato atual porque salva apenas A/B, enquanto
-  DRM-SAINT-G salva checkpoint runtime completo com manifesto, deltas, metricas e
+  SAINT-G salva checkpoint runtime completo com manifesto, deltas, metricas e
   estado de otimizador;
 - a geracao curta nao mudou neste modelo minusculo, entao ela deve ser tratada
   apenas como sanity check de pipeline, nao como evidencia de qualidade.
@@ -412,18 +412,18 @@ DRM-SAINT-G_merged: DRM-SAINT-G stairs stairs stairs stairs stairs stairs stairs
 
 Status: **concluido**.
 
-Este marco testa uma grade pequena de hiperparametros para DRM-SAINT-G e LoRA, e
-adiciona uma comparacao de tamanho mais justa usando artefato DRM-SAINT-G delta-only.
+Este marco testa uma grade pequena de hiperparametros para SAINT-G e LoRA, e
+adiciona uma comparacao de tamanho mais justa usando artefato SAINT-G delta-only.
 
 ### Entregas
 
 - modulo `saint/adapters/huggingface_grid.py`;
 - script `scripts/benchmark_huggingface_grid_phase13.py`;
-- grid de budgets DRM-SAINT-G;
-- grid de learning rates DRM-SAINT-G;
+- grid de budgets SAINT-G;
+- grid de learning rates SAINT-G;
 - grid de ranks LoRA;
 - grid de learning rates LoRA;
-- artefato DRM-SAINT-G `DRM-SAINT-G_delta_only.json`;
+- artefato SAINT-G `SAINT-G_delta_only.json`;
 - comparacao contra validation loss do modelo base;
 - prompts multiplos para sanity check de geracao;
 - resultados em `grid_results.json` e `grid_results.md`.
@@ -454,16 +454,16 @@ Base validation loss:
 
 | metodo | budget | rank | lr | parametros | val loss | delta vs base | ganho/param | bytes |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| DRM-SAINT-G | 8 |  | 0.001 | 8 | 10.826005 | -0.000041 | 0.00000608 | 360 |
-| DRM-SAINT-G | 8 |  | 0.005 | 8 | 10.825827 | -0.000219 | 0.00005305 | 348 |
-| DRM-SAINT-G | 16 |  | 0.001 | 12 | 10.825991 | -0.000055 | 0.00000572 | 483 |
-| DRM-SAINT-G | 16 |  | 0.005 | 12 | 10.825816 | -0.000230 | 0.00005500 | 460 |
+| SAINT-G | 8 |  | 0.001 | 8 | 10.826005 | -0.000041 | 0.00000608 | 360 |
+| SAINT-G | 8 |  | 0.005 | 8 | 10.825827 | -0.000219 | 0.00005305 | 348 |
+| SAINT-G | 16 |  | 0.001 | 12 | 10.825991 | -0.000055 | 0.00000572 | 483 |
+| SAINT-G | 16 |  | 0.005 | 12 | 10.825816 | -0.000230 | 0.00005500 | 460 |
 | LoRA |  | 2 | 0.001 | 24 | 10.826046 | 0.000000 | 0.00000012 | 2733 |
 | LoRA |  | 2 | 0.005 | 24 | 10.826030 | -0.000016 | 0.00000131 | 2733 |
 | LoRA |  | 4 | 0.001 | 48 | 10.826044 | -0.000002 | 0.00000014 | 2797 |
 | LoRA |  | 4 | 0.005 | 48 | 10.826013 | -0.000033 | 0.00000129 | 2797 |
 
-Melhor DRM-SAINT-G:
+Melhor SAINT-G:
 
 ```text
 budget: 16
@@ -486,18 +486,18 @@ gain_per_parameter: 0.00000129
 ### Prompts
 
 ```text
-DRM-SAINT-G      -> DRM-SAINT-G stairs stairs stairs stairs stairs stairs stairs stairs
+SAINT-G      -> SAINT-G stairs stairs stairs stairs stairs stairs stairs stairs
 Checkpoint -> Checkpoint stairs stairs stairs stairs stairs stairs stairs stairs
 LoRA       -> LoRA stairs stairs stairs stairs stairs stairs stairs stairs
 ```
 
 ### Leitura Tecnica
 
-- neste grid curto, DRM-SAINT-G venceu LoRA em validation loss, ganho por parametro e
+- neste grid curto, SAINT-G venceu LoRA em validation loss, ganho por parametro e
   tamanho de artefato delta-only;
-- o melhor DRM-SAINT-G ainda muda pouco a geracao, entao prompts continuam sendo
+- o melhor SAINT-G ainda muda pouco a geracao, entao prompts continuam sendo
   sanity check de pipeline;
-- a comparacao de tamanho ficou mais justa com `DRM-SAINT-G_delta_only.json`, enquanto
+- a comparacao de tamanho ficou mais justa com `SAINT-G_delta_only.json`, enquanto
   o checkpoint runtime completo continua maior por carregar manifestos, metricas
   e estado de otimizador.
 
@@ -547,7 +547,7 @@ python scripts/benchmark_huggingface_multiseed_phase13.py \
 
 | metodo | count | mean val loss | best val loss | mean gain/param |
 |---|---:|---:|---:|---:|
-| DRM-SAINT-G | 12 | 10.823841 | 10.823558 | 0.00005602 |
+| SAINT-G | 12 | 10.823841 | 10.823558 | 0.00005602 |
 | LoRA | 12 | 10.824103 | 10.824080 | 0.00000049 |
 
 Artefato LoRA carregado:
@@ -563,7 +563,7 @@ targets:
 Geracao simples:
 
 ```text
-DRM-SAINT-G      -> DRM-SAINT-G stairs stairs stairs stairs stairs stairs stairs stairs
+SAINT-G      -> SAINT-G stairs stairs stairs stairs stairs stairs stairs stairs
 Checkpoint -> Checkpoint stairs stairs stairs stairs stairs stairs stairs stairs
 Training   -> Training stairs stairs stairs stairs stairs stairs stairs stairs
 ```
@@ -576,7 +576,7 @@ fase_13_can_close_with_caveat
 
 Interpretacao:
 
-- DRM-SAINT-G venceu LoRA neste regime em validation loss media, melhor validation
+- SAINT-G venceu LoRA neste regime em validation loss media, melhor validation
   loss e ganho medio por parametro;
 - o artefato LoRA carregado reproduziu avaliacao no forward;
 - a geracao continua sem mudanca qualitativa observavel, o que limita a
@@ -592,7 +592,7 @@ A Fase 13 demonstrou:
 
 - carregamento Hugging Face local;
 - forward real `AutoModelForCausalLM`;
-- treino DRM-SAINT-G por autograd;
+- treino SAINT-G por autograd;
 - comparacao contra full fine-tuning e LoRA;
 - sweep de budgets, ranks e learning rates;
 - split treino/validacao;
@@ -614,4 +614,4 @@ Proximo passo recomendado:
 - antes de 3B, rodar uma ponte opcional em modelo HF maior que `tiny-gpt2`;
 - candidatos: GPT-2 pequeno local, TinyLlama pequeno ou outro causal LM abaixo
   de 1B que caiba na RTX 4090;
-- manter DRM-SAINT-G vs LoRA multiseed como criterio de entrada para escala maior.
+- manter SAINT-G vs LoRA multiseed como criterio de entrada para escala maior.

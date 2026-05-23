@@ -104,7 +104,7 @@ Foi adicionado o script:
 scripts/benchmark_drm_matrices.py
 ```
 
-Ele carrega um checkpoint real do `drm_transformer`, extrai matrizes 2D selecionadas e roda os metodos de reconstrucao do DRM-SAINT-G.
+Ele carrega um checkpoint real do `drm_transformer`, extrai matrizes 2D selecionadas e roda os metodos de reconstrucao do SAINT-G.
 
 Checkpoint usado:
 
@@ -178,9 +178,9 @@ compressao media: 2.26
 
 Ou seja, comprime melhor, mas perde informacao demais.
 
-## Onde DRM-SAINT-G Vence
+## Onde SAINT-G Vence
 
-DRM-SAINT-G vence claramente em matrizes sinteticas com estrutura local:
+SAINT-G vence claramente em matrizes sinteticas com estrutura local:
 
 - matrizes sparse;
 - matrizes com blocos repetidos;
@@ -192,9 +192,9 @@ Nesses regimes, block-codebook e multi-scale conseguem:
 - compressao acima de 1;
 - alta taxa de reutilizacao.
 
-## Onde DRM-SAINT-G Perde
+## Onde SAINT-G Perde
 
-DRM-SAINT-G perde ou nao mostra vantagem clara em:
+SAINT-G perde ou nao mostra vantagem clara em:
 
 - matrizes gaussianas;
 - matrizes low-rank, onde low-rank/SVD e mais natural;
@@ -235,7 +235,7 @@ congelar, 8x8, 4x4, 2x2, delta livre ou LoRA auxiliar.
 Avanco com restricao:
 
 ```text
-DRM-SAINT-G nao deve assumir que codebook hierarquico atual ja e bom.
+SAINT-G nao deve assumir que codebook hierarquico atual ja e bom.
 Fase 3 deve existir para melhorar selecao local e reduzir erro.
 ```
 
@@ -264,5 +264,5 @@ Esta fase e considerada concluida porque agora ha:
 - benchmark reproduzivel em matrizes sinteticas;
 - benchmark em matrizes reais do `drm_transformer`;
 - comparacao contra low-rank, quantizacao, codebook tamanho unico e hierarchical;
-- relatorio com casos onde DRM-SAINT-G vence e perde;
+- relatorio com casos onde SAINT-G vence e perde;
 - decisao clara de avancar para roteador de blocos.

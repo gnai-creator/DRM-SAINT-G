@@ -1,16 +1,16 @@
-# Fase 17 - Escala 70B
+# Fase 19 - Escala 70B
 
 Status: **pendente**.
 
 ## Objetivo
 
-Validar DRM-SAINT-G como adaptacao extrema em hardware limitado.
+Validar SAINT-G como adaptacao extrema em hardware limitado.
 
 Esta fase nao tenta provar que conseguimos treinar um DRM 70B do zero em uma GPU
 domestica. O objetivo e mais restrito e mais honesto:
 
 ```text
-usar grafting/enxertos DRM-SAINT-G sobre um modelo grande congelado
+usar grafting/enxertos SAINT-G sobre um modelo grande congelado
 com memoria controlada
 checkpoint recomponivel
 e melhoria mensuravel de loss em uma tarefa pequena
@@ -18,7 +18,7 @@ e melhoria mensuravel de loss em uma tarefa pequena
 
 ## Premissa Central
 
-Sim: a Fase 17 deve usar **grafting**.
+Sim: a Fase 19 deve usar **grafting**.
 
 Mas nao e:
 
@@ -40,7 +40,7 @@ merge/checkpoint recomponivel
 ```
 
 Como nao existe baseline full DRM 70B viavel no hardware alvo, a comparacao da
-Fase 17 deve ser contra controles possiveis.
+Fase 19 deve ser contra controles possiveis.
 
 ## O Que Comparar
 
@@ -54,7 +54,7 @@ Comparacoes viaveis:
 
 - base congelada sem enxerto;
 - enxerto desligado, para detectar ruido experimental;
-- DRM-SAINT-G/Phi em budgets diferentes;
+- SAINT-G/Phi em budgets diferentes;
 - QLoRA/LoRA quando couber no mesmo limite de VRAM;
 - full-module pequeno em modelos DRM menores, por extrapolacao;
 - resultados das fases 5C/5D como referencia de comportamento em escala menor;
@@ -68,7 +68,7 @@ E:
 
 ```text
 modelo base quantizado/congelado
-deltas DRM-SAINT-G esparsos
+deltas SAINT-G esparsos
 codebook multi-escala quando aplicavel
 offload agressivo
 micro-batch 1
@@ -86,7 +86,7 @@ Antes de qualquer tentativa 70B, a fase deve continuar a partir de:
 drm_transformer/configs/scaling/multilingual/5m.yaml
 ```
 
-Esse baseline e a ponte validada no Marco 5D. A Fase 17 nao deve saltar direto
+Esse baseline e a ponte validada no Marco 5D. A Fase 19 nao deve saltar direto
 para 70B sem manter uma trilha reproduzivel em escalas menores.
 
 ## Sequencia de Escala
@@ -176,7 +176,7 @@ Passa se:
 
 Objetivo:
 
-Aplicar enxerto DRM-SAINT-G/Phi sem treino.
+Aplicar enxerto SAINT-G/Phi sem treino.
 
 Entregas:
 
@@ -198,7 +198,7 @@ Passa se:
 
 Objetivo:
 
-Treinar poucos parametros DRM-SAINT-G/Phi em 70B congelado.
+Treinar poucos parametros SAINT-G/Phi em 70B congelado.
 
 Entregas:
 
@@ -253,7 +253,7 @@ Controles:
 
 - base congelada;
 - enxerto zero;
-- DRM-SAINT-G/Phi;
+- SAINT-G/Phi;
 - LoRA/QLoRA se couber;
 - run menor 5M/escala intermediaria com full-module, como referencia.
 
@@ -269,7 +269,7 @@ Metricas:
 
 Criterio:
 
-Passa se DRM-SAINT-G demonstrar vantagem em pelo menos um eixo relevante:
+Passa se SAINT-G demonstrar vantagem em pelo menos um eixo relevante:
 
 - menor memoria que LoRA/QLoRA;
 - menor checkpoint;
@@ -328,7 +328,7 @@ e alguma melhoria mensuravel na loss
 Sucesso forte:
 
 ```text
-DRM-SAINT-G/Phi melhora loss
+SAINT-G/Phi melhora loss
 com checkpoint menor que LoRA/QLoRA
 e memoria menor ou comparavel
 mantendo estabilidade em mais de uma seed
@@ -355,19 +355,19 @@ Falha:
 
 ## Decisao Sobre Comparacao
 
-Como nao ha como montar e treinar um DRM 70B full do zero, a Fase 17 nao deve
+Como nao ha como montar e treinar um DRM 70B full do zero, a Fase 19 nao deve
 exigir essa comparacao.
 
 O baseline cientifico correto e:
 
 ```text
-base congelada vs base + DRM-SAINT-G/Phi
+base congelada vs base + SAINT-G/Phi
 ```
 
 E, quando possivel:
 
 ```text
-base + DRM-SAINT-G/Phi vs base + QLoRA/LoRA
+base + SAINT-G/Phi vs base + QLoRA/LoRA
 ```
 
 Para qualidade absoluta, usar modelos menores como controle:
@@ -381,13 +381,13 @@ Para qualidade absoluta, usar modelos menores como controle:
 Assim a pergunta muda de:
 
 ```text
-DRM-SAINT-G vence treino full 70B?
+SAINT-G vence treino full 70B?
 ```
 
 para:
 
 ```text
-DRM-SAINT-G permite adaptar um modelo grande congelado
+SAINT-G permite adaptar um modelo grande congelado
 com menos memoria e checkpoint recomponivel?
 ```
 
@@ -397,7 +397,7 @@ Essa e a pergunta certa para hardware limitado.
 
 Antes de qualquer carga 70B:
 
-1. Criar memory planner especifico da Fase 17.
+1. Criar memory planner especifico da Fase 19.
 2. Rodar `multilingual/5m.yaml` com o mesmo pipeline de checkpoint/reload.
 3. Adicionar retencao para as variantes Phi.
 4. Medir CUDA real em 5M.

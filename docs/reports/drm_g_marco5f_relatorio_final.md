@@ -3,7 +3,7 @@
 Status: **concluido com avanco condicional para Fase 16**.
 
 Este relatorio fecha a fase DRM-G ate o Marco 5. O veredito e pragmatico:
-DRM-SAINT-G deve avancar para a Fase 16, mas como evidencia parcial, nao como
+SAINT-G deve avancar para a Fase 16, mas como evidencia parcial, nao como
 vitoria absoluta contra `full_module_linear`.
 
 ## Resumo dos Marcos
@@ -82,10 +82,10 @@ passed_axes: 7 / 6
 | `compression_win` | true |
 
 O eixo que falhou importa: `best_case_win=false`. Portanto, a fase nao deve ser
-descrita como "DRM-SAINT-G vence full-module". A descricao correta e:
+descrita como "SAINT-G vence full-module". A descricao correta e:
 
 ```text
-DRM-SAINT-G/Phi e competitivo na media multiseed e mais estavel em alguns regimes,
+SAINT-G/Phi e competitivo na media multiseed e mais estavel em alguns regimes,
 mas ainda nao domina o melhor caso absoluto de full-module.
 ```
 

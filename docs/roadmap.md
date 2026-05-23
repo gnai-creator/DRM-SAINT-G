@@ -1,6 +1,6 @@
-# Roadmap DRM-SAINT-G
+# Roadmap SAINT-G
 
-DRM-SAINT-G significa **DRM por Enxerto com DRM-SAINT-G-Phi**. Este roadmap organiza o desenvolvimento do paradigma em fases verificaveis, partindo de experimentos matematicos pequenos ate testes em modelos grandes.
+SAINT-G significa **DRM por Enxerto com SAINT-G-Phi**. Este roadmap organiza o desenvolvimento do paradigma em fases verificaveis, partindo de experimentos matematicos pequenos ate testes em modelos grandes.
 
 O objetivo nao e comecar pelo 70B. O objetivo e provar, passo a passo, que o paradigma funciona:
 
@@ -14,7 +14,7 @@ matriz isolada
   -> modelo 70B
 ```
 
-O principio do DRM-SAINT-G e:
+O principio do SAINT-G e:
 
 ```text
 loss global,
@@ -27,7 +27,7 @@ recomposicao final
 ## Status Atual
 
 ```text
-Fase atual: Fase DRM-G - DRM-SAINT-G
+Fase atual: Fase DRM-G - SAINT-G
 Fase anterior: Fase 15 concluida com ressalvas
 Proximo marco: DRM-G Marco 3 - Consolidacao permanente do enxerto
 ```
@@ -43,7 +43,7 @@ Resumo do estado:
 | 4 | Treino de Camada Linear | Concluida |
 | 5 | Mini-Transformer | Concluida |
 | 6 | Mapa de Sensibilidade | Concluida |
-| 7 | Runtime DRM-SAINT-G | Concluida |
+| 7 | Runtime SAINT-G | Concluida |
 | 8 | Checkpoint e Reconstituicao | Concluida |
 | 9 | Adaptador DRM Transformer | Concluida |
 | 10 | Checkpoint Robusto | Concluida |
@@ -52,7 +52,7 @@ Resumo do estado:
 | 13 | Modelos Hugging Face Pequenos | Concluida com ressalvas |
 | 14 | Escala 3B | Concluida com ressalvas |
 | 15 | Escala 14B | Concluida com ressalvas |
-| DRM-G | DRM-SAINT-G | Em andamento |
+| DRM-G | SAINT-G | Em andamento |
 | 16+ | Modelos reais e escala maior | Pendente |
 
 ## Fase 0 - Fundacao Conceitual
@@ -66,7 +66,7 @@ Consolidar o paradigma antes de escrever um runtime grande.
 ### Entregas
 
 - `docs/paradigma_treino_tradicional.md`
-- `docs/paradigma_DRM-SAINT-G.md`
+- `docs/paradigma_SAINT-G.md`
 - `docs/arquitetura.md`
 - `docs/roadmap.md`
 - `docs/glossario_tecnico.md`
@@ -75,8 +75,8 @@ Consolidar o paradigma antes de escrever um runtime grande.
 
 ### Perguntas
 
-- O que DRM-SAINT-G tenta melhorar em relacao ao treino tradicional?
-- O que DRM-SAINT-G nao promete?
+- O que SAINT-G tenta melhorar em relacao ao treino tradicional?
+- O que SAINT-G nao promete?
 - Quais baselines serao usados?
 - Quais experimentos invalidam a ideia?
 
@@ -85,7 +85,7 @@ Consolidar o paradigma antes de escrever um runtime grande.
 A fase termina quando o projeto tem uma definicao clara:
 
 ```text
-DRM-SAINT-G = sparse multi-scale block-codebook delta training
+SAINT-G = sparse multi-scale block-codebook delta training
 ```
 
 Em portugues:
@@ -140,7 +140,7 @@ Criar operacoes basicas para dividir, agrupar, reconstruir e medir matrizes.
 
 ### Entregas Tecnicas
 
-- pacote inicial `drm-saint-g` - concluido;
+- pacote inicial `SAINT-G` - concluido;
 - modulo `blocks` - concluido;
 - funcao para particionar matrizes - concluido;
 - funcao para reconstruir matrizes - concluido;
@@ -186,7 +186,7 @@ groups = group_blocks(signatures)
 
 ### Criterio de conclusao
 
-A fase termina quando DRM-SAINT-G consegue:
+A fase termina quando SAINT-G consegue:
 
 ```text
 W -> blocos -> codebook -> W_aprox
@@ -385,7 +385,7 @@ compressao media 7.73.
 ```
 
 Esse resultado nao e suficiente para aprovar a tecnica em reconstrucao de peso
-bruto, mas e coerente com a proposta de DRM-SAINT-G para treino de deltas: congelar
+bruto, mas e coerente com a proposta de SAINT-G para treino de deltas: congelar
 uma regiao deve significar nao aplicar delta, mantendo o peso base intacto.
 
 Tambem foram testados codebook com escala por bloco e codebook residual. Em
@@ -434,7 +434,7 @@ Comparar:
 
 ### Criterio de conclusao
 
-DRM-SAINT-G deve empatar ou superar pelo menos uma baseline eficiente em algum eixo relevante:
+SAINT-G deve empatar ou superar pelo menos uma baseline eficiente em algum eixo relevante:
 
 - menos memoria;
 - menos parametros;
@@ -462,7 +462,7 @@ Resultado inicial:
 
 ```text
 full_delta test_loss: 0.0000003, params: 64
-DRM-SAINT-G_routed_delta test_loss: 0.0004701, params: 56
+SAINT-G_routed_delta test_loss: 0.0004701, params: 56
 lora_rank_2 test_loss: 0.0034705, params: 32
 sparse_sensitivity_delta test_loss: 0.0010289, params: 16
 ```
@@ -470,7 +470,7 @@ sparse_sensitivity_delta test_loss: 0.0010289, params: 16
 Leitura:
 
 ```text
-DRM-SAINT-G ainda nao bate full_delta em loss,
+SAINT-G ainda nao bate full_delta em loss,
 mas aprende com menos parametros e supera LoRA rank 2 nesse caso sintetico.
 ```
 
@@ -479,12 +479,12 @@ orcamentos do roteador e criterio automatico de sucesso/falha.
 
 ### Resultado do Sweep
 
-Foi adicionado sweep com 5 sementes, LoRA rank 1/2/4 e tres orcamentos DRM-SAINT-G.
+Foi adicionado sweep com 5 sementes, LoRA rank 1/2/4 e tres orcamentos SAINT-G.
 
-Melhor variante DRM-SAINT-G:
+Melhor variante SAINT-G:
 
 ```text
-DRM-SAINT-G_routed_f50_c25
+SAINT-G_routed_f50_c25
 test_loss medio: 0.0005749
 params medios: 51.2
 ganho/parametro: 0.00007862
@@ -509,9 +509,9 @@ gain_per_parameter_ratio >= 1.0
 Resultado inicial:
 
 ```text
-DRM-SAINT-G_routed_f50_c25 passou contra lora_rank_2.
-DRM-SAINT-G_routed_f25_c50 passou contra lora_rank_2.
-DRM-SAINT-G_routed_f25_c25 falhou contra lora_rank_1 por exceder 2x parametros.
+SAINT-G_routed_f50_c25 passou contra lora_rank_2.
+SAINT-G_routed_f25_c50 passou contra lora_rank_2.
+SAINT-G_routed_f25_c25 falhou contra lora_rank_1 por exceder 2x parametros.
 ```
 
 A Fase 4 continua em andamento porque falta testar tamanhos maiores, deltas
@@ -530,19 +530,19 @@ seeds: 11, 12
 Resultado agregado:
 
 ```text
-DRM-SAINT-G_routed_f50_c25 test_loss medio: 0.0043511
-DRM-SAINT-G_routed_f50_c25 params medios: 364.0
+SAINT-G_routed_f50_c25 test_loss medio: 0.0043511
+SAINT-G_routed_f50_c25 params medios: 364.0
 lora_rank_2 test_loss medio: 0.0098293
 lora_rank_2 params medios: 74.7
-budgeted_full_delta_for_DRM-SAINT-G_routed_f50_c25 test_loss medio: 0.0035874
+budgeted_full_delta_for_SAINT-G_routed_f50_c25 test_loss medio: 0.0035874
 ```
 
 Leitura:
 
 ```text
-DRM-SAINT-G ainda vence LoRA rank 2 em loss,
+SAINT-G ainda vence LoRA rank 2 em loss,
 mas perde o criterio de parametros em 16x16 e 32x32.
-Contra full_delta esparso com orcamento equivalente, DRM-SAINT-G ainda perde.
+Contra full_delta esparso com orcamento equivalente, SAINT-G ainda perde.
 ```
 
 Conclusao atual:
@@ -558,7 +558,7 @@ e compartilhar codebooks em escala de camada.
 Foi adicionada a variante:
 
 ```text
-DRM-SAINT-G_global_capped
+SAINT-G_global_capped
 ```
 
 Ela usa codebook global por camada, limite de regioes livres e limite global de
@@ -567,18 +567,18 @@ prototipos.
 Resultado agregado:
 
 ```text
-DRM-SAINT-G_global_capped test_loss medio: 0.0074230
-DRM-SAINT-G_global_capped params medios: 126.7
+SAINT-G_global_capped test_loss medio: 0.0074230
+SAINT-G_global_capped params medios: 126.7
 lora_rank_2 test_loss medio: 0.0098293
 lora_rank_2 params medios: 74.7
-budgeted_full_delta_for_DRM-SAINT-G_global_capped test_loss medio: 0.0052087
+budgeted_full_delta_for_SAINT-G_global_capped test_loss medio: 0.0052087
 ```
 
 Decisao:
 
 ```text
-DRM-SAINT-G_global_capped passou contra LoRA rank 2 em todos os regimes testados.
-DRM-SAINT-G_global_capped ainda perdeu para full delta esparso com mesmo orcamento.
+SAINT-G_global_capped passou contra LoRA rank 2 em todos os regimes testados.
+SAINT-G_global_capped ainda perdeu para full delta esparso com mesmo orcamento.
 ```
 
 Conclusao atualizada:
@@ -594,7 +594,7 @@ o gargalo e competir contra budgeted_full_delta.
 Foi adicionada a variante:
 
 ```text
-DRM-SAINT-G_global_scaled_residual
+SAINT-G_global_scaled_residual
 ```
 
 Ela usa:
@@ -609,21 +609,21 @@ Ela usa:
 Resultado agregado:
 
 ```text
-DRM-SAINT-G_global_scaled_residual test_loss medio: 0.0061497
-DRM-SAINT-G_global_scaled_residual params medios: 106.7
-DRM-SAINT-G_global_capped test_loss medio: 0.0074230
-DRM-SAINT-G_global_capped params medios: 126.7
-budgeted_full_delta_for_DRM-SAINT-G_global_scaled_residual test_loss medio: 0.0054662
+SAINT-G_global_scaled_residual test_loss medio: 0.0061497
+SAINT-G_global_scaled_residual params medios: 106.7
+SAINT-G_global_capped test_loss medio: 0.0074230
+SAINT-G_global_capped params medios: 126.7
+budgeted_full_delta_for_SAINT-G_global_scaled_residual test_loss medio: 0.0054662
 ```
 
 Decisao:
 
 ```text
-DRM-SAINT-G_global_scaled_residual passou contra LoRA rank 2 em todos os regimes.
-DRM-SAINT-G_global_scaled_residual reduziu parametros contra DRM-SAINT-G_global_capped.
-DRM-SAINT-G_global_scaled_residual melhorou qualidade media contra DRM-SAINT-G_global_capped.
-DRM-SAINT-G_global_scaled_residual venceu budgeted_full_delta em 1 de 6 regimes.
-DRM-SAINT-G_global_scaled_residual ainda perdeu para budgeted_full_delta na media.
+SAINT-G_global_scaled_residual passou contra LoRA rank 2 em todos os regimes.
+SAINT-G_global_scaled_residual reduziu parametros contra SAINT-G_global_capped.
+SAINT-G_global_scaled_residual melhorou qualidade media contra SAINT-G_global_capped.
+SAINT-G_global_scaled_residual venceu budgeted_full_delta em 1 de 6 regimes.
+SAINT-G_global_scaled_residual ainda perdeu para budgeted_full_delta na media.
 ```
 
 Conclusao:
@@ -633,12 +633,12 @@ Fase 4 continuou em andamento neste ponto.
 O gargalo era melhorar qualidade por parametro, nao apenas reduzir parametros.
 ```
 
-### Resultado do DRM-SAINT-G Dinamico
+### Resultado do SAINT-G Dinamico
 
 Foi adicionada a variante:
 
 ```text
-DRM-SAINT-G_dynamic_delta
+SAINT-G_dynamic_delta
 ```
 
 Ela usa:
@@ -655,21 +655,21 @@ Ela usa:
 Resultado agregado:
 
 ```text
-DRM-SAINT-G_dynamic_delta test_loss medio: 0.0055666
-DRM-SAINT-G_dynamic_delta params medios: 111.0
+SAINT-G_dynamic_delta test_loss medio: 0.0055666
+SAINT-G_dynamic_delta params medios: 111.0
 lora_tuned_rank_2 test_loss medio: 0.0097656
 lora_tuned_rank_4 test_loss medio: 0.0096352
-block_budgeted_delta_for_DRM-SAINT-G_dynamic_delta test_loss medio: 0.0059000
-budgeted_full_delta_for_DRM-SAINT-G_dynamic_delta test_loss medio: 0.0053768
+block_budgeted_delta_for_SAINT-G_dynamic_delta test_loss medio: 0.0059000
+budgeted_full_delta_for_SAINT-G_dynamic_delta test_loss medio: 0.0053768
 ```
 
 Decisao:
 
 ```text
-DRM-SAINT-G_dynamic_delta venceu LoRA rank 2 tunado em 6 de 6 regimes.
-DRM-SAINT-G_dynamic_delta venceu LoRA rank 4 tunado em 6 de 6 regimes.
-DRM-SAINT-G_dynamic_delta venceu block_budgeted_delta em 2 de 6 regimes.
-DRM-SAINT-G_dynamic_delta venceu budgeted_full_delta em 2 de 6 regimes.
+SAINT-G_dynamic_delta venceu LoRA rank 2 tunado em 6 de 6 regimes.
+SAINT-G_dynamic_delta venceu LoRA rank 4 tunado em 6 de 6 regimes.
+SAINT-G_dynamic_delta venceu block_budgeted_delta em 2 de 6 regimes.
+SAINT-G_dynamic_delta venceu budgeted_full_delta em 2 de 6 regimes.
 ```
 
 Criterio de fechamento aplicado:
@@ -693,7 +693,7 @@ Status: **concluida**.
 
 ### Objetivo
 
-Validar DRM-SAINT-G em um modelo com acoplamento real entre camadas.
+Validar SAINT-G em um modelo com acoplamento real entre camadas.
 
 ### Implementacao Inicial
 
@@ -707,7 +707,7 @@ Componentes:
 
 - `model.py`: forward com embeddings, self-attention de ultima posicao, MLP e head;
 - `training.py`: baselines `mini_full_delta`, `mini_budgeted_delta` e `mini_block_budgeted_delta`;
-- `DRM-SAINT-G_adapter.py`: `mini_DRM-SAINT-G_dynamic_delta`;
+- `SAINT-G_adapter.py`: `mini_SAINT-G_dynamic_delta`;
 - `benchmark.py`: sweep inicial;
 - `scripts/benchmark_mini_transformer_phase5.py`;
 - `tests/test_transformer_phase5.py`;
@@ -719,18 +719,18 @@ global. Isso e intencionalmente pequeno e auditavel; nao e o runtime final.
 Resultado inicial:
 
 ```text
-mini_DRM-SAINT-G_dynamic_delta test_loss medio: 0.00001998
-mini_DRM-SAINT-G_dynamic_delta params medios: 48.0
+mini_SAINT-G_dynamic_delta test_loss medio: 0.00001998
+mini_SAINT-G_dynamic_delta params medios: 48.0
 mini_full_delta test_loss medio: 0.00002063
 mini_full_delta params medios: 160.0
-mini_budgeted_delta_for_DRM-SAINT-G test_loss medio: 0.00002063
-mini_block_budgeted_delta_for_DRM-SAINT-G test_loss medio: 0.00002064
+mini_budgeted_delta_for_SAINT-G test_loss medio: 0.00002063
+mini_block_budgeted_delta_for_SAINT-G test_loss medio: 0.00002064
 ```
 
 Leitura:
 
 ```text
-DRM-SAINT-G venceu os controles no primeiro teste,
+SAINT-G venceu os controles no primeiro teste,
 mas a tarefa ainda esta facil demais para concluir a fase.
 ```
 
@@ -738,12 +738,12 @@ Resultado com tarefa mais dificil:
 
 ```text
 delta_scale: 3.0
-mini_DRM-SAINT-G_dynamic_delta test_loss medio: 0.00020029
-mini_DRM-SAINT-G_dynamic_delta params medios: 48.0
-mini_DRM-SAINT-G_per_matrix_delta test_loss medio: 0.00019998
-mini_DRM-SAINT-G_per_matrix_delta params medios: 72.0
-mini_budgeted_delta_for_DRM-SAINT-G test_loss medio: 0.00020591
-mini_block_budgeted_delta_for_DRM-SAINT-G test_loss medio: 0.00020598
+mini_SAINT-G_dynamic_delta test_loss medio: 0.00020029
+mini_SAINT-G_dynamic_delta params medios: 48.0
+mini_SAINT-G_per_matrix_delta test_loss medio: 0.00019998
+mini_SAINT-G_per_matrix_delta params medios: 72.0
+mini_budgeted_delta_for_SAINT-G test_loss medio: 0.00020591
+mini_block_budgeted_delta_for_SAINT-G test_loss medio: 0.00020598
 mini_lora_rank_1 test_loss medio: 0.00020912
 mini_lora_rank_2 test_loss medio: 0.00020912
 ```
@@ -751,11 +751,11 @@ mini_lora_rank_2 test_loss medio: 0.00020912
 Criterio automatico:
 
 ```text
-DRM-SAINT-G global venceu LoRA rank 1 em 4/4 regimes.
-DRM-SAINT-G global venceu LoRA rank 2 em 4/4 regimes.
-DRM-SAINT-G global venceu budgeted_delta em 4/4 regimes.
-DRM-SAINT-G global venceu block_budgeted_delta em 4/4 regimes.
-DRM-SAINT-G global teve melhor eficiencia que DRM-SAINT-G por matriz em 4/4 regimes.
+SAINT-G global venceu LoRA rank 1 em 4/4 regimes.
+SAINT-G global venceu LoRA rank 2 em 4/4 regimes.
+SAINT-G global venceu budgeted_delta em 4/4 regimes.
+SAINT-G global venceu block_budgeted_delta em 4/4 regimes.
+SAINT-G global teve melhor eficiencia que SAINT-G por matriz em 4/4 regimes.
 ```
 
 Resultado:
@@ -781,11 +781,11 @@ seq_len: 128 a 512
 - treino tradicional;
 - head-only;
 - LoRA;
-- DRM-SAINT-G por camada;
-- DRM-SAINT-G por matriz;
-- DRM-SAINT-G por blocos;
-- DRM-SAINT-G com codebook multi-escala;
-- DRM-SAINT-G com consolidacao.
+- SAINT-G por camada;
+- SAINT-G por matriz;
+- SAINT-G por blocos;
+- SAINT-G com codebook multi-escala;
+- SAINT-G com consolidacao.
 
 ### Perguntas
 
@@ -797,7 +797,7 @@ seq_len: 128 a 512
 
 ### Criterio de conclusao
 
-Prosseguir se DRM-SAINT-G aprender de forma consistente e nao apenas memorizar comportamento acidental.
+Prosseguir se SAINT-G aprender de forma consistente e nao apenas memorizar comportamento acidental.
 
 ## Fase 6 - Mapa de Sensibilidade
 
@@ -844,14 +844,14 @@ Decisao inicial:
 ```text
 7 metodos venceram random.
 criterio inicial passou.
-Fase 6 continua em andamento ate testar blocos, regimes separados e uso no DRM-SAINT-G.
+Fase 6 continua em andamento ate testar blocos, regimes separados e uso no SAINT-G.
 ```
 
 Resultado final:
 
 ```text
-mini_DRM-SAINT-G_default_for_sensitivity test_loss medio: 0.00029131
-mini_DRM-SAINT-G_gradient_norm test_loss medio: 0.00029131
+mini_SAINT-G_default_for_sensitivity test_loss medio: 0.00029131
+mini_SAINT-G_gradient_norm test_loss medio: 0.00029131
 sensitivity_accumulated_gradient test_loss medio: 0.00029264
 sensitivity_fisher test_loss medio: 0.00029264
 sensitivity_gradient_norm test_loss medio: 0.00029264
@@ -866,7 +866,7 @@ repeated aprovado: sim
 dense aprovado: sim
 melhor bloco 2x2 venceu random: sim
 sensibilidade acumulada venceu random: sim
-DRM-SAINT-G alimentado por sensibilidade empatou/venceu DRM-SAINT-G padrao: sim
+SAINT-G alimentado por sensibilidade empatou/venceu SAINT-G padrao: sim
 ```
 
 Resultado:
@@ -901,7 +901,7 @@ Comparar selecao:
 
 O mapa de sensibilidade deve superar selecao aleatoria de forma clara.
 
-## Fase 7 - Runtime DRM-SAINT-G
+## Fase 7 - Runtime SAINT-G
 
 Status: **concluida**.
 
@@ -925,7 +925,7 @@ tests/test_runtime_phase7.py
 docs/process/fase_7_runtime.md
 ```
 
-O runtime inicial executa o mini-transformer com `mini_DRM-SAINT-G_dynamic_delta`,
+O runtime inicial executa o mini-transformer com `mini_SAINT-G_dynamic_delta`,
 mapa `gradient_norm`, config JSON, estimativa de memoria, logs e checkpoint.
 
 Smoke test executado:
@@ -941,7 +941,7 @@ python -m saint.cli merge --run runs/runtime_smoke
 Resultado:
 
 ```text
-method: mini_DRM-SAINT-G_dynamic_delta
+method: mini_SAINT-G_dynamic_delta
 parameter_count: 30
 test_loss: 0.00016531
 fits_budget: true
@@ -972,7 +972,7 @@ saint/
 
 ### Funcionalidades
 
-- CLI `drm-saint-g`;
+- CLI `SAINT-G`;
 - config YAML/JSON;
 - memory planner;
 - particionador de pesos;
@@ -987,12 +987,12 @@ saint/
 ### Comandos
 
 ```bash
-drm-saint-g inspect --model ./model
-drm-saint-g reconstruct --matrix ./weights.pt
-drm-saint-g estimate --model ./model --vram-gb 12
-drm-saint-g train --config configs/exp.yaml
-drm-saint-g resume --run runs/exp001
-drm-saint-g merge --run runs/exp001
+SAINT-G inspect --model ./model
+SAINT-G reconstruct --matrix ./weights.pt
+SAINT-G estimate --model ./model --vram-gb 12
+SAINT-G train --config configs/exp.yaml
+SAINT-G resume --run runs/exp001
+SAINT-G merge --run runs/exp001
 ```
 
 ### Criterio de conclusao
@@ -1030,7 +1030,7 @@ Implementado em:
 ```text
 saint/checkpoints/manager.py
 saint/runtime/runner.py
-saint/transformer/DRM-SAINT-G_adapter.py
+saint/transformer/SAINT-G_adapter.py
 saint/adapters/drm_transformer.py
 pyproject.toml
 docs/process/fase_8_checkpoint_reconstituicao.md
@@ -1070,7 +1070,7 @@ runs/
 
 ### Criterio de conclusao
 
-DRM-SAINT-G deve conseguir:
+SAINT-G deve conseguir:
 
 ```text
 treinar -> salvar -> retomar -> fundir -> avaliar
@@ -1089,7 +1089,7 @@ Usar `drm_transformer` como primeiro modelo customizado.
 - adapter para carregar `DRMTransformer`;
 - listagem de camadas e matrizes;
 - congelar/descongelar partes;
-- aplicar delta DRM-SAINT-G;
+- aplicar delta SAINT-G;
 - salvar deltas;
 - avaliar loss;
 - trocar diferenca finita por autograd/PyTorch;
@@ -1100,24 +1100,24 @@ Usar `drm_transformer` como primeiro modelo customizado.
 
 Status: **concluido**.
 
-O primeiro marco valida que o runtime DRM-SAINT-G consegue operar sobre pesos reais do
+O primeiro marco valida que o runtime SAINT-G consegue operar sobre pesos reais do
 `drm_transformer`, mesmo antes de treinar com autograd.
 
 Entregas:
 
 - carregar `DRMTransformer` ou checkpoint do `drm_transformer`;
 - listar matrizes treinaveis;
-- mapear nomes de matriz para regioes DRM-SAINT-G;
-- aplicar delta DRM-SAINT-G em pesos reais;
-- salvar deltas em checkpoint DRM-SAINT-G;
+- mapear nomes de matriz para regioes SAINT-G;
+- aplicar delta SAINT-G em pesos reais;
+- salvar deltas em checkpoint SAINT-G;
 - reconstituir pesos mesclados;
 - validar shapes e compatibilidade de merge.
 
 Resultado:
 
 ```text
-drm_DRM-SAINT-G_delta_smoke:
-  checkpoint -> matrizes 2D -> regioes DRM-SAINT-G -> delta_payload -> merged_weights
+drm_SAINT-G_delta_smoke:
+  checkpoint -> matrizes 2D -> regioes SAINT-G -> delta_payload -> merged_weights
 ```
 
 ### Marco 2 - Treino Real com Autograd
@@ -1132,22 +1132,22 @@ Entregas:
 - medir loss real do `drm_transformer`;
 - medir gradientes reais por matriz/bloco;
 - alimentar o roteador com sensibilidade por gradiente;
-- comparar DRM-SAINT-G contra treino tradicional pequeno;
+- comparar SAINT-G contra treino tradicional pequeno;
 - gerar logs comparaveis com os experimentos anteriores.
 
 Resultado:
 
 ```text
-drm_DRM-SAINT-G_autograd_smoke:
+drm_SAINT-G_autograd_smoke:
   DRMTransformer pequeno -> loss real -> gradientes por bloco
-  -> mascara DRM-SAINT-G por sensibilidade -> delta_payload -> merge
+  -> mascara SAINT-G por sensibilidade -> delta_payload -> merge
 ```
 
 Smoke validado:
 
 ```text
 initial_loss: 4.1506
-DRM-SAINT-G_loss: 3.7953
+SAINT-G_loss: 3.7953
 full_baseline_loss: 3.7548
 parameter_count: 32
 shape_validation: true
@@ -1155,7 +1155,7 @@ shape_validation: true
 
 ### Criterio de conclusao
 
-O `drm_transformer` deve treinar em modo DRM-SAINT-G em escala pequena e produzir logs comparaveis.
+O `drm_transformer` deve treinar em modo SAINT-G em escala pequena e produzir logs comparaveis.
 
 ## Fase 10 - Checkpoint Robusto
 
@@ -1163,7 +1163,7 @@ Status: **concluida**.
 
 ### Objetivo
 
-Transformar os checkpoints DRM-SAINT-G em artefatos compactos, verificaveis e
+Transformar os checkpoints SAINT-G em artefatos compactos, verificaveis e
 adequados para treinos reais.
 
 Esta fase vem depois do adaptador `drm_transformer`, porque o formato robusto
@@ -1188,8 +1188,8 @@ compactos:
 
 ```text
 checkpoint.json
-deltas.DRM-SAINT-Gbin
-optimizer.DRM-SAINT-Gopt
+deltas.SAINT-Gbin
+optimizer.SAINT-Gopt
 ```
 
 O `checkpoint.json` contem a versao do formato e checksums SHA-256 dos arquivos.
@@ -1199,7 +1199,7 @@ corrompido. O `merge` tambem valida integridade antes de reconstituir pesos.
 Formato:
 
 ```text
-format: DRM-SAINT-G_checkpoint
+format: SAINT-G_checkpoint
 format_version: 1
 ```
 
@@ -1217,7 +1217,7 @@ e manteve migracao automatica de manifestos v1.
 
 ### Criterio de conclusao
 
-DRM-SAINT-G deve conseguir:
+SAINT-G deve conseguir:
 
 ```text
 treinar -> salvar checkpoint compacto -> validar -> retomar -> fundir -> avaliar
@@ -1249,7 +1249,7 @@ deve tornar esse formato apropriado para modelos maiores e runs longos.
 
 O checkpoint robusto agora suporta:
 
-- estado real de AdamW no caminho `drm_DRM-SAINT-G_autograd_smoke`;
+- estado real de AdamW no caminho `drm_SAINT-G_autograd_smoke`;
 - retomada real de treino via `metadata.resume_run`;
 - payloads de delta shardados;
 - leitura de payload por `mmap`;
@@ -1263,7 +1263,7 @@ first_loss: 4.1385
 resume_initial_loss: 4.1385
 second_loss: 4.1327
 optimizer: AdamW
-delta_format: DRM-SAINT-G_matrix_shards
+delta_format: SAINT-G_matrix_shards
 dtype: float16
 shards: 6
 shape_validation: true
@@ -1287,7 +1287,7 @@ shape_validation: true
 
 ### Criterio de conclusao
 
-DRM-SAINT-G deve conseguir retomar um treino DRM autograd preservando estado real de
+SAINT-G deve conseguir retomar um treino DRM autograd preservando estado real de
 AdamW e usando checkpoints shardados/compactos com validacao de integridade.
 
 ## Fase 12 - Validacao de Escala de Checkpoint
@@ -1318,7 +1318,7 @@ Status: **concluida**.
 Resultado:
 
 ```text
-format: DRM-SAINT-G_matrix_shards
+format: SAINT-G_matrix_shards
 matrix_count: 8
 rows: 256
 cols: 256
@@ -1360,7 +1360,7 @@ max_abs_error: 0.00000189
 ```
 
 O runtime agora aceita `merge_runtime(..., matrix_names={...})` e a CLI aceita
-`drm-saint-g merge --matrix <nome>` para fundir somente matrizes selecionadas.
+`SAINT-G merge --matrix <nome>` para fundir somente matrizes selecionadas.
 
 #### Fase 12C - Custo de I/O por Dtype
 
@@ -1436,7 +1436,7 @@ mini-transformer pequeno, mas continua experimental para modelos reais maiores.
 
 ### Criterio de Conclusao
 
-DRM-SAINT-G deve conseguir:
+SAINT-G deve conseguir:
 
 ```text
 checkpoint grande -> validar -> retomar -> merge parcial -> avaliar
@@ -1460,7 +1460,7 @@ Status: **concluida com ressalvas**.
 
 ### Objetivo
 
-Testar DRM-SAINT-G em modelos reais pequenos.
+Testar SAINT-G em modelos reais pequenos.
 
 ### Marco 1 - Adaptador Local Dependency-Optional
 
@@ -1474,7 +1474,7 @@ Entregas:
 - tentativa opcional de `AutoModelForCausalLM.from_pretrained` com
   `local_files_only=True`;
 - listagem de matrizes 2D por keywords;
-- metodo `hf_DRM-SAINT-G_delta_smoke`;
+- metodo `hf_SAINT-G_delta_smoke`;
 - checkpoint robusto com dtype/shards;
 - `inspect -> train -> resume -> merge`;
 - config exemplo `configs/huggingface_smoke.json`;
@@ -1504,7 +1504,7 @@ mas ainda nao mede perplexity real nem executa autograd em transformers.
 
 ### Criterio de conclusao
 
-DRM-SAINT-G deve mostrar vantagem ou comportamento complementar a LoRA em pelo menos um tipo de tarefa.
+SAINT-G deve mostrar vantagem ou comportamento complementar a LoRA em pelo menos um tipo de tarefa.
 
 ### Marco 2 - Treino Real com Autograd
 
@@ -1512,7 +1512,7 @@ Status: **concluido**.
 
 Entregas:
 
-- metodo `hf_DRM-SAINT-G_autograd_smoke`;
+- metodo `hf_SAINT-G_autograd_smoke`;
 - modulo `saint/adapters/huggingface_autograd.py`;
 - deltas treinaveis com PyTorch autograd;
 - selecao de parametros por magnitude;
@@ -1536,14 +1536,14 @@ Status: **concluido**.
 
 Entregas:
 
-- metodo `hf_DRM-SAINT-G_forward_smoke`;
+- metodo `hf_SAINT-G_forward_smoke`;
 - modulo `saint/adapters/huggingface_forward.py`;
 - carregamento local com `AutoModelForCausalLM`;
 - carregamento local com `AutoTokenizer`;
 - tokenizacao de textos curtos;
 - forward real com `model(input_ids, labels=input_ids)`;
 - aplicacao de deltas por `torch.func.functional_call`;
-- treino DRM-SAINT-G por autograd em matrizes alvo;
+- treino SAINT-G por autograd em matrizes alvo;
 - medicao de loss inicial, loss final e perplexity;
 - checkpoint robusto com dtype/shards;
 - merge dos deltas treinados;
@@ -1553,7 +1553,7 @@ Entregas:
 Fluxo validado:
 
 ```text
-modelo local -> tokenizer local -> forward real -> treino DRM-SAINT-G -> checkpoint -> merge
+modelo local -> tokenizer local -> forward real -> treino SAINT-G -> checkpoint -> merge
 ```
 
 ### Marco 4 - Comparacao com Baselines HF
@@ -1563,20 +1563,20 @@ Status: **concluido**.
 Entregas:
 
 - modulo `saint/adapters/huggingface_benchmark.py`;
-- benchmark `benchmark_hf_DRM-SAINT-G_vs_full`;
-- comparacao DRM-SAINT-G vs full fine-tuning pequeno;
+- benchmark `benchmark_hf_SAINT-G_vs_full`;
+- comparacao SAINT-G vs full fine-tuning pequeno;
 - seeds `31` e `32`;
 - medicao de `tokens_per_s`;
 - medicao de `cuda_peak_bytes`;
-- checkpoint e merge avaliavel para DRM-SAINT-G.
+- checkpoint e merge avaliavel para SAINT-G.
 
 Resultado CUDA:
 
 | metodo | seed | parametros | loss inicial | loss final | delta loss | tokens/s | pico CUDA |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| DRM-SAINT-G | 31 | 8 | 2.792639 | 2.792619 | -0.000021 | 393.51 | 18230784 |
+| SAINT-G | 31 | 8 | 2.792639 | 2.792619 | -0.000021 | 393.51 | 18230784 |
 | full | 31 | 3824 | 2.790193 | 2.749064 | -0.041129 | 2915.51 | 18239488 |
-| DRM-SAINT-G | 32 | 8 | 2.792639 | 2.792619 | -0.000021 | 5873.83 | 18230784 |
+| SAINT-G | 32 | 8 | 2.792639 | 2.792619 | -0.000021 | 5873.83 | 18230784 |
 | full | 32 | 3824 | 2.767291 | 2.769696 | 0.002405 | 4872.50 | 18239488 |
 
 ### Marco 5 - LoRA e Modelo HF Real Local
@@ -1588,7 +1588,7 @@ Entregas:
 - baseline `hf_lora_rank_2` no forward real;
 - aplicacao LoRA por `torch.func.functional_call`, sem dependencia de `peft`;
 - dataset curto ampliado;
-- benchmark DRM-SAINT-G vs LoRA vs full fine-tuning;
+- benchmark SAINT-G vs LoRA vs full fine-tuning;
 - medicao de qualidade apos `resume`;
 - medicao de ganho por parametro treinavel;
 - suporte ao mesmo caminho local para modelos HF reais pequenos.
@@ -1614,10 +1614,10 @@ do checkpoint ja existente na maquina.
 Smoke CUDA:
 
 ```text
-DRM-SAINT-G: params 8, loss 3.425533 -> 3.425443, ganho/param 0.00001124
+SAINT-G: params 8, loss 3.425533 -> 3.425443, ganho/param 0.00001124
 LoRA r2: params 192, loss 3.432518 -> 3.432486, ganho/param 0.00000017
 full: params 4064, loss 3.435688 -> 3.386605, ganho/param 0.00001208
-resume_quality_delta DRM-SAINT-G: 0.0
+resume_quality_delta SAINT-G: 0.0
 ```
 
 ### Marco 6 - Sweep HF Real Local
@@ -1628,7 +1628,7 @@ Entregas:
 
 - modulo `saint/adapters/huggingface_sweep.py`;
 - script `scripts/benchmark_huggingface_phase13.py`;
-- sweep DRM-SAINT-G com budgets `4`, `8` e `16`;
+- sweep SAINT-G com budgets `4`, `8` e `16`;
 - sweep LoRA com ranks `1`, `2`, `4` e `8`;
 - resultado salvo em `results.json` e `results.md`;
 - perplexity inicial, final e apos merge;
@@ -1639,9 +1639,9 @@ Resultado CUDA:
 
 | metodo | budget | rank | params | loss final | ppl merge | ganho/param | pico CUDA |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| DRM-SAINT-G | 4 |  | 4 | 10.824375 | 49923.772119 | 0.00000119 | 31205888 |
-| DRM-SAINT-G | 8 |  | 8 | 10.824288 | 49919.201671 | 0.00001144 | 31205888 |
-| DRM-SAINT-G | 16 |  | 12 | 10.824239 | 49916.583373 | 0.00001176 | 31205888 |
+| SAINT-G | 4 |  | 4 | 10.824375 | 49923.772119 | 0.00000119 | 31205888 |
+| SAINT-G | 8 |  | 8 | 10.824288 | 49919.201671 | 0.00001144 | 31205888 |
+| SAINT-G | 16 |  | 12 | 10.824239 | 49916.583373 | 0.00001176 | 31205888 |
 | LoRA |  | 1 | 12 | 10.818256 | 49923.962564 | 0.00000008 | 43878400 |
 | LoRA |  | 2 | 24 | 10.818254 | 49923.867341 | 0.00000012 | 43878400 |
 | LoRA |  | 4 | 48 | 10.818251 | 49923.676897 | 0.00000014 | 43878400 |
@@ -1651,7 +1651,7 @@ Resultado CUDA:
 Leitura:
 
 ```text
-DRM-SAINT-G ainda perde em loss absoluta contra full fine-tuning,
+SAINT-G ainda perde em loss absoluta contra full fine-tuning,
 mas supera LoRA em ganho por parametro neste sweep curto e usa menos pico CUDA.
 ```
 
@@ -1666,33 +1666,33 @@ Entregas:
 - script `scripts/benchmark_huggingface_validation_phase13.py`;
 - split treino/validacao;
 - acumulacao de gradiente com `batch_size`;
-- learning rates separados para DRM-SAINT-G, LoRA e full fine-tuning;
-- checkpoint DRM-SAINT-G e artefato LoRA salvos;
-- geracao curta antes e depois do merge DRM-SAINT-G;
+- learning rates separados para SAINT-G, LoRA e full fine-tuning;
+- checkpoint SAINT-G e artefato LoRA salvos;
+- geracao curta antes e depois do merge SAINT-G;
 - resultados em JSON/Markdown.
 
 Resultado CUDA:
 
 | metodo | budget | rank | params | val loss | ppl merge | artefato bytes | ganho/param |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| DRM-SAINT-G | 8 |  | 8 | 10.825989 | 50311.490508 | 27679 | 0.00000894 |
+| SAINT-G | 8 |  | 8 | 10.825989 | 50311.490508 | 27679 | 0.00000894 |
 | LoRA |  | 4 | 48 | 10.825988 | 50311.442528 | 2757 | 0.00000230 |
 | full |  |  | 102714 | 10.823018 | 50162.252171 | 0 | 0.00000004 |
 
 Geracao curta:
 
 ```text
-prompt: DRM-SAINT-G
-base: DRM-SAINT-G stairs stairs stairs stairs stairs stairs stairs stairs
-DRM-SAINT-G_merged: DRM-SAINT-G stairs stairs stairs stairs stairs stairs stairs stairs
+prompt: SAINT-G
+base: SAINT-G stairs stairs stairs stairs stairs stairs stairs stairs
+SAINT-G_merged: SAINT-G stairs stairs stairs stairs stairs stairs stairs stairs
 ```
 
 Leitura:
 
 ```text
-DRM-SAINT-G ainda perde em loss absoluta para full fine-tuning,
+SAINT-G ainda perde em loss absoluta para full fine-tuning,
 mas manteve melhor ganho por parametro que LoRA rank 4 neste run.
-O formato DRM-SAINT-G atual salva mais contexto que o artefato LoRA,
+O formato SAINT-G atual salva mais contexto que o artefato LoRA,
 entao ainda falta uma comparacao delta-only de tamanho.
 ```
 
@@ -1704,9 +1704,9 @@ Entregas:
 
 - modulo `saint/adapters/huggingface_grid.py`;
 - script `scripts/benchmark_huggingface_grid_phase13.py`;
-- grid de budgets e learning rates DRM-SAINT-G;
+- grid de budgets e learning rates SAINT-G;
 - grid de ranks e learning rates LoRA;
-- artefato DRM-SAINT-G delta-only;
+- artefato SAINT-G delta-only;
 - comparacao contra validation loss do modelo base;
 - sanity check de geracao em multiplos prompts;
 - resultados em JSON/Markdown.
@@ -1715,10 +1715,10 @@ Resultado CUDA:
 
 | metodo | budget | rank | lr | params | val loss | delta vs base | ganho/param | bytes |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| DRM-SAINT-G | 8 |  | 0.001 | 8 | 10.826005 | -0.000041 | 0.00000608 | 360 |
-| DRM-SAINT-G | 8 |  | 0.005 | 8 | 10.825827 | -0.000219 | 0.00005305 | 348 |
-| DRM-SAINT-G | 16 |  | 0.001 | 12 | 10.825991 | -0.000055 | 0.00000572 | 483 |
-| DRM-SAINT-G | 16 |  | 0.005 | 12 | 10.825816 | -0.000230 | 0.00005500 | 460 |
+| SAINT-G | 8 |  | 0.001 | 8 | 10.826005 | -0.000041 | 0.00000608 | 360 |
+| SAINT-G | 8 |  | 0.005 | 8 | 10.825827 | -0.000219 | 0.00005305 | 348 |
+| SAINT-G | 16 |  | 0.001 | 12 | 10.825991 | -0.000055 | 0.00000572 | 483 |
+| SAINT-G | 16 |  | 0.005 | 12 | 10.825816 | -0.000230 | 0.00005500 | 460 |
 | LoRA |  | 2 | 0.001 | 24 | 10.826046 | 0.000000 | 0.00000012 | 2733 |
 | LoRA |  | 2 | 0.005 | 24 | 10.826030 | -0.000016 | 0.00000131 | 2733 |
 | LoRA |  | 4 | 0.001 | 48 | 10.826044 | -0.000002 | 0.00000014 | 2797 |
@@ -1727,7 +1727,7 @@ Resultado CUDA:
 Leitura:
 
 ```text
-DRM-SAINT-G venceu LoRA neste grid curto em validation loss,
+SAINT-G venceu LoRA neste grid curto em validation loss,
 ganho por parametro e tamanho de artefato delta-only.
 A geracao curta ainda nao mudou de forma observavel.
 ```
@@ -1752,7 +1752,7 @@ Resultado CUDA:
 
 | metodo | count | mean val loss | best val loss | mean gain/param |
 |---|---:|---:|---:|---:|
-| DRM-SAINT-G | 12 | 10.823841 | 10.823558 | 0.00005602 |
+| SAINT-G | 12 | 10.823841 | 10.823558 | 0.00005602 |
 | LoRA | 12 | 10.824103 | 10.824080 | 0.00000049 |
 
 Artefato LoRA carregado:
@@ -1784,7 +1784,7 @@ Fase 14 Marco 1 - Ponte HF Maior que Tiny GPT-2:
 - rodar o mesmo benchmark multiseed;
 - medir VRAM real;
 - manter LoRA carregavel como controle;
-- decidir se avanca para experimento 3B ou se precisa otimizar DRM-SAINT-G primeiro.
+- decidir se avanca para experimento 3B ou se precisa otimizar SAINT-G primeiro.
 
 ## Fase 14 - Escala 3B
 
@@ -1799,7 +1799,7 @@ Primeiro teste serio em GPU domestica.
 ```text
 modelo: 3B
 VRAM alvo: 12GB ou 24GB
-modo: base congelada + deltas DRM-SAINT-G
+modo: base congelada + deltas SAINT-G
 seq_len: 512 a 2048
 micro_batch: 1
 offload: opcional
@@ -1831,13 +1831,13 @@ Resultado CUDA:
 
 | metodo | count | mean val loss | best val loss | mean gain/param |
 |---|---:|---:|---:|---:|
-| DRM-SAINT-G | 3 | 6.814889 | 6.814889 | 0.00000200 |
+| SAINT-G | 3 | 6.814889 | 6.814889 | 0.00000200 |
 | LoRA | 3 | 6.808302 | 6.806123 | 0.00000399 |
 
 Pico CUDA:
 
 ```text
-DRM-SAINT-G: 2.083841536 GB
+SAINT-G: 2.083841536 GB
 LoRA:  1.016675840 GB
 ```
 
@@ -1851,26 +1851,26 @@ Motivo:
 
 ```text
 LoRA venceu em loss, ganho por parametro e memoria no caminho atual.
-DRM-SAINT-G precisa otimizar memoria/payload e melhorar selecao antes da escala 3B.
+SAINT-G precisa otimizar memoria/payload e melhorar selecao antes da escala 3B.
 ```
 
-### Marco 2 - Otimizar DRM-SAINT-G em GPT-2 Small
+### Marco 2 - Otimizar SAINT-G em GPT-2 Small
 
 Status: **concluido**.
 
 Entregas:
 
 - evitar segunda carga completa do modelo no adapter Hugging Face;
-- salvar apenas deltas treinaveis no payload DRM-SAINT-G;
+- salvar apenas deltas treinaveis no payload SAINT-G;
 - reduzir custo de merge/eval;
 - medir memoria por etapa;
-- testar budgets DRM-SAINT-G maiores contra LoRA ranks `2` e `4`;
+- testar budgets SAINT-G maiores contra LoRA ranks `2` e `4`;
 - decidir novamente se o projeto pode ir para 3B.
 
 Resultado:
 
 ```text
-DRM-SAINT-G: mean val loss 6.814783, best 6.814630, mean gain/param 0.00000276
+SAINT-G: mean val loss 6.814783, best 6.814630, mean gain/param 0.00000276
 LoRA:  mean val loss 6.803654, best 6.794116, mean gain/param 0.00000408
 ```
 
@@ -1878,13 +1878,13 @@ Curva CUDA:
 
 | metodo | config | count | mean val loss | best val loss | mean gain/param | mean CUDA GB |
 |---|---:|---:|---:|---:|---:|---:|
-| DRM-SAINT-G | budget 16 | 3 | 6.814889 | 6.814889 | 0.00000200 | 2.079 |
-| DRM-SAINT-G | budget 64 | 3 | 6.814830 | 6.814830 | 0.00000328 | 2.076 |
-| DRM-SAINT-G | budget 256 | 3 | 6.814630 | 6.814630 | 0.00000302 | 2.076 |
+| SAINT-G | budget 16 | 3 | 6.814889 | 6.814889 | 0.00000200 | 2.079 |
+| SAINT-G | budget 64 | 3 | 6.814830 | 6.814830 | 0.00000328 | 2.076 |
+| SAINT-G | budget 256 | 3 | 6.814630 | 6.814630 | 0.00000302 | 2.076 |
 | LoRA | rank 2 | 3 | 6.808302 | 6.806123 | 0.00000399 | 1.017 |
 | LoRA | rank 4 | 3 | 6.799007 | 6.794116 | 0.00000418 | 1.017 |
 
-Memoria por etapa em um run DRM-SAINT-G:
+Memoria por etapa em um run SAINT-G:
 
 ```text
 load_cuda_peak_bytes: 508782592
@@ -1899,25 +1899,25 @@ Veredito:
 nao avancar ainda para 3B.
 ```
 
-O caminho melhorou: nao ha segunda carga completa no treino, o payload DRM-SAINT-G
+O caminho melhorou: nao ha segunda carga completa no treino, o payload SAINT-G
 ficou esparso, e merge/eval usam matrizes selecionadas. Mesmo assim, LoRA ainda
 vence em loss, ganho por parametro e pico CUDA.
 
-### Marco 3 - Melhorar DRM-SAINT-G em GPT-2 Small
+### Marco 3 - Melhorar SAINT-G em GPT-2 Small
 
 Status: **concluido**.
 
 Objetivo:
 
 ```text
-tornar DRM-SAINT-G competitivo contra LoRA rank 2/4 em GPT-2 small antes de 3B.
+tornar SAINT-G competitivo contra LoRA rank 2/4 em GPT-2 small antes de 3B.
 ```
 
 Entregas:
 
 - selecionar deltas por gradiente real, nao apenas por magnitude inicial;
 - testar mais matrizes alvo por camada;
-- aumentar steps e medir se DRM-SAINT-G ganha mais com treino longo;
+- aumentar steps e medir se SAINT-G ganha mais com treino longo;
 - comparar budgets maiores sem voltar a payload denso;
 - reduzir overhead CUDA do forward funcional;
 - manter LoRA rank `2` e `4` como controles obrigatorios.
@@ -1925,7 +1925,7 @@ Entregas:
 Resultado:
 
 ```text
-DRM-SAINT-G: mean val loss 6.776390, best 6.704383, mean gain/param 0.00033130
+SAINT-G: mean val loss 6.776390, best 6.704383, mean gain/param 0.00033130
 LoRA:  mean val loss 6.756175, best 6.727021, mean gain/param 0.00002527
 ```
 
@@ -1933,25 +1933,25 @@ Curva CUDA:
 
 | metodo | config | count | mean val loss | best val loss | mean gain/param | mean CUDA GB |
 |---|---:|---:|---:|---:|---:|---:|
-| DRM-SAINT-G | budget 256 | 3 | 6.833445 | 6.833445 | 0.00068272 | 2.263 |
-| DRM-SAINT-G | budget 1024 | 3 | 6.791341 | 6.791341 | 0.00022535 | 2.262 |
-| DRM-SAINT-G | budget 4096 | 3 | 6.704383 | 6.704383 | 0.00008584 | 2.262 |
+| SAINT-G | budget 256 | 3 | 6.833445 | 6.833445 | 0.00068272 | 2.263 |
+| SAINT-G | budget 1024 | 3 | 6.791341 | 6.791341 | 0.00022535 | 2.262 |
+| SAINT-G | budget 4096 | 3 | 6.704383 | 6.704383 | 0.00008584 | 2.262 |
 | LoRA | rank 2 | 3 | 6.771237 | 6.755111 | 0.00003135 | 1.018 |
 | LoRA | rank 4 | 3 | 6.741114 | 6.727021 | 0.00001918 | 1.018 |
 
 Veredito:
 
 ```text
-DRM-SAINT-G ficou competitivo em qualidade, mas ainda nao em memoria.
+SAINT-G ficou competitivo em qualidade, mas ainda nao em memoria.
 ```
 
-O melhor DRM-SAINT-G venceu o melhor LoRA em validation loss, mas o pico CUDA
+O melhor SAINT-G venceu o melhor LoRA em validation loss, mas o pico CUDA
 continuou aproximadamente 2.2x maior que LoRA.
 
 Teste adicional com `--saint-lrs 0.005` e `--lora-lrs 0.005`:
 
 ```text
-DRM-SAINT-G: mean val loss 6.562497, best 6.140045, mean gain/param 0.00049000
+SAINT-G: mean val loss 6.562497, best 6.140045, mean gain/param 0.00049000
 LoRA:  mean val loss 6.664005, best 6.563403, mean gain/param 0.00004904
 ```
 
@@ -1961,14 +1961,14 @@ Decisao automatica:
 fase_13_can_close_with_caveat
 ```
 
-### Marco 4 - Reduzir Overhead CUDA do DRM-SAINT-G
+### Marco 4 - Reduzir Overhead CUDA do SAINT-G
 
 Status: **concluido com ressalvas**.
 
 Objetivo:
 
 ```text
-reduzir o pico CUDA do caminho DRM-SAINT-G antes de tentar 3B.
+reduzir o pico CUDA do caminho SAINT-G antes de tentar 3B.
 ```
 
 Entregas:
@@ -1983,11 +1983,11 @@ Entregas:
 Resultado:
 
 ```text
-DRM-SAINT-G: mean val loss 6.562497, best 6.140045, mean gain/param 0.00049000
+SAINT-G: mean val loss 6.562497, best 6.140045, mean gain/param 0.00049000
 LoRA:  mean val loss 6.664005, best 6.563403, mean gain/param 0.00004904
 ```
 
-Memoria por etapa em um run DRM-SAINT-G:
+Memoria por etapa em um run SAINT-G:
 
 ```text
 load_cuda_peak_bytes: 508782592
@@ -2000,7 +2000,7 @@ merge_cuda_peak_bytes: 18087936
 Veredito:
 
 ```text
-DRM-SAINT-G venceu em qualidade e reduziu artifact/checkpoint de benchmark,
+SAINT-G venceu em qualidade e reduziu artifact/checkpoint de benchmark,
 mas o pico CUDA ainda e dominado pelo roteamento por gradiente.
 ```
 
@@ -2026,7 +2026,7 @@ Entregas:
 
 Resultado:
 
-| roteamento | DRM-SAINT-G mean val loss | DRM-SAINT-G best val loss | routing CUDA GB | train CUDA GB | decisao |
+| roteamento | SAINT-G mean val loss | SAINT-G best val loss | routing CUDA GB | train CUDA GB | decisao |
 |---|---:|---:|---:|---:|---|
 | gradient completo | 6.562497 | 6.140045 | 2.264 | 0.638 | passa com ressalva |
 | gradient sequencial | 6.140045 | 6.140045 | 2.247 | 0.637 | passa com ressalva |
@@ -2066,7 +2066,7 @@ Entregas:
 
 Resultado:
 
-| roteamento | DRM-SAINT-G mean val loss | DRM-SAINT-G best val loss | routing CUDA GB | train CUDA GB | decisao |
+| roteamento | SAINT-G mean val loss | SAINT-G best val loss | routing CUDA GB | train CUDA GB | decisao |
 |---|---:|---:|---:|---:|---|
 | gradient sequencial completo | 6.140045 | 6.140045 | 2.259 | 0.637 | passa com ressalva |
 | gradient sequencial subset | 6.441031 | 6.441031 | 0.540 | 0.637 | passa com ressalva |
@@ -2110,19 +2110,19 @@ Entregas:
 - modelo escolhido: `Qwen/Qwen2.5-3B`;
 - carga CUDA validada com dtype economico;
 - smoke de load/forward sem treino passou;
-- DRM-SAINT-G `activation` rodou com `budget=4096`, micro-batch 1 e
+- SAINT-G `activation` rodou com `budget=4096`, micro-batch 1 e
   `routing_max_length=8`;
 - checkpoint salvou delta esparso real com 4096 valores;
 - resume e merge foram validados;
 - LoRA rank 1 coube como controle minimo;
 - load/routing/train/checkpoint/merge foram medidos.
 
-Resultado DRM-SAINT-G 3B:
+Resultado SAINT-G 3B:
 
 | metrica | valor |
 |---|---:|
 | base validation loss | 7.690704 |
-| DRM-SAINT-G validation loss | 7.688824 |
+| SAINT-G validation loss | 7.688824 |
 | merged validation loss | 7.688824 |
 | parametros treinaveis | 4096 |
 | delta sparse values | 4096 |
@@ -2137,7 +2137,7 @@ Comparacao minima:
 
 | metodo | val loss | params | gain/param | CUDA peak GB |
 |---|---:|---:|---:|---:|
-| DRM-SAINT-G activation | 7.688824 | 4096 | 0.00000613 | 11.869 |
+| SAINT-G activation | 7.688824 | 4096 | 0.00000613 | 11.869 |
 | LoRA rank 1 | 7.664804 | 6400 | 0.00000684 | 7.630 |
 
 Veredito:
@@ -2148,18 +2148,18 @@ Fase 14 Marco 7 passou tecnicamente, mas Fase 14 ainda nao fecha.
 
 Motivo:
 
-- DRM-SAINT-G ja carrega, treina, salva, retoma e mergeia em 3B;
+- SAINT-G ja carrega, treina, salva, retoma e mergeia em 3B;
 - LoRA rank 1 ainda vence em qualidade e pico CUDA neste microteste;
 - o proximo marco precisa reduzir overhead e melhorar ganho por parametro.
 
-### Marco 8 - Otimizacao DRM-SAINT-G 3B contra LoRA
+### Marco 8 - Otimizacao SAINT-G 3B contra LoRA
 
 Status: **concluido com ressalva**.
 
 Mudancas:
 
 - treino HF deixou de materializar recortes densos de pesos para checkpoint;
-- `DRM-SAINT-G_sparse_delta` salva coordenadas reais e shapes completos;
+- `SAINT-G_sparse_delta` salva coordenadas reais e shapes completos;
 - validacao de checkpoint esparso nao expande payload para matriz densa;
 - benchmarks HF aplicam deltas por coordenada;
 - `bfloat16` passou a ser o dtype operacional para 3B.
@@ -2168,7 +2168,7 @@ Grid activation:
 
 | metodo | count | mean val loss | best val loss | mean gain/param |
 |---|---:|---:|---:|---:|
-| DRM-SAINT-G activation | 4 | 7.657179 | 7.656769 | 0.00000225 |
+| SAINT-G activation | 4 | 7.657179 | 7.656769 | 0.00000225 |
 | LoRA rank 1/2 | 4 | 7.671440 | 7.661643 | 0.00000430 |
 
 Controle `gradient_sequential` subset:
@@ -2186,9 +2186,9 @@ Fase 14 Marco 8 passou, mas Fase 14 ainda nao fecha.
 
 Motivo:
 
-- DRM-SAINT-G activation venceu LoRA em validation loss media e melhor loss;
+- SAINT-G activation venceu LoRA em validation loss media e melhor loss;
 - `gradient_sequential` subset foi muito melhor que activation e LoRA;
-- o pico do forward funcional DRM-SAINT-G ainda fica maior que LoRA.
+- o pico do forward funcional SAINT-G ainda fica maior que LoRA.
 
 ### Marco 9 - Reducao do Pico Funcional
 
@@ -2313,7 +2313,7 @@ GPU: embeddings + camadas 0 a 32
 CPU: camadas 33 a 47 + norm + rotary_emb + lm_head
 ```
 
-Tentativa DRM-SAINT-G:
+Tentativa SAINT-G:
 
 ```text
 inplace + activation + budget 4096 + micro-batch 1
@@ -2340,7 +2340,7 @@ Status: **concluido como diagnostico, ainda sem treino viavel**.
 
 Mudancas:
 
-- `target_names` explicito para DRM-SAINT-G HF;
+- `target_names` explicito para SAINT-G HF;
 - filtro `target_device` para evitar matrizes offloadadas;
 - CLI multiseed com:
   - `--saint-target-names`;
@@ -2362,7 +2362,7 @@ Smoke relativo:
 | Qwen2.5-14B `0=18GiB,cpu=64GiB` | 33.053 | 1.353 | 17.783 |
 | Qwen2.5-14B `0=22GiB,cpu=64GiB` | 23.044 | 1.098 | 21.885 |
 
-Tentativa DRM-SAINT-G limitada:
+Tentativa SAINT-G limitada:
 
 ```text
 target: model.layers.0.self_attn.q_proj.weight
@@ -2418,7 +2418,7 @@ Resultado principal:
 Veredito:
 
 ```text
-DRM-SAINT-G completou um step autograd 14B abaixo de 5 minutos com checkpoint.
+SAINT-G completou um step autograd 14B abaixo de 5 minutos com checkpoint.
 ```
 
 Limite observado:
@@ -2441,12 +2441,12 @@ Status: **concluido com ressalva na avaliacao posterior**.
 Mudancas:
 
 - criado `scripts/benchmark_huggingface_phase15_compare.py`;
-- cada ponto DRM-SAINT-G roda em subprocesso separado;
+- cada ponto SAINT-G roda em subprocesso separado;
 - criado `scripts/benchmark_huggingface_phase15_eval_checkpoint.py`;
 - LoRA rank 1 testado no mesmo alvo;
 - resultados salvos em JSON/Markdown.
 
-Resultados DRM-SAINT-G:
+Resultados SAINT-G:
 
 | max_memory | budget | status | train_s | train CUDA GB |
 |---|---:|---|---:|---:|
@@ -2472,7 +2472,7 @@ LoRA rank 1:
 Avaliacoes:
 
 ```text
-drm-saint-g train-only passou abaixo de 23 GB em todos os pontos.
+SAINT-G train-only passou abaixo de 23 GB em todos os pontos.
 LoRA rank 1 tambem coube no limite.
 Avaliacao posterior separada funciona, mas merge/eval chegou a 29.682 GB.
 ```
@@ -2517,13 +2517,13 @@ Comparacao LoRA rank 1:
 
 | metodo | params | loss delta | ganho/param |
 |---|---:|---:|---:|
-| DRM-SAINT-G `q_proj` budget 8192 | 8192 | -0.021804 | 2.6616e-06 |
+| SAINT-G `q_proj` budget 8192 | 8192 | -0.021804 | 2.6616e-06 |
 | LoRA rank 1 `q_proj` | 10240 | 0.000000 | 0.0000 |
 
 Veredito:
 
 ```text
-Marco 5 passou: DRM-SAINT-G 14B reduziu loss e avaliacao posterior ficou abaixo de 23 GB.
+Marco 5 passou: SAINT-G 14B reduziu loss e avaliacao posterior ficou abaixo de 23 GB.
 ```
 
 ### Marco 6 - Robustez de Qualidade 14B
@@ -2532,14 +2532,14 @@ Status: **concluido com ressalva de validacao**.
 
 Mudancas:
 
-- `lr_decay` no treino DRM-SAINT-G in-place;
+- `lr_decay` no treino SAINT-G in-place;
 - LoRA rank 1 com `B` nao-zero;
 - avaliacao posterior com base e merged via `--include-base`;
 - testados seeds 31/32/33, camadas 0/1/2, scheduler e `v_proj + o_proj`.
 
 Seeds em `layer0.v_proj`, budget 8192:
 
-| seed | DRM-SAINT-G loss delta | LoRA loss delta |
+| seed | SAINT-G loss delta | LoRA loss delta |
 |---:|---:|---:|
 | 31 | -0.298339 | +0.012675 |
 | 32 | -0.298339 | -0.002483 |
@@ -2547,7 +2547,7 @@ Seeds em `layer0.v_proj`, budget 8192:
 
 Camadas em `v_proj`, seed 31:
 
-| camada | DRM-SAINT-G loss delta | ganho/param |
+| camada | SAINT-G loss delta | ganho/param |
 |---:|---:|---:|
 | 0 | -0.298339 | 3.6418e-05 |
 | 1 | -0.542579 | 6.6233e-05 |
@@ -2555,7 +2555,7 @@ Camadas em `v_proj`, seed 31:
 
 Outros resultados:
 
-| teste | DRM-SAINT-G loss delta | LoRA loss delta |
+| teste | SAINT-G loss delta | LoRA loss delta |
 |---|---:|---:|
 | `v_proj`, steps 8, `lr_decay=0.8` | -0.313544 | -0.000988 |
 | `v_proj + o_proj`, layer 0 | -0.045656 | -0.003168 |
@@ -2573,7 +2573,7 @@ Validacao com 4 exemplos:
 Veredito:
 
 ```text
-DRM-SAINT-G ficou robusto em train loss, mas a validacao ainda nao melhorou.
+SAINT-G ficou robusto em train loss, mas a validacao ainda nao melhorou.
 ```
 
 Proximo marco:
@@ -2604,11 +2604,11 @@ Resultado:
 |---|---|---:|---:|
 | layer 2 `v_proj` | `validation_gradient` | falhou | 29.962 GB |
 | layer 2 `v_proj` com 8GiB | `validation_gradient` | falhou | 29.987 GB |
-| layer 2 `v_proj` | DRM-SAINT-G validation proxy | +0.073896 | 15.782 GB |
+| layer 2 `v_proj` | SAINT-G validation proxy | +0.073896 | 15.782 GB |
 | layer 2 `v_proj` | LoRA rank 1 | -0.003053 | 15.785 GB |
-| layer 3 `v_proj` | DRM-SAINT-G validation proxy | +0.058203 | 15.782 GB |
+| layer 3 `v_proj` | SAINT-G validation proxy | +0.058203 | 15.782 GB |
 | layer 3 `v_proj` | LoRA rank 1 | -0.000484 | 15.785 GB |
-| layer 2 `v_proj` | DRM-SAINT-G activation multitexto | -0.182964 | 15.782 GB |
+| layer 2 `v_proj` | SAINT-G activation multitexto | -0.182964 | 15.782 GB |
 | layer 2/3 `v_proj` | LoRA rank 2 | falhou | 26.703 GB |
 
 Veredito:
@@ -2623,7 +2623,7 @@ Leitura:
 - `validation_gradient` e fiel, mas estoura o limite de 23 GB;
 - `validation_magnitude_activation` cabe, mas escolheu blocos piores que
   `activation`;
-- `activation` ainda e o baseline DRM-SAINT-G 14B mais forte neste marco;
+- `activation` ainda e o baseline SAINT-G 14B mais forte neste marco;
 - LoRA rank 1 melhora pouco, enquanto LoRA rank 2 ainda estoura memoria no
   caminho atual.
 
@@ -2669,8 +2669,8 @@ Resultado parcial em Qwen2.5-14B, layer 2 `v_proj`, `train_texts=3`,
 
 | metodo | loss delta | params | ganho/param | CUDA treino |
 |---|---:|---:|---:|---:|
-| DRM-SAINT-G `activation_validation_rerank` | -0.090874 | 8192 | 1.1093e-05 | 15.782 GB |
-| DRM-SAINT-G `activation` | -0.086226 | 8192 | 1.0526e-05 | 15.782 GB |
+| SAINT-G `activation_validation_rerank` | -0.090874 | 8192 | 1.1093e-05 | 15.782 GB |
+| SAINT-G `activation` | -0.086226 | 8192 | 1.0526e-05 | 15.782 GB |
 | LoRA rank 1 forward-hook | -0.132801 | 6144 | 2.1615e-05 | 15.778 GB |
 | LoRA rank 2 forward-hook | -0.573527 | 12288 | 4.6674e-05 | 15.778 GB |
 
@@ -2683,7 +2683,7 @@ mas ainda perde para LoRA forward-hook.
 
 Proximo marco:
 
-- fazer DRM-SAINT-G operar em blocos 2x2/4x4 no treino HF, nao apenas coordenadas
+- fazer SAINT-G operar em blocos 2x2/4x4 no treino HF, nao apenas coordenadas
   independentes;
 - usar mini-validacao para escolher blocos;
 - comparar budgets menores;
@@ -2709,7 +2709,7 @@ Resultado principal em Qwen2.5-14B, layer 2 `v_proj`:
 
 | metodo | train delta | validation delta | params efetivos | routing_s | CUDA treino |
 |---|---:|---:|---:|---:|---:|
-| DRM-SAINT-G block4 rerank | -0.012179 | -0.013615 | 128 | 34.756 | 15.781 GB |
+| SAINT-G block4 rerank | -0.012179 | -0.013615 | 128 | 34.756 | 15.781 GB |
 | LoRA rank 1 forward-hook | -0.227059 | n/a | 6144 | n/a | 15.778 GB |
 
 Outros achados:
@@ -2719,7 +2719,7 @@ Outros achados:
 - `block_size=4` usa melhor o budget, mas 64 candidatos ainda custam
   `routing_s=238.497`;
 - limitar a 8 candidatos reduz o roteamento para cerca de 35s;
-- DRM-SAINT-G block4 mostrou sinal de validacao positiva com poucos parametros, mas
+- SAINT-G block4 mostrou sinal de validacao positiva com poucos parametros, mas
   LoRA forward-hook continua mais forte.
 
 Veredito:
@@ -2752,7 +2752,7 @@ Mudancas:
 
 Resultado 14B, `v_proj`, block4, budget 16:
 
-| camada | DRM-SAINT-G val delta | DRM-SAINT-G params | routing_s | LoRA r1 val delta | LoRA r2 val delta |
+| camada | SAINT-G val delta | SAINT-G params | routing_s | LoRA r1 val delta | LoRA r2 val delta |
 |---:|---:|---:|---:|---:|---:|
 | 1 | +0.002546 | 16 | 16.888 | -0.116323 | -0.180719 |
 | 2 | -0.002882 | 16 | 16.282 | -0.285410 | -0.197755 |
@@ -2771,7 +2771,7 @@ Proximo marco:
 - inicializar prototipos por gradiente/ativacao;
 - testar budgets 32, 64 e 128 scales;
 - comparar ganho por parametro em validation loss;
-- decidir se DRM-SAINT-G 14B deve otimizar compressao extrema ou qualidade contra
+- decidir se SAINT-G 14B deve otimizar compressao extrema ou qualidade contra
   LoRA.
 
 ### Marco 11 - Multiplos Prototipos Estruturados
@@ -2801,20 +2801,20 @@ Comparacao:
 
 | metodo | validation delta | params | ganho val/param |
 |---|---:|---:|---:|
-| DRM-SAINT-G budget 32 | -0.021731 | 32 | 6.79e-04 |
+| SAINT-G budget 32 | -0.021731 | 32 | 6.79e-04 |
 | LoRA rank 1 forward-hook | -0.165617 | 6144 | 2.70e-05 |
 
 Veredito:
 
 ```text
 LoRA ainda vence em qualidade absoluta.
-DRM-SAINT-G venceu em ganho de validacao por parametro no budget 32.
+SAINT-G venceu em ganho de validacao por parametro no budget 32.
 ```
 
 Decisao tecnica:
 
 ```text
-Fase 15 deve tratar DRM-SAINT-G como compressao extrema primeiro,
+Fase 15 deve tratar SAINT-G como compressao extrema primeiro,
 nao como substituto direto de LoRA em qualidade absoluta.
 ```
 
@@ -2834,7 +2834,7 @@ Mudancas:
 
 - criado `scripts/benchmark_huggingface_phase15_efficiency.py`;
 - `validation_gain_per_parameter` virou metrica obrigatoria;
-- melhor ponto DRM-SAINT-G e selecionado automaticamente por ganho de validacao por
+- melhor ponto SAINT-G e selecionado automaticamente por ganho de validacao por
   parametro;
 - comparacao contra LoRA rank 1 inclui estimativa por parametro equivalente;
 - corrigido bug onde `train_only + measure_loss` podia registrar
@@ -2852,7 +2852,7 @@ Comparacao:
 
 | metodo | validation delta | ganho val/param | params |
 |---|---:|---:|---:|
-| DRM-SAINT-G budget 32 | -0.006461 | 2.019107e-04 | 32 |
+| SAINT-G budget 32 | -0.006461 | 2.019107e-04 | 32 |
 | LoRA rank 1 forward-hook | -0.004622 | 7.521982e-07 | 6144 |
 
 Mais camadas, budget 32:
@@ -2876,17 +2876,17 @@ Direcao tecnica:
 Delta W = A Phi B
 ```
 
-`Phi` deve virar o objeto DRM-SAINT-G principal: operador geometrico, manifold local,
+`Phi` deve virar o objeto SAINT-G principal: operador geometrico, manifold local,
 microbloco relacional 2x2/4x4 ou codebook topologico multi-escala.
 
 Proximo marco:
 
-- implementar `DRM-SAINT-G_phi_delta`;
+- implementar `SAINT-G_phi_delta`;
 - comparar contra `layer 1 v_proj budget 32`;
 - medir ganho por parametro, tamanho de checkpoint e pico CUDA;
 - decidir se a proxima escala usa o formato atual ou o formato `Phi`.
 
-### Marco 13 - DRM-SAINT-G Phi Delta
+### Marco 13 - SAINT-G Phi Delta
 
 Status: **concluido**.
 
@@ -2925,7 +2925,7 @@ Comparacao:
 Veredito:
 
 ```text
-DRM-SAINT-G Phi superou o melhor ponto do Marco 12.
+SAINT-G Phi superou o melhor ponto do Marco 12.
 O melhor Phi foi hadamard, sugerindo que estrutura vence capacidade bruta nesse budget.
 ```
 
@@ -2970,7 +2970,7 @@ Controle LoRA rank 1:
 
 | metodo | validation delta | ganho val/param | params |
 |---|---:|---:|---:|
-| DRM-SAINT-G Phi hadamard rank 8 | -0.032917 | 1.097218e-03 | 30 |
+| SAINT-G Phi hadamard rank 8 | -0.032917 | 1.097218e-03 | 30 |
 | LoRA rank 1 forward-hook | +0.004285 | 0.000000e+00 | 6144 |
 
 Veredito:
@@ -3013,7 +3013,7 @@ Resultados multi-seed:
 
 | metodo | mean validation delta | mean ganho val/param | params |
 |---|---:|---:|---:|
-| DRM-SAINT-G Phi rank 8 | -0.012927 | 4.309018e-04 | 30 |
+| SAINT-G Phi rank 8 | -0.012927 | 4.309018e-04 | 30 |
 | LoRA rank 1 | -0.006209 | 1.010563e-06 | 6144 |
 
 Outros testes:
@@ -3034,7 +3034,7 @@ Fase 15 fecha com Phi hadamard rank 8 como baseline historico para a proxima esc
 Ressalva:
 
 ```text
-DRM-SAINT-G venceu em ganho por parametro e checkpoint pequeno.
+SAINT-G venceu em ganho por parametro e checkpoint pequeno.
 Ainda nao venceu LoRA como qualidade absoluta geral.
 ```
 
@@ -3052,7 +3052,7 @@ train_texts: 4
 validation_texts: 8
 ```
 
-## Fase DRM-G - DRM-SAINT-G
+## Fase DRM-G - SAINT-G
 
 Status: **em andamento**.
 
@@ -3067,14 +3067,14 @@ Nesta fase, o modelo nao nasce grande. Ele cresce por ciclos:
 DRM pequeno
   -> congelar nucleo estavel
   -> anexar modulo novo
-  -> treinar enxerto com DRM-SAINT-G-Phi
+  -> treinar enxerto com SAINT-G-Phi
   -> validar perda global
   -> consolidar, manter ou descartar enxerto
 ```
 
 ### Definicao
 
-DRM-SAINT-G e a linha de pesquisa em que DRM-SAINT-G-Phi deixa de ser apenas um delta
+SAINT-G e a linha de pesquisa em que SAINT-G-Phi deixa de ser apenas um delta
 compacto sobre pesos existentes e passa a ser um mecanismo de crescimento:
 
 ```text
@@ -3099,25 +3099,25 @@ e o sufixo `G` marca **grafting**, ou enxerto progressivo.
 
 - Um DRM pequeno consegue melhorar por enxertos sem retreinar tudo?
 - O enxerto preserva capacidades antigas ou causa esquecimento?
-- DRM-SAINT-G-Phi e suficiente para treinar o modulo novo com poucos parametros?
+- SAINT-G-Phi e suficiente para treinar o modulo novo com poucos parametros?
 - Consolidar enxertos melhora ou degrada a loss global?
 - O custo por ganho e melhor que simplesmente aumentar uma camada e treinar full?
 
 ### Criterio de conclusao
 
-A fase passa se DRM-SAINT-G demonstrar um ciclo completo:
+A fase passa se SAINT-G demonstrar um ciclo completo:
 
 ```text
 modelo DRM pequeno
   -> enxerto novo
-  -> treino DRM-SAINT-G-Phi
+  -> treino SAINT-G-Phi
   -> validacao melhor que base congelada
   -> checkpoint recomponivel
   -> consolidacao sem regressao clara
 ```
 
 Com isso, a nova Fase 16 pode comparar um full controlado contra grafting antes
-da Fase 17 de 70B.
+da Fase 17 publicavel, da Fase 18 de protocolo e da Fase 19 de 70B.
 
 ### Marco 1 - Enxerto Phi no DRM 3.5M
 
@@ -3387,7 +3387,7 @@ exigida para encerrar o Marco 5 inteiro.
 
 Marco 5C inicial:
 
-| metrica | DRM-SAINT-G 4096 | full_budget 4096 | full_module 4096 |
+| metrica | SAINT-G 4096 | full_budget 4096 | full_module 4096 |
 |---|---:|---:|---:|
 | validation_gain | 0.000400 | -0.005331 | 0.025951 |
 | gain_per_parameter | 9.770156e-08 | -1.301611e-06 | 6.335787e-06 |
@@ -3395,7 +3395,7 @@ Marco 5C inicial:
 | train_s | 0.156 | 0.114 | 0.081 |
 
 O benchmark `scripts/benchmark_drm_g_marco5c.py` tornou o controle mais forte:
-`DRM-SAINT-G` tambem foi testado com 4096 parametros (`phi_rank=64`). Ele venceu
+`SAINT-G` tambem foi testado com 4096 parametros (`phi_rank=64`). Ele venceu
 o `full_budget_linear_4096`, mas perdeu por margem grande para
 `full_module_linear` no mesmo alvo e com o mesmo numero nominal de parametros.
 O Marco 5C ficou implementado, mas nao passou no criterio de qualidade contra
@@ -3481,7 +3481,7 @@ O Marco 5F fecha a fase DRM-G com recomendacao tecnica clara: seguir para Fase
 16, usando Phi como familia principal, mas mantendo `full_module_linear` como
 baseline obrigatorio e sem declarar vitoria absoluta de qualidade.
 
-## Fase 16 - DRM Full 125M/350M vs DRM-SAINT-G Grafted
+## Fase 16 - DRM Full 125M/350M vs SAINT-G Grafted
 
 Status: **pendente**.
 
@@ -3500,7 +3500,7 @@ O baseline full precisa existir em uma escala menor usando configs reais do
 DRM full 125M
 DRM full 350M, se couber
 vs
-DRM 5M + DRM-SAINT-G grafted ate capacidade/budget semelhante
+DRM 5M + SAINT-G grafted ate capacidade/budget semelhante
 vs
 modelos externos pequenos quando aplicavel
 ```
@@ -3878,13 +3878,152 @@ em perplexity por byte, memoria ou parametro treinavel
 docs/process/fase_16_full_125m_350m_vs_grafted.md
 ```
 
-## Fase 17 - Escala 70B
+## Fase 17 - Prova Experimental Publicavel e Controle
 
 Status: **pendente**.
 
 ### Objetivo
 
-Validar DRM-SAINT-G como adaptacao extrema em hardware limitado.
+Fechar a ponte entre `drm_transformer` e `SAINT-G` como prova experimental
+publicavel:
+
+```text
+DRM full controlado vs DRM pequeno + enxertos SAINT-G
+```
+
+A pergunta central:
+
+```text
+um DRM pequeno + enxertos consegue se aproximar de um DRM full maior
+com melhor eficiencia de memoria, checkpoint, tempo e controle?
+```
+
+### Entregas
+
+- benchmark final `DRM full 125M` vs `DRM 5M + grafts`;
+- repetir com `DRM full 350M` se viavel;
+- relatorio com loss, perplexity, VRAM, tempo, checkpoint e ganho por parametro;
+- avaliacao de retencao/regressao apos enxertos;
+- avaliacao simples de controle/safety;
+- texto base para README, LinkedIn, Hugging Face e paper curto.
+
+### Marcos
+
+- Marco 1: benchmark full vs grafted;
+- Marco 2: retencao e regressao;
+- Marco 3: avaliacao de controle;
+- Marco 4: relatorio publicavel.
+
+### Criterio de sucesso
+
+Sucesso minimo:
+
+```text
+benchmark full vs grafted reproduzivel
+checkpoint grafted recomponivel
+metricas multi-eixo registradas
+avaliacao de controle inicial executada
+```
+
+Sucesso forte:
+
+```text
+DRM 5M + grafts demonstra vantagem clara em pelo menos um eixo operacional
+sem regressao forte de retencao
+e com sinal positivo em controle/safety toy
+```
+
+### Documento
+
+```text
+docs/process/fase_17_prova_experimental_controle.md
+```
+
+## Fase 18 - DRM Growth Protocol e Online Graft Search
+
+Status: **pendente**.
+
+### Objetivo
+
+Transformar um resultado positivo em 125M/350M em uma linha cientifica
+defensavel:
+
+```text
+DRM-Growth Protocol
+Distributed Validation-Gated Grafting
+DRM-GOS: DRM Graft Orchestration System
+```
+
+### Marcos
+
+- replication run com varias seeds, outro split e outra config;
+- comparacao contra LoRA/QLoRA forte, full-module, sparse/budgeted delta e adapters;
+- retencao e regressao;
+- especificacao do DRM-Growth Protocol;
+- safety/control evals;
+- ponte 1.3B antes de 70B;
+- arquitetura DRM-GOS para busca online distribuida de enxertos.
+
+### DRM-Growth Protocol
+
+```text
+base DRM
+-> sensitivity map
+-> candidate grafts
+-> validation-gated accept/reject/defer
+-> freeze accepted grafts
+-> staged consolidation
+-> retention eval
+```
+
+### DRM-GOS
+
+```text
+base DRM congelado
+        |
+        v
+coordenador central
+        |
+        +--> worker GPU 1: testa graft A
+        +--> worker GPU 2: testa graft B
+        +--> worker GPU 3: testa graft C
+        +--> worker GPU 4: roda controle LoRA
+        |
+        v
+validador central
+        |
+        v
+accept / reject / defer / retrain
+        |
+        v
+checkpoint composto recomponivel
+```
+
+### Criterio de sucesso
+
+Sucesso minimo:
+
+```text
+replicacao multiseed
+comparacao contra baselines fortes
+protocolo DRM-Growth documentado
+safety/control eval inicial
+plano DRM-GOS especificado
+```
+
+### Documento
+
+```text
+docs/process/fase_18_drm_growth_protocol.md
+```
+
+## Fase 19 - Escala 70B
+
+Status: **pendente**.
+
+### Objetivo
+
+Validar SAINT-G como adaptacao extrema em hardware limitado.
 
 ### Condicoes
 
@@ -3894,7 +4033,7 @@ E:
 
 ```text
 modelo base quantizado/congelado
-deltas DRM-SAINT-G esparsos
+deltas SAINT-G esparsos
 codebook multi-escala
 offload agressivo
 micro-batch 1
@@ -3926,7 +4065,7 @@ e alguma melhoria mensuravel na loss
 ### Documento
 
 ```text
-docs/process/fase_17_escala_70b.md
+docs/process/fase_19_escala_70b.md
 ```
 
 ## Trilha Transversal - Escalabilidade em Clusters de GPU
@@ -3935,14 +4074,14 @@ Status: **pendente**.
 
 ### Objetivo
 
-Projetar DRM-SAINT-G para escalar alem de uma unica RTX 4090, usando clusters
+Projetar SAINT-G para escalar alem de uma unica RTX 4090, usando clusters
 de GPU de forma parecida com laboratorios grandes e big techs, mas preservando a
 ideia central do projeto: treinar capacidade nova por partes, nao todo o modelo
 de uma vez.
 
 ### Hipotese
 
-DRM-SAINT-G pode aproveitar clusters de GPU em dois niveis:
+SAINT-G pode aproveitar clusters de GPU em dois niveis:
 
 ```text
 paralelismo de modelo/dados
@@ -3960,7 +4099,7 @@ O primeiro e o caminho classico:
 - sharding de checkpoints;
 - pipeline de dados por shards.
 
-O segundo e especifico do DRM-SAINT-G:
+O segundo e especifico do SAINT-G:
 
 - varias GPUs testam candidatos de graft em paralelo;
 - cada job mede ganho de validacao por parametro/byte/tempo;
@@ -4012,7 +4151,7 @@ Em cluster grande:
 A trilha passa quando o projeto demonstrar:
 
 ```text
-o mesmo experimento DRM-SAINT-G rodando em 1 GPU e N GPUs
+o mesmo experimento SAINT-G rodando em 1 GPU e N GPUs
 com ganho claro de tempo ou cobertura de busca
 sem perder recomponibilidade de checkpoint
 e com metricas comparaveis por candidato
@@ -4021,10 +4160,249 @@ e com metricas comparaveis por candidato
 ### Risco
 
 Escalar mal tambem e um resultado importante. Se comunicacao, I/O ou roteamento
-custarem mais que o treino dos enxertos, DRM-SAINT-G deve priorizar eficiencia
+custarem mais que o treino dos enxertos, SAINT-G deve priorizar eficiencia
 single-GPU antes de perseguir clusters.
 
-## Fase 18 - Otimizacoes
+## Fase 20 - DRM Continual Growth System
+
+Status: **pendente**.
+
+### Objetivo
+
+Se o cluster-scale online graft search funcionar, o proximo passo e transformar
+o projeto em um sistema de crescimento continuo, auditavel e reversivel:
+
+```text
+base model
++ verified graft registry
++ distributed graft search
++ continual safety gates
++ rollback
++ distillation
++ governance layer
+= controlled evolving AI system
+```
+
+A ideia deixa de ser apenas "treinar enxertos" e passa a ser governanca de
+crescimento.
+
+### Modelo Mental
+
+```text
+modelo base
+  + grafts aceitos
+  + historico de validacao
+  + safety gates
+  + rollback
+  + auditoria
+  + consolidacao periodica
+```
+
+### Graft Registry
+
+Um registro versionado de todos os enxertos:
+
+- qual camada/matriz altera;
+- qual dataset treinou;
+- qual ganho trouxe;
+- quais regressoes causou;
+- quais evals passou;
+- compatibilidade com outros grafts;
+- checksums e reprodutibilidade;
+- licenca, origem e hashes do payload.
+
+### Rollback e Remocao Seletiva
+
+Se um graft causar comportamento ruim, remover apenas aquele graft:
+
+```text
+model_v42 = base + grafts[1,2,3,7,9]
+model_v43 = base + grafts[1,2,3,9]
+```
+
+Isso cria um caminho para corrigibilidade operacional sem jogar fora o modelo
+inteiro.
+
+### Graft Distillation
+
+Depois de acumular muitos grafts:
+
+```text
+base + 500 grafts -> novo base compactado
+```
+
+Objetivos:
+
+- reduzir latencia;
+- reduzir memoria;
+- simplificar deploy;
+- preservar rastreabilidade via manifest de consolidacao.
+
+### Safety-Gated Growth
+
+Nenhum graft entra apenas por melhorar loss. Ele precisa passar por gates:
+
+- quality gate;
+- retention gate;
+- safety gate;
+- interpretability gate;
+- conflict gate;
+- rollback gate.
+
+Regra operacional:
+
+```text
+new_gain > threshold
+old_regression < limit
+safety_regression < limit
+checkpoint_growth < budget
+conflict_score < limit
+rollback_test = pass
+```
+
+### Specialized Graft Libraries
+
+Bibliotecas de grafts por competencia:
+
+- matematica;
+- codigo;
+- portugues;
+- medicina;
+- direito;
+- raciocinio longo;
+- seguranca;
+- factualidade;
+- tool use.
+
+Exemplos de artefatos:
+
+```text
+drm-code-graft-v3
+drm-ptbr-legal-graft-v2
+drm-safety-refusal-graft-v5
+drm-math-proof-graft-v1
+```
+
+### Market e Reuso de Grafts
+
+Se grafts forem pequenos e recomponiveis, podem virar artefatos reutilizaveis
+com certificado de:
+
+- ganho;
+- seguranca;
+- compatibilidade;
+- rastreabilidade;
+- licenca;
+- dataset;
+- hashes.
+
+### Automated Curriculum
+
+O sistema passa a decidir o que precisa aprender em seguida:
+
+```text
+eval falha em X
+-> gerar candidatos de graft
+-> treinar em paralelo
+-> validar
+-> aceitar/rejeitar/adiar
+-> registrar
+```
+
+### IA com Sistema Imunologico
+
+Se um graft causa regressao, comportamento perigoso ou conflito:
+
+```text
+detect anomaly
+-> quarantine graft
+-> rollback
+-> retrain candidate
+```
+
+### Modelos Personalizados por Composicao
+
+Em vez de baixar um modelo inteiro:
+
+```text
+Base DRM 7B
++ pt-BR graft
++ coding graft
++ safety graft
++ finance graft
++ reasoning graft
+```
+
+Capacidades podem ser ativadas/desativadas por contexto:
+
+```text
+modo medico: safety + evidence + uncertainty grafts
+modo codigo: coding + debugging + tool-use grafts
+modo crianca: safety + education + age-appropriate grafts
+```
+
+### Auditoria Causal
+
+Pergunta central:
+
+```text
+qual graft causou esta mudanca de comportamento?
+```
+
+Isso diferencia SAINT-G de modelos densos em que mudancas ficam misturadas
+em bilhoes de pesos.
+
+### Autoaperfeicoamento com Freios
+
+O sistema pode propor melhorias, mas nao aplicar sozinho:
+
+```text
+AI detects weakness
+-> proposes graft candidates
+-> cluster trains candidates
+-> independent validators test
+-> human or policy gate approves
+```
+
+### Direcoes Futuras
+
+- autoarquitetura controlada;
+- modelos vivos no sentido operacional, mas governados;
+- ecossistemas de capacidades;
+- validacao formal parcial;
+- IA institucional com historico de mudancas;
+- cognicao modular;
+- redes de IAs interoperaveis;
+- governanca computavel.
+
+### Pergunta Central
+
+```text
+Da para criar uma inteligencia que melhora continuamente
+sem perder rastreabilidade, corrigibilidade e controle?
+```
+
+Tese:
+
+```text
+O caminho para IA mais segura pode nao ser impedir modelos de crescerem,
+mas fazer com que crescam em unidades pequenas, auditaveis,
+reversiveis e governadas.
+```
+
+### Criterio de Sucesso
+
+Passa se houver prototipo capaz de:
+
+- registrar grafts com metadados completos;
+- compor modelos por manifest;
+- remover graft seletivamente;
+- validar rollback;
+- rodar gates de quality/retention/safety;
+- consolidar grafts em novo base mantendo manifest;
+- auditar qual graft alterou uma metrica ou comportamento.
+
+## Fase 21 - Otimizacoes
 
 Status: **pendente**.
 
@@ -4047,9 +4425,9 @@ Reduzir overhead.
 
 ### Criterio de conclusao
 
-O overhead do DRM-SAINT-G deve ficar pequeno o bastante para ser pratico em experimentos reais.
+O overhead do SAINT-G deve ficar pequeno o bastante para ser pratico em experimentos reais.
 
-## Fase 19 - Avaliacao
+## Fase 22 - Avaliacao
 
 Status: **pendente**.
 
@@ -4070,13 +4448,13 @@ Medir qualidade alem da loss.
 
 ### Perguntas
 
-- DRM-SAINT-G aprende algo util?
-- DRM-SAINT-G destroi capacidades antigas?
-- DRM-SAINT-G e mais eficiente que LoRA em algum regime?
-- DRM-SAINT-G escala com modelo maior?
-- DRM-SAINT-G depende demais do dataset?
+- SAINT-G aprende algo util?
+- SAINT-G destroi capacidades antigas?
+- SAINT-G e mais eficiente que LoRA em algum regime?
+- SAINT-G escala com modelo maior?
+- SAINT-G depende demais do dataset?
 
-## Fase 20 - Produto de Pesquisa
+## Fase 23 - Produto de Pesquisa
 
 Status: **pendente**.
 
@@ -4099,14 +4477,14 @@ Transformar o projeto em ferramenta utilizavel.
 ### Comandos Esperados
 
 ```bash
-drm-saint-g estimate --model tiny
-drm-saint-g reconstruct --checkpoint runs/matrix001
-drm-saint-g train --config configs/tiny_transformer.yaml
-DRM-SAINT-G compare --run runs/DRM-SAINT-G001 --baseline runs/lora001
-drm-saint-g merge --run runs/DRM-SAINT-G001 --out merged/
+SAINT-G estimate --model tiny
+SAINT-G reconstruct --checkpoint runs/matrix001
+SAINT-G train --config configs/tiny_transformer.yaml
+SAINT-G compare --run runs/SAINT-G001 --baseline runs/lora001
+SAINT-G merge --run runs/SAINT-G001 --out merged/
 ```
 
-## 21. Ordem Recomendada
+## 24. Ordem Recomendada
 
 Prioridade pratica:
 
@@ -4125,11 +4503,14 @@ Prioridade pratica:
 11. 3B
 12. 14B
 13. full controlado 125M/350M vs grafted
-14. 70B
-15. escalabilidade em clusters de GPU
+14. prova publicavel e controle
+15. DRM-Growth Protocol / DRM-GOS
+16. 70B
+17. continual growth system
+18. escalabilidade em clusters de GPU
 ```
 
-## 21.1 Proxima Acao Imediata
+## 24.1 Proxima Acao Imediata
 
 Criar a base de implementacao da Fase 1:
 
@@ -4177,7 +4558,7 @@ Parar e reavaliar se:
 - codebook nao comprime matrizes melhor que baselines simples;
 - agrupamento de blocos quase nunca reutiliza padroes;
 - roteador escolhe regioes sem ganho real;
-- DRM-SAINT-G perde sempre para LoRA em memoria e qualidade;
+- SAINT-G perde sempre para LoRA em memoria e qualidade;
 - offload torna treino impraticavel;
 - consolidacao nao reduz conflito;
 - mini-transformer nao converge.
@@ -4187,44 +4568,44 @@ Parar e reavaliar se:
 ### Marco A - Prova de Matriz
 
 ```text
-DRM-SAINT-G representa matrizes com codebook multi-escala
+SAINT-G representa matrizes com codebook multi-escala
 e mostra compressao/erro competitivo.
 ```
 
 ### Marco B - Prova de Aprendizado
 
 ```text
-DRM-SAINT-G treina uma camada linear melhor que uma baseline simples
+SAINT-G treina uma camada linear melhor que uma baseline simples
 em pelo menos um regime de memoria.
 ```
 
 ### Marco C - Prova de Acoplamento
 
 ```text
-DRM-SAINT-G treina um mini-transformer com loss global e atualizacao local.
+SAINT-G treina um mini-transformer com loss global e atualizacao local.
 ```
 
 ### Marco D - Prova de Modelo Real
 
 ```text
-DRM-SAINT-G adapta um modelo real pequeno e compara com LoRA.
+SAINT-G adapta um modelo real pequeno e compara com LoRA.
 ```
 
 ### Marco E - Prova de Escala
 
 ```text
-DRM-SAINT-G roda em 3B/14B com memoria controlada.
+SAINT-G roda em 3B/14B com memoria controlada.
 ```
 
 ### Marco F - Prova Extrema
 
 ```text
-DRM-SAINT-G executa treino parcial em 70B com checkpoint recomponivel.
+SAINT-G executa treino parcial em 70B com checkpoint recomponivel.
 ```
 
 ## 21. Definicao de Sucesso
 
-DRM-SAINT-G sera considerado promissor se demonstrar pelo menos uma destas vantagens:
+SAINT-G sera considerado promissor se demonstrar pelo menos uma destas vantagens:
 
 - menor memoria que LoRA em algum regime;
 - menor checkpoint;
@@ -4234,7 +4615,7 @@ DRM-SAINT-G sera considerado promissor se demonstrar pelo menos uma destas vanta
 - recomposicao estavel;
 - codebook reutilizavel entre camadas ou modelos.
 
-DRM-SAINT-G sera considerado fraco se:
+SAINT-G sera considerado fraco se:
 
 - sempre perder para LoRA/QLoRA;
 - exigir overhead alto demais;

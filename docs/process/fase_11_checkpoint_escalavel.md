@@ -7,7 +7,7 @@ treino e payloads maiores.
 
 ## Objetivo
 
-Escalar checkpoints DRM-SAINT-G para runs mais longos:
+Escalar checkpoints SAINT-G para runs mais longos:
 
 ```text
 treinar -> salvar AdamW + shards -> retomar -> continuar treino -> fundir
@@ -15,7 +15,7 @@ treinar -> salvar AdamW + shards -> retomar -> continuar treino -> fundir
 
 ## Implementado
 
-- estado completo de AdamW no caminho `drm_DRM-SAINT-G_autograd_smoke`;
+- estado completo de AdamW no caminho `drm_SAINT-G_autograd_smoke`;
 - restauracao de AdamW com `optimizer.load_state_dict`;
 - retomada real via `metadata.resume_run`;
 - deltas cumulativos apos continuation;
@@ -60,7 +60,7 @@ resume_initial_loss: 4.1385
 second_loss: 4.1327
 optimizer: AdamW
 has_adamw_state: true
-delta_format: DRM-SAINT-G_matrix_shards
+delta_format: SAINT-G_matrix_shards
 dtype: float16
 shards: 6
 shape_validation: true
@@ -73,7 +73,7 @@ Fase 11 concluida em escala smoke.
 ```
 
 O resultado prova que o runtime consegue continuar um treino real do
-`drm_transformer` a partir de deltas e estado AdamW salvos em checkpoint DRM-SAINT-G.
+`drm_transformer` a partir de deltas e estado AdamW salvos em checkpoint SAINT-G.
 
 ## Continuidade
 

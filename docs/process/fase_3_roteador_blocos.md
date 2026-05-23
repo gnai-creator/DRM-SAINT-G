@@ -3,7 +3,7 @@
 Status: **concluida**.
 
 Esta fase implementa o mecanismo que decide, por regiao da matriz, qual
-representacao usar no paradigma DRM-SAINT-G.
+representacao usar no paradigma SAINT-G.
 
 ## Objetivo
 
@@ -92,7 +92,7 @@ para cada regiao:
   respeitar orcamento duro por metodo
 ```
 
-O objetivo dessa politica e aproximar a ideia real do DRM-SAINT-G:
+O objetivo dessa politica e aproximar a ideia real do SAINT-G:
 
 ```text
 regiao pouco importante -> freeze
@@ -307,7 +307,7 @@ Mas falha em reconstruir pesos brutos:
 erro relativo medio: 0.7441
 ```
 
-Esse resultado nao invalida diretamente o DRM-SAINT-G, porque `freeze/zero_delta`
+Esse resultado nao invalida diretamente o SAINT-G, porque `freeze/zero_delta`
 foi pensado para deltas de treino, nao para reconstruir o peso completo. Em
 um benchmark de peso bruto, congelar uma regiao significa trocar peso por zero,
 o que naturalmente gera erro alto. No paradigma final, congelar significa:
@@ -378,7 +378,7 @@ O proximo teste correto e a Fase 4:
 
 ```text
 treinar deltas em uma camada linear
-comparar full delta, LoRA e DRM-SAINT-G
+comparar full delta, LoRA e SAINT-G
 medir loss, parametros treinaveis, memoria e compressao
 ```
 
@@ -387,5 +387,5 @@ medir loss, parametros treinaveis, memoria e compressao
 1. Criar tarefa de camada linear para medir aprendizado, nao apenas reconstrucao.
 2. Usar `freeze` como ausencia de delta sobre peso base, nao como matriz zero de peso bruto.
 3. Medir sensibilidade por gradiente ou impacto na loss.
-4. Comparar DRM-SAINT-G contra LoRA em ganho por parametro treinavel.
+4. Comparar SAINT-G contra LoRA em ganho por parametro treinavel.
 5. Usar o resultado da Fase 3 como baseline inicial do roteador na Fase 4.

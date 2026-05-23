@@ -75,12 +75,12 @@ Do not start with the full grid. The full grid below has:
 With up to 6 stages, that can become expensive. Start with this lighter probe:
 
 ```powershell
-cd E:\dev\ai\DRM-SAINT-G
-$env:PYTHONPATH="E:\dev\ai\DRM-SAINT-G"
+cd E:\dev\ai\SAINT-G
+$env:PYTHONPATH="E:\dev\ai\SAINT-G"
 
 .\.venv\Scripts\python.exe `
   scripts\benchmark_drm_g_phase16_graftblock.py `
-  --output-dir E:\dev\ai\DRM-SAINT-G\runs\phase16_marco4g_light_probe_24graft `
+  --output-dir E:\dev\ai\SAINT-G\runs\phase16_marco4g_light_probe_24graft `
   --checkpoint E:\dev\ai\drm_transformer\checkpoints\multilingual_5m\smoke_819k\final.pt `
   --data-dir E:\dev\ai\drm_transformer\data\multilingual_125m `
   --device cuda `
@@ -122,12 +122,12 @@ many hours.
 Use this only after the light probe shows a promising region:
 
 ```powershell
-cd E:\dev\ai\DRM-SAINT-G
-$env:PYTHONPATH="E:\dev\ai\DRM-SAINT-G"
+cd E:\dev\ai\SAINT-G
+$env:PYTHONPATH="E:\dev\ai\SAINT-G"
 
 .\.venv\Scripts\python.exe `
   scripts\benchmark_drm_g_phase16_graftblock.py `
-  --output-dir E:\dev\ai\DRM-SAINT-G\runs\phase16_marco4g_grid_24graft `
+  --output-dir E:\dev\ai\SAINT-G\runs\phase16_marco4g_grid_24graft `
   --checkpoint E:\dev\ai\drm_transformer\checkpoints\multilingual_5m\smoke_819k\final.pt `
   --data-dir E:\dev\ai\drm_transformer\data\multilingual_125m `
   --device cuda `

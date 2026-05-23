@@ -42,13 +42,13 @@ python scripts/benchmark_huggingface_multiseed_phase13.py \
 
 | metodo | count | mean val loss | best val loss | mean gain/param |
 |---|---:|---:|---:|---:|
-| DRM-SAINT-G | 3 | 6.814889 | 6.814889 | 0.00000200 |
+| SAINT-G | 3 | 6.814889 | 6.814889 | 0.00000200 |
 | LoRA | 3 | 6.808302 | 6.806123 | 0.00000399 |
 
 Pico CUDA observado:
 
 ```text
-DRM-SAINT-G: 2.083841536 GB
+SAINT-G: 2.083841536 GB
 LoRA:  1.016675840 GB
 ```
 
@@ -62,7 +62,7 @@ lora_loaded_perplexity: 905.3200922133876
 Geracao simples:
 
 ```text
-DRM-SAINT-G      -> DRM-SAINT-G-RADIO-SOUTH
+SAINT-G      -> SAINT-G-RADIO-SOUTH
 Checkpoint -> Checkpoint\n\nThe following is a list of
 Training   -> Training.\n\nThe first step is to
 ```
@@ -75,11 +75,11 @@ nao avancar ainda para 3B
 
 Motivos:
 
-- LoRA venceu DRM-SAINT-G em validation loss media;
+- LoRA venceu SAINT-G em validation loss media;
 - LoRA venceu em ganho por parametro;
 - LoRA usou menos pico CUDA neste caminho atual;
-- DRM-SAINT-G ainda carrega mais estado/runtime do que deveria para esse porte;
-- o caminho DRM-SAINT-G precisa reduzir memoria e melhorar selecao de deltas antes do
+- SAINT-G ainda carrega mais estado/runtime do que deveria para esse porte;
+- o caminho SAINT-G precisa reduzir memoria e melhorar selecao de deltas antes do
   experimento 3B.
 
 ### Problema Corrigido
@@ -94,24 +94,24 @@ Correcao:
 delta_payload agora corta o delta para o mesmo shape da base antes de salvar.
 ```
 
-## Marco 2 - Otimizar DRM-SAINT-G em GPT-2 Small
+## Marco 2 - Otimizar SAINT-G em GPT-2 Small
 
 Status: **concluido**.
 
-Este marco reduziu custo do caminho DRM-SAINT-G antes de tentar um modelo 3B.
+Este marco reduziu custo do caminho SAINT-G antes de tentar um modelo 3B.
 
 ### Entregas
 
 - o treino Hugging Face reutiliza o `state_dict` do modelo ja carregado e evita
   uma segunda carga completa via `make_task`;
-- checkpoints do caminho `hf_DRM-SAINT-G_forward_smoke` salvam deltas esparsos no
-  formato `DRM-SAINT-G_sparse_delta`, contendo apenas valores treinaveis;
+- checkpoints do caminho `hf_SAINT-G_forward_smoke` salvam deltas esparsos no
+  formato `SAINT-G_sparse_delta`, contendo apenas valores treinaveis;
 - o merge parcial usa `merge_runtime(..., matrix_names=...)`;
 - o leitor de delta esparso filtra por matriz antes de expandir;
 - a validacao registra memoria por etapa:
   `load_cuda_peak_bytes`, `train_cuda_peak_bytes`, `checkpoint_file_bytes` e
   `merge_cuda_peak_bytes`;
-- foi testada uma curva DRM-SAINT-G contra LoRA rank `2` e `4`.
+- foi testada uma curva SAINT-G contra LoRA rank `2` e `4`.
 
 ### Comando
 
@@ -134,20 +134,20 @@ python scripts/benchmark_huggingface_multiseed_phase13.py \
 
 | metodo | config | count | mean val loss | best val loss | mean gain/param | mean CUDA GB |
 |---|---:|---:|---:|---:|---:|---:|
-| DRM-SAINT-G | budget 16 | 3 | 6.814889 | 6.814889 | 0.00000200 | 2.079 |
-| DRM-SAINT-G | budget 64 | 3 | 6.814830 | 6.814830 | 0.00000328 | 2.076 |
-| DRM-SAINT-G | budget 256 | 3 | 6.814630 | 6.814630 | 0.00000302 | 2.076 |
+| SAINT-G | budget 16 | 3 | 6.814889 | 6.814889 | 0.00000200 | 2.079 |
+| SAINT-G | budget 64 | 3 | 6.814830 | 6.814830 | 0.00000328 | 2.076 |
+| SAINT-G | budget 256 | 3 | 6.814630 | 6.814630 | 0.00000302 | 2.076 |
 | LoRA | rank 2 | 3 | 6.808302 | 6.806123 | 0.00000399 | 1.017 |
 | LoRA | rank 4 | 3 | 6.799007 | 6.794116 | 0.00000418 | 1.017 |
 
 Agregado:
 
 ```text
-DRM-SAINT-G: mean val loss 6.814783, best 6.814630, mean gain/param 0.00000276
+SAINT-G: mean val loss 6.814783, best 6.814630, mean gain/param 0.00000276
 LoRA:  mean val loss 6.803654, best 6.794116, mean gain/param 0.00000408
 ```
 
-Memoria por etapa em um run DRM-SAINT-G:
+Memoria por etapa em um run SAINT-G:
 
 ```text
 load_cuda_peak_bytes: 508782592
@@ -162,16 +162,16 @@ merge_cuda_peak_bytes: 18087936
 nao avancar ainda para 3B
 ```
 
-O caminho ficou mais eficiente e os checkpoints agora sao esparsos, mas DRM-SAINT-G
+O caminho ficou mais eficiente e os checkpoints agora sao esparsos, mas SAINT-G
 ainda perde para LoRA em GPT-2 small em loss, ganho por parametro e pico CUDA.
 
 ### Plano do Marco 3
 
-Marco 3 deve melhorar a competitividade DRM-SAINT-G em GPT-2 small:
+Marco 3 deve melhorar a competitividade SAINT-G em GPT-2 small:
 
 - selecionar deltas por gradiente real, nao por magnitude inicial;
 - testar mais matrizes alvo por camada;
-- aumentar steps e validar se DRM-SAINT-G ganha com treino mais longo;
+- aumentar steps e validar se SAINT-G ganha com treino mais longo;
 - comparar budgets maiores sem aumentar payload denso;
 - reduzir overhead CUDA do forward funcional;
 - manter LoRA rank `2` e `4` como controle minimo.
@@ -180,19 +180,19 @@ Marco 3 deve melhorar a competitividade DRM-SAINT-G em GPT-2 small:
 
 Status: **concluido**.
 
-Este marco trocou a selecao DRM-SAINT-G de deltas por magnitude inicial para gradiente
+Este marco trocou a selecao SAINT-G de deltas por magnitude inicial para gradiente
 real da loss. O caminho agora calcula um mapa de sensibilidade por autograd,
 seleciona os maiores gradientes dentro do budget e treina apenas esses valores
 como parametros reais do otimizador.
 
 ### Mudancas Tecnicas
 
-- `hf_DRM-SAINT-G_forward_smoke` aceita `routing_method=gradient`;
+- `hf_SAINT-G_forward_smoke` aceita `routing_method=gradient`;
 - o delta treinavel deixou de ser uma matriz densa mascarada;
 - AdamW otimiza apenas os valores selecionados;
 - o payload continua esparso;
 - o benchmark aceita `--saint-target-matrices`;
-- o experimento usou 4 matrizes alvo DRM-SAINT-G.
+- o experimento usou 4 matrizes alvo SAINT-G.
 
 ### Comando
 
@@ -217,20 +217,20 @@ python scripts/benchmark_huggingface_multiseed_phase13.py \
 
 | metodo | config | count | mean val loss | best val loss | mean gain/param | mean CUDA GB |
 |---|---:|---:|---:|---:|---:|---:|
-| DRM-SAINT-G | budget 256 | 3 | 6.833445 | 6.833445 | 0.00068272 | 2.263 |
-| DRM-SAINT-G | budget 1024 | 3 | 6.791341 | 6.791341 | 0.00022535 | 2.262 |
-| DRM-SAINT-G | budget 4096 | 3 | 6.704383 | 6.704383 | 0.00008584 | 2.262 |
+| SAINT-G | budget 256 | 3 | 6.833445 | 6.833445 | 0.00068272 | 2.263 |
+| SAINT-G | budget 1024 | 3 | 6.791341 | 6.791341 | 0.00022535 | 2.262 |
+| SAINT-G | budget 4096 | 3 | 6.704383 | 6.704383 | 0.00008584 | 2.262 |
 | LoRA | rank 2 | 3 | 6.771237 | 6.755111 | 0.00003135 | 1.018 |
 | LoRA | rank 4 | 3 | 6.741114 | 6.727021 | 0.00001918 | 1.018 |
 
 Agregado:
 
 ```text
-DRM-SAINT-G: mean val loss 6.776390, best 6.704383, mean gain/param 0.00033130
+SAINT-G: mean val loss 6.776390, best 6.704383, mean gain/param 0.00033130
 LoRA:  mean val loss 6.756175, best 6.727021, mean gain/param 0.00002527
 ```
 
-Memoria por etapa em um run DRM-SAINT-G:
+Memoria por etapa em um run SAINT-G:
 
 ```text
 load_cuda_peak_bytes: 508782592
@@ -242,11 +242,11 @@ merge_cuda_peak_bytes: 18087936
 ### Veredito
 
 ```text
-DRM-SAINT-G ficou competitivo em qualidade, mas ainda nao em memoria.
+SAINT-G ficou competitivo em qualidade, mas ainda nao em memoria.
 ```
 
-O melhor DRM-SAINT-G (`budget=4096`) venceu o melhor LoRA em validation loss e o ganho
-medio por parametro foi maior. A ressalva e que o pico CUDA do caminho DRM-SAINT-G
+O melhor SAINT-G (`budget=4096`) venceu o melhor LoRA em validation loss e o ganho
+medio por parametro foi maior. A ressalva e que o pico CUDA do caminho SAINT-G
 continua aproximadamente 2.2x maior que LoRA.
 
 ### Teste com Learning Rate 0.005
@@ -256,7 +256,7 @@ O mesmo grid foi repetido com `--saint-lrs 0.005` e `--lora-lrs 0.005`.
 Resultado:
 
 ```text
-DRM-SAINT-G: mean val loss 6.562497, best 6.140045, mean gain/param 0.00049000
+SAINT-G: mean val loss 6.562497, best 6.140045, mean gain/param 0.00049000
 LoRA:  mean val loss 6.664005, best 6.563403, mean gain/param 0.00004904
 ```
 
@@ -264,9 +264,9 @@ Curva:
 
 | metodo | config | count | mean val loss | best val loss | mean gain/param | mean CUDA GB |
 |---|---:|---:|---:|---:|---:|---:|
-| DRM-SAINT-G | budget 256 | 3 | 6.743636 | 6.743636 | 0.00085865 | 2.263 |
-| DRM-SAINT-G | budget 1024 | 3 | 6.803809 | 6.803809 | 0.00024298 | 2.262 |
-| DRM-SAINT-G | budget 4096 | 3 | 6.140045 | 6.140045 | 0.00036838 | 2.262 |
+| SAINT-G | budget 256 | 3 | 6.743636 | 6.743636 | 0.00085865 | 2.263 |
+| SAINT-G | budget 1024 | 3 | 6.803809 | 6.803809 | 0.00024298 | 2.262 |
+| SAINT-G | budget 4096 | 3 | 6.140045 | 6.140045 | 0.00036838 | 2.262 |
 | LoRA | rank 2 | 3 | 6.642759 | 6.563403 | 0.00007042 | 1.018 |
 | LoRA | rank 4 | 3 | 6.685251 | 6.633552 | 0.00002766 | 1.018 |
 
@@ -296,7 +296,7 @@ Status: **concluido com ressalvas**.
 
 - `functional_call` agora recebe apenas parametros alterados, em vez de um
   dicionario completo de parametros;
-- o payload base do checkpoint DRM-SAINT-G guarda apenas matrizes alvo por padrao;
+- o payload base do checkpoint SAINT-G guarda apenas matrizes alvo por padrao;
 - benchmarks de validacao chamam `merge_runtime(..., write_artifact=False)`;
 - `merge_runtime` ganhou opcao `write_artifact`;
 - as metricas separam `routing_cuda_peak_bytes` e `train_cuda_peak_bytes`.
@@ -306,11 +306,11 @@ Status: **concluido com ressalvas**.
 Com o mesmo grid `lr=0.005`, a qualidade permaneceu igual:
 
 ```text
-DRM-SAINT-G: mean val loss 6.562497, best 6.140045, mean gain/param 0.00049000
+SAINT-G: mean val loss 6.562497, best 6.140045, mean gain/param 0.00049000
 LoRA:  mean val loss 6.664005, best 6.563403, mean gain/param 0.00004904
 ```
 
-Memoria por etapa em um run DRM-SAINT-G:
+Memoria por etapa em um run SAINT-G:
 
 ```text
 load_cuda_peak_bytes: 508782592
@@ -330,7 +330,7 @@ pico total ainda e dominado pelo roteamento por gradiente: ~2.26 GB
 
 ### Veredito
 
-DRM-SAINT-G esta competitivo em qualidade no GPT-2 small, mas o roteamento por
+SAINT-G esta competitivo em qualidade no GPT-2 small, mas o roteamento por
 gradiente precisa ficar mais barato antes de um salto confiante para 3B.
 
 ## Proximo Marco
@@ -360,7 +360,7 @@ Status: **concluido com ressalvas**.
 
 ### Comparacao
 
-| roteamento | DRM-SAINT-G mean val loss | DRM-SAINT-G best val loss | routing CUDA GB | train CUDA GB | decisao |
+| roteamento | SAINT-G mean val loss | SAINT-G best val loss | routing CUDA GB | train CUDA GB | decisao |
 |---|---:|---:|---:|---:|---|
 | gradient completo | 6.562497 | 6.140045 | 2.264 | 0.638 | passa com ressalva |
 | gradient sequencial | 6.140045 | 6.140045 | 2.247 | 0.637 | passa com ressalva |
@@ -450,7 +450,7 @@ python scripts/benchmark_huggingface_multiseed_phase13.py \
 
 ### Comparacao
 
-| roteamento | DRM-SAINT-G mean val loss | DRM-SAINT-G best val loss | routing CUDA GB | train CUDA GB | decisao |
+| roteamento | SAINT-G mean val loss | SAINT-G best val loss | routing CUDA GB | train CUDA GB | decisao |
 |---|---:|---:|---:|---:|---|
 | gradient sequencial completo | 6.140045 | 6.140045 | 2.259 | 0.637 | passa com ressalva |
 | gradient sequencial subset | 6.441031 | 6.441031 | 0.540 | 0.637 | passa com ressalva |
@@ -476,7 +476,7 @@ Motivo:
 - reduziu roteamento de ~2.26 GB para ~0.52 GB;
 - venceu LoRA em media de validation loss neste grid;
 - `gradient_sequential` com subset tambem venceu LoRA e ficou barato;
-- o pico total DRM-SAINT-G ainda fica acima de LoRA, mas a RTX 4090 tem margem para
+- o pico total SAINT-G ainda fica acima de LoRA, mas a RTX 4090 tem margem para
   uma ponte 3B controlada se o modelo base for carregado de forma conservadora.
 
 ### Condicoes Para Ponte 3B
@@ -512,11 +512,11 @@ Motivo:
 
 - benchmarks HF aceitam `--model-dtype` e `--max-cuda-gb`;
 - `from_pretrained` usa dtype economico quando configurado;
-- caminho DRM-SAINT-G aborta se `load`, `routing` ou `train` excederem budget CUDA;
+- caminho SAINT-G aborta se `load`, `routing` ou `train` excederem budget CUDA;
 - CLI aceita `--skip-lora` e `--skip-generation` para smoke controlado;
 - alvos default agora cobrem familias GPT e Qwen:
   `q_proj`, `v_proj`, `o_proj`, `gate_proj`, `up_proj`, `down_proj`;
-- deltas DRM-SAINT-G usam o mesmo dtype do peso alvo;
+- deltas SAINT-G usam o mesmo dtype do peso alvo;
 - roteamento pode limitar scores ao recorte salvo no checkpoint, evitando delta
   treinado fora do payload;
 - LoRA bf16 faz merge do delta no dtype do peso base.
@@ -534,7 +534,7 @@ loss: 8.064380
 
 O smoke passou dentro do budget.
 
-### DRM-SAINT-G Activation
+### SAINT-G Activation
 
 Configuracao:
 
@@ -554,7 +554,7 @@ Resultado:
 | metrica | valor |
 |---|---:|
 | base validation loss | 7.690704 |
-| DRM-SAINT-G validation loss | 7.688824 |
+| SAINT-G validation loss | 7.688824 |
 | merged validation loss | 7.688824 |
 | parametros treinaveis | 4096 |
 | delta sparse values | 4096 |
@@ -582,7 +582,7 @@ model_dtype: bfloat16
 
 | metodo | val loss | params | gain/param | CUDA peak GB |
 |---|---:|---:|---:|---:|
-| DRM-SAINT-G activation | 7.688824 | 4096 | 0.00000613 | 11.869 |
+| SAINT-G activation | 7.688824 | 4096 | 0.00000613 | 11.869 |
 | LoRA rank 1 | 7.664804 | 6400 | 0.00000684 | 7.630 |
 
 LoRA rank 1 coube e venceu neste microteste.
@@ -597,24 +597,24 @@ O projeto agora consegue:
 
 - carregar um modelo 3B local em CUDA;
 - rodar smoke sem treino;
-- treinar DRM-SAINT-G activation com micro-batch 1;
+- treinar SAINT-G activation com micro-batch 1;
 - salvar delta esparso real;
 - validar resume/merge;
 - comparar contra LoRA pequeno.
 
-Mas DRM-SAINT-G ainda nao esta competitivo contra LoRA rank 1 em qualidade e pico CUDA
+Mas SAINT-G ainda nao esta competitivo contra LoRA rank 1 em qualidade e pico CUDA
 neste regime. A proxima etapa deve reduzir overhead de memoria e melhorar o
 ganho por parametro antes de declarar a Fase 14 concluida.
 
-## Marco 8 - Otimizacao DRM-SAINT-G 3B contra LoRA
+## Marco 8 - Otimizacao SAINT-G 3B contra LoRA
 
 Status: **concluido com ressalva**.
 
 ### Mudancas
 
-- o caminho `hf_DRM-SAINT-G_forward_smoke` deixou de materializar recortes densos via
+- o caminho `hf_SAINT-G_forward_smoke` deixou de materializar recortes densos via
   `matrices_from_state` durante o treino real;
-- o payload `DRM-SAINT-G_sparse_delta` agora salva shapes completos e coordenadas
+- o payload `SAINT-G_sparse_delta` agora salva shapes completos e coordenadas
   reais dos tensores alvo;
 - checkpoints esparsos podem ser validados sem expandir para matriz densa;
 - benchmarks HF leem e aplicam deltas esparsos diretamente por coordenada;
@@ -630,7 +630,7 @@ Configuracao:
 model: Qwen/Qwen2.5-3B
 dtype: bfloat16
 seeds: 31, 32
-budgets DRM-SAINT-G: 8192, 16384
+budgets SAINT-G: 8192, 16384
 LoRA ranks: 1, 2
 steps: 1
 batch_size: 1
@@ -644,19 +644,19 @@ Agregado:
 
 | metodo | count | mean val loss | best val loss | mean gain/param |
 |---|---:|---:|---:|---:|
-| DRM-SAINT-G activation | 4 | 7.657179 | 7.656769 | 0.00000225 |
+| SAINT-G activation | 4 | 7.657179 | 7.656769 | 0.00000225 |
 | LoRA rank 1/2 | 4 | 7.671440 | 7.661643 | 0.00000430 |
 
 Por linha:
 
 | metodo | seed | budget/rank | val loss | params | peak CUDA GB | merge CUDA GB |
 |---|---:|---:|---:|---:|---:|---:|
-| DRM-SAINT-G activation | 31 | 8192 | 7.657590 | 8192 | 11.827 | 8.094 |
-| DRM-SAINT-G activation | 31 | 16384 | 7.656769 | 16384 | 11.827 | 8.094 |
+| SAINT-G activation | 31 | 8192 | 7.657590 | 8192 | 11.827 | 8.094 |
+| SAINT-G activation | 31 | 16384 | 7.656769 | 16384 | 11.827 | 8.094 |
 | LoRA | 31 | rank 1 | 7.664804 | 6400 | 7.630 | n/a |
 | LoRA | 31 | rank 2 | 7.661643 | 12800 | 7.630 | n/a |
-| DRM-SAINT-G activation | 32 | 8192 | 7.657590 | 8192 | 11.827 | 8.094 |
-| DRM-SAINT-G activation | 32 | 16384 | 7.656769 | 16384 | 11.827 | 8.094 |
+| SAINT-G activation | 32 | 8192 | 7.657590 | 8192 | 11.827 | 8.094 |
+| SAINT-G activation | 32 | 16384 | 7.656769 | 16384 | 11.827 | 8.094 |
 | LoRA | 32 | rank 1 | 7.678699 | 6400 | 7.630 | n/a |
 | LoRA | 32 | rank 2 | 7.680615 | 12800 | 7.630 | n/a |
 
@@ -682,7 +682,7 @@ Resultado:
 | gradient_sequential | 16384 | 7.448014 | 16384 | 5.870 | 5.956 | 5.970 | 8.084 |
 
 O `gradient_sequential` subset melhorou qualidade sem estourar o limite de
-22 GB. Ele venceu tanto o melhor DRM-SAINT-G activation quanto o melhor LoRA rank 2
+22 GB. Ele venceu tanto o melhor SAINT-G activation quanto o melhor LoRA rank 2
 neste smoke.
 
 ### Veredito
@@ -693,10 +693,10 @@ Fase 14 Marco 8 passou, mas Fase 14 ainda nao fecha.
 
 Motivo:
 
-- DRM-SAINT-G voltou a vencer LoRA em validation loss no grid activation;
+- SAINT-G voltou a vencer LoRA em validation loss no grid activation;
 - `gradient_sequential` subset deu o melhor resultado do marco;
 - o delta esparso agora nao depende mais de recorte denso para ser salvo/aplicado;
-- o pico do forward funcional DRM-SAINT-G ainda fica maior que LoRA;
+- o pico do forward funcional SAINT-G ainda fica maior que LoRA;
 - o merge/eval ainda carrega o modelo para avaliar o delta aplicado, gerando pico
   CUDA relevante.
 
@@ -740,7 +740,7 @@ Resultado:
 
 Conclusao:
 
-- o modo `inplace` reduziu o pico total do caminho DRM-SAINT-G;
+- o modo `inplace` reduziu o pico total do caminho SAINT-G;
 - a qualidade caiu muito porque o update virou um SGD esparso manual;
 - o modo `functional` continua sendo o baseline de qualidade para 3B;
 - o modo `inplace` fica como caminho experimental para uma futura versao com
@@ -770,7 +770,7 @@ Agregado:
 
 | metodo | count | mean val loss | best val loss | mean gain/param |
 |---|---:|---:|---:|---:|
-| DRM-SAINT-G gradient_sequential functional | 3 | 7.448014 | 7.448014 | 0.00003785 |
+| SAINT-G gradient_sequential functional | 3 | 7.448014 | 7.448014 | 0.00003785 |
 
 ### Decisao da Fase 14
 
@@ -778,7 +778,7 @@ Agregado:
 Fase 14 conclui com ressalva.
 ```
 
-DRM-SAINT-G 3B cumpriu o criterio minimo:
+SAINT-G 3B cumpriu o criterio minimo:
 
 - carrega modelo 3B local em CUDA;
 - treina delta esparso com micro-batch 1;
@@ -799,7 +799,7 @@ Ressalva:
 
 Fase 15 deve iniciar escala 14B com cautela:
 
-- manter `gradient_sequential` subset funcional como baseline DRM-SAINT-G 3B;
+- manter `gradient_sequential` subset funcional como baseline SAINT-G 3B;
 - investigar otimizador esparso para o caminho `inplace`;
 - adicionar offload/CPU para load e merge/eval;
 - evitar materializacao densa no forward;

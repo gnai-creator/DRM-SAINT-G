@@ -57,7 +57,7 @@ Resultado:
 Fase 12C concluida.
 ```
 
-DRM-SAINT-G agora mede custo de I/O por dtype e tem dados objetivos para escolher o
+SAINT-G agora mede custo de I/O por dtype e tem dados objetivos para escolher o
 formato de checkpoint conforme tamanho, velocidade e erro numerico.
 
 ## Proximas Subfases

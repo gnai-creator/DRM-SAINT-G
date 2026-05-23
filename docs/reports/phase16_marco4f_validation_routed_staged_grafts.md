@@ -261,8 +261,8 @@ fixed-target routing.
 ## Recommended Command
 
 ```powershell
-cd E:\dev\ai\DRM-SAINT-G
-$env:PYTHONPATH="E:\dev\ai\DRM-SAINT-G"
+cd E:\dev\ai\SAINT-G
+$env:PYTHONPATH="E:\dev\ai\SAINT-G"
 
 .\.venv\Scripts\python.exe `
   scripts\benchmark_drm_g_phase16_graftblock.py `

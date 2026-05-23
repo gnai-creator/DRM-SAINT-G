@@ -1,8 +1,8 @@
-# Licenca Comercial - DRM-SAINT-G
+# Licenca Comercial - SAINT-G
 
 ## Visao Geral
 
-O DRM-SAINT-G e disponibilizado sob licenca dual:
+O SAINT-G e disponibilizado sob licenca dual:
 
 1. **AGPL-3.0** (gratuita) - para uso open-source compativel com AGPL
 2. **Licenca Comercial** (paga) - para uso sem obrigacoes AGPL
@@ -11,7 +11,7 @@ O DRM-SAINT-G e disponibilizado sob licenca dual:
 
 Voce precisa de uma licenca comercial se:
 
-- Deseja integrar o DRM-SAINT-G em software proprietario (closed-source)
+- Deseja integrar o SAINT-G em software proprietario (closed-source)
 - Deseja oferecer o software como servico (SaaS) sem liberar o codigo-fonte
 - Deseja distribuir versoes modificadas sem cumprir as obrigacoes da AGPL
 - Deseja usar o software em produtos comerciais sem atribuicao AGPL
@@ -45,7 +45,7 @@ Voce precisa de uma licenca comercial se:
 Para obter uma licenca comercial ou tirar duvidas:
 
 - **E-mail:** felipe@truthagi.ai
-- **Assunto:** Licenca Comercial - DRM-SAINT-G
+- **Assunto:** Licenca Comercial - SAINT-G
 
 ## Perguntas Frequentes
 

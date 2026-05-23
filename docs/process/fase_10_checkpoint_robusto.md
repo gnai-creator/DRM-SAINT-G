@@ -2,7 +2,7 @@
 
 Status: **concluida**.
 
-Esta fase transforma checkpoints DRM-SAINT-G em artefatos compactos, versionados e
+Esta fase transforma checkpoints SAINT-G em artefatos compactos, versionados e
 verificaveis.
 
 ## Objetivo
@@ -21,8 +21,8 @@ O runtime grava:
 runs/<exp>/
   checkpoint.json
   metrics.json
-  deltas.DRM-SAINT-Gbin
-  optimizer.DRM-SAINT-Gopt
+  deltas.SAINT-Gbin
+  optimizer.SAINT-Gopt
   logs.jsonl
 ```
 
@@ -31,13 +31,13 @@ runs/<exp>/
 `checkpoint.json` e um manifesto leve:
 
 ```text
-format: DRM-SAINT-G_checkpoint
+format: SAINT-G_checkpoint
 format_version: 1
 files:
-  - path: deltas.DRM-SAINT-Gbin
+  - path: deltas.SAINT-Gbin
     payload: delta
     sha256: ...
-  - path: optimizer.DRM-SAINT-Gopt
+  - path: optimizer.SAINT-Gopt
     payload: optimizer_state
     sha256: ...
 ```
@@ -47,10 +47,10 @@ mantendo leitura automatica de manifestos v1.
 
 ## Payload de Deltas
 
-`deltas.DRM-SAINT-Gbin` usa:
+`deltas.SAINT-Gbin` usa:
 
 ```text
-magic: DRM-SAINT-GMAT1
+magic: SAINT-GMAT1
 header: JSON com shapes, offsets e dtype
 payload: float32 little-endian
 ```
@@ -60,10 +60,10 @@ modelo no `merge`.
 
 ## Estado do Otimizador
 
-`optimizer.DRM-SAINT-Gopt` usa:
+`optimizer.SAINT-Gopt` usa:
 
 ```text
-magic: DRM-SAINT-GOPT1
+magic: SAINT-GOPT1
 header: JSON
 payload: zlib(JSON)
 ```
@@ -78,16 +78,16 @@ runtime salva pelo menos o resumo versionado de `optimizer_state_values`.
 
 - verifica `format_version`;
 - verifica SHA-256 de cada arquivo;
-- carrega `deltas.DRM-SAINT-Gbin` quando `has_delta_payload=true`;
-- carrega `optimizer.DRM-SAINT-Gopt`;
+- carrega `deltas.SAINT-Gbin` quando `has_delta_payload=true`;
+- carrega `optimizer.SAINT-Gopt`;
 - rejeita payload corrompido antes de retomar ou fundir.
 
 ## Implementado
 
 - `saint/checkpoints/robust.py`;
 - manifesto robusto em `checkpoint.json`;
-- deltas binarios em `deltas.DRM-SAINT-Gbin`;
-- estado de otimizador em `optimizer.DRM-SAINT-Gopt`;
+- deltas binarios em `deltas.SAINT-Gbin`;
+- estado de otimizador em `optimizer.SAINT-Gopt`;
 - `metrics.json` sem payload pesado;
 - validacao de integridade no `resume`;
 - validacao de integridade no `merge`;

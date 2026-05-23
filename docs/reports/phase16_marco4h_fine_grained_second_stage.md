@@ -61,12 +61,12 @@ sizing, checkpoint composition, and target maps work.
 ## Recommended Command
 
 ```powershell
-cd E:\dev\ai\DRM-SAINT-G
-$env:PYTHONPATH="E:\dev\ai\DRM-SAINT-G"
+cd E:\dev\ai\SAINT-G
+$env:PYTHONPATH="E:\dev\ai\SAINT-G"
 
 .\.venv\Scripts\python.exe `
   scripts\benchmark_drm_g_phase16_graftblock.py `
-  --output-dir E:\dev\ai\DRM-SAINT-G\runs\phase16_marco4h_fine_g2_24graft `
+  --output-dir E:\dev\ai\SAINT-G\runs\phase16_marco4h_fine_g2_24graft `
   --checkpoint E:\dev\ai\drm_transformer\checkpoints\multilingual_5m\smoke_819k\final.pt `
   --data-dir E:\dev\ai\drm_transformer\data\multilingual_125m `
   --device cuda `

@@ -1,4 +1,4 @@
-# Fase DRM-G - DRM-SAINT-G
+# Fase DRM-G - SAINT-G
 
 Status: **em andamento**.
 
@@ -8,16 +8,16 @@ Testar crescimento progressivo do `drm_transformer` por enxertos treinaveis.
 
 A ideia central e evitar tentar nascer com um DRM grande demais para o hardware
 disponivel. Em vez disso, o modelo cresce por ciclos pequenos, preservando um
-nucleo congelado e treinando apenas enxertos compactos com DRM-SAINT-G-Phi.
+nucleo congelado e treinando apenas enxertos compactos com SAINT-G-Phi.
 
 ## Hipotese
 
-DRM-SAINT-G deve permitir:
+SAINT-G deve permitir:
 
 ```text
 DRM pequeno estavel
   -> modulo novo anexado
-  -> treino local por DRM-SAINT-G-Phi
+  -> treino local por SAINT-G-Phi
   -> validacao global
   -> consolidacao progressiva
 ```
@@ -29,7 +29,7 @@ pequenos sem exigir pre-training full de um modelo gigante.
 
 O enxerto nao e apenas LoRA em uma matriz existente.
 
-Ele e um modulo novo ou uma extensao estrutural do DRM. DRM-SAINT-G-Phi treina a ponte
+Ele e um modulo novo ou uma extensao estrutural do DRM. SAINT-G-Phi treina a ponte
 entre o nucleo antigo e a capacidade nova:
 
 ```text
@@ -48,7 +48,7 @@ onde:
 - registro de modulos enxertaveis do DRM;
 - congelamento explicito do nucleo antigo;
 - criacao de enxertos pequenos em camadas selecionadas;
-- treino do enxerto com DRM-SAINT-G-Phi;
+- treino do enxerto com SAINT-G-Phi;
 - checkpoint separado por enxerto;
 - validacao antes/depois no mesmo corpus;
 - criterio para consolidar ou descartar enxertos;
@@ -93,7 +93,7 @@ Resultado do smoke:
 
 Leitura:
 
-DRM-SAINT-G ja executa um ciclo minimo de enxerto sobre a arquitetura 3.5M real:
+SAINT-G ja executa um ciclo minimo de enxerto sobre a arquitetura 3.5M real:
 carrega config canonica, congela o nucleo, treina apenas `Phi` e salva
 checkpoint do runtime.
 
@@ -156,7 +156,7 @@ Leitura:
 O Marco 2 melhora o Marco 1 em realismo: o enxerto nao depende mais apenas de
 projecoes aleatorias e a validacao ja usa outro batch. A melhor configuracao do
 smoke foi `blocks.1` com inicializacao por gradiente. Nesse ponto,
-DRM-SAINT-G melhorou a validacao enquanto a baseline densa de mesmo budget
+SAINT-G melhorou a validacao enquanto a baseline densa de mesmo budget
 piorou.
 
 Varredura curta:
@@ -532,7 +532,7 @@ Entregas:
 
 Criterio:
 
-Passa se DRM-SAINT-G vencer pelo menos um eixo relevante:
+Passa se SAINT-G vencer pelo menos um eixo relevante:
 
 - maior ganho por parametro;
 - menor checkpoint;
@@ -557,10 +557,10 @@ baseline_runs: 12
 phase_5c_passed: false
 ```
 
-Melhor DRM-SAINT-G por ganho/parametro:
+Melhor SAINT-G por ganho/parametro:
 
 ```text
-method: drm_saint_g_64
+method: SAINT_G_64
 seed: 33
 validation_gain: 0.000075
 gain_per_parameter: 1.166016e-06
@@ -569,10 +569,10 @@ checkpoint_bytes: 39456
 train_s: 0.194
 ```
 
-Melhor DRM-SAINT-G com 4096 parametros:
+Melhor SAINT-G com 4096 parametros:
 
 ```text
-method: drm_saint_g_4096
+method: SAINT_G_4096
 seed: 33
 validation_gain: 0.000400
 gain_per_parameter: 9.770156e-08
@@ -605,13 +605,13 @@ best gain_per_parameter: -1.301611e-06
 
 Veredito:
 
-5C agora compara tambem `DRM-SAINT-G` com 4096 parametros contra baselines de
+5C agora compara tambem `SAINT-G` com 4096 parametros contra baselines de
 4096 parametros. O resultado continuou reprovando o criterio de qualidade:
-`drm_saint_g_4096` melhorou mais que `full_budget_linear_4096`, mas perdeu por
+`SAINT_G_4096` melhorou mais que `full_budget_linear_4096`, mas perdeu por
 margem grande para `full_module_linear`. Portanto o problema nao e apenas
 orcamento; o caminho full-module direto otimiza melhor esse modulo no regime
 testado. O proximo passo precisa melhorar a parametrizacao/otimizacao do enxerto
-ou aceitar que DRM-SAINT-G, nesse marco, e uma tecnica de compressao extrema e
+ou aceitar que SAINT-G, nesse marco, e uma tecnica de compressao extrema e
 nao uma substituta direta de full-module no mesmo orcamento.
 
 Teste de hipoteses A Phi B:
@@ -675,7 +675,7 @@ Status formal do 5C:
 
 5C fica fechado como **implementado e parcialmente suportado**. Nao ha vitoria
 absoluta contra `full_module_linear`, porque o melhor caso individual ainda foi
-do full-module. Ao mesmo tempo, DRM-SAINT-G venceu ou empatou eixos relevantes:
+do full-module. Ao mesmo tempo, SAINT-G venceu ou empatou eixos relevantes:
 media multiseed, estabilidade de ganhos positivos e vantagem contra
 `full_budget_linear_4096`. A conclusao correta e que `A Phi B` continua viavel,
 mas precisa de criterio multi-eixo e nao apenas "melhor caso absoluto".
@@ -820,7 +820,7 @@ Veredito:
 5E passou. O avaliador automatico reproduz o veredito manual: Marco 5 nao e
 uma vitoria absoluta, porque `best_case_win=false`, mas passa como evidencia
 parcial/suportiva por artefato reproduzivel, retencao, media multiseed,
-estabilidade, checkpoint, memoria e compressao. Isto formaliza que DRM-SAINT-G
+estabilidade, checkpoint, memoria e compressao. Isto formaliza que SAINT-G
 deve avancar com ressalva cientifica, nao com alegacao de dominancia total.
 
 #### Marco 5F - Relatorio Final DRM-G
@@ -864,7 +864,7 @@ Resposta curta:
 - Foco da proxima fase? Infraestrutura e escala controlada primeiro; qualidade
   continua medida, mas sem alegacao de dominancia absoluta.
 
-O Marco 5F fecha a fase dizendo que DRM-SAINT-G/Phi e competitivo em media
+O Marco 5F fecha a fase dizendo que SAINT-G/Phi e competitivo em media
 multiseed e estabilidade, mas ainda perde o melhor caso absoluto para
 `full_module_linear`. A Fase 16 deve preservar essa honestidade cientifica com
 um baseline full controlado antes de qualquer salto para 70B.
@@ -901,13 +901,13 @@ Antes da escala 70B, o projeto deve comparar:
 DRM full 125M
 DRM full 350M, se couber na RTX 4090
 vs
-DRM 5M + DRM-SAINT-G grafted ate capacidade/budget semelhante
+DRM 5M + SAINT-G grafted ate capacidade/budget semelhante
 ```
 
 Esses tamanhos devem vir dos YAMLs ja existentes do `drm_transformer`, usando
 datasets separados `data/multilingual_125m` e `data/multilingual_350m`.
 
-Se DRM-SAINT-G funcionar nessa ponte, a Fase 17 de 70B nao deve ser tratada
+Se SAINT-G funcionar nessa ponte, a Fase 19 de 70B nao deve ser tratada
 apenas como adaptacao de pesos existentes. Ela deve ser tratada como crescimento
 controlado por enxertos, com o nucleo congelado e capacidade nova adicionada em
 partes.

@@ -1,6 +1,6 @@
-# Contributing to DRM-SAINT-G
+# Contributing to SAINT-G
 
-DRM-SAINT-G means DRM por Enxerto com DRM-SAINT-G-Phi. The current technical definition is:
+SAINT-G means DRM por Enxerto com SAINT-G-Phi. The current technical definition is:
 
 ```text
 sparse multi-scale block-codebook delta training
@@ -14,7 +14,7 @@ treino de deltas esparsos por dicionario multi-escala de blocos
 
 ## Project Stage
 
-DRM-SAINT-G is experimental. Contributions should preserve the research discipline of
+SAINT-G is experimental. Contributions should preserve the research discipline of
 the project: clear hypotheses, controlled baselines, reproducible benchmarks,
 and honest success/failure criteria.
 
@@ -24,7 +24,7 @@ and honest success/failure criteria.
 - Keep changes scoped to the phase or experiment being modified.
 - Prefer dependency-free implementations unless a phase explicitly introduces a
   dependency such as PyTorch.
-- Do not remove baselines just because DRM-SAINT-G loses against them.
+- Do not remove baselines just because SAINT-G loses against them.
 - Record benchmark results in docs when they change the project verdict.
 - Keep generated artifacts out of git unless they are intentionally small and
   useful as fixtures.
@@ -50,7 +50,7 @@ relevant files under `docs/`.
 
 Important documents:
 
-- `docs/paradigma_DRM-SAINT-G.md`
+- `docs/paradigma_SAINT-G.md`
 - `docs/arquitetura.md`
 - `docs/roadmap.md`
 - `docs/process/`

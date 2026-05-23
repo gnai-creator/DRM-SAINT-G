@@ -13,7 +13,7 @@ treino -> checkpoint dtype -> merge -> avaliacao de loss
 ## Implementado
 
 - benchmark `benchmark_dtype_quality`;
-- treino mini-transformer com `mini_DRM-SAINT-G_dynamic_delta`;
+- treino mini-transformer com `mini_SAINT-G_dynamic_delta`;
 - checkpoint por dtype;
 - merge por dtype;
 - avaliacao de `distillation_loss` nos pesos reconstruidos;
@@ -26,7 +26,7 @@ Configuracao:
 
 ```text
 task: mini_transformer
-method: mini_DRM-SAINT-G_dynamic_delta
+method: mini_SAINT-G_dynamic_delta
 baseline_dtype: float32
 dtypes: float32, float16, bfloat16, int8
 ```
@@ -55,7 +55,7 @@ Resultado:
 Fase 12E concluida.
 ```
 
-DRM-SAINT-G agora tem validacao inicial de qualidade numerica por dtype em uma tarefa
+SAINT-G agora tem validacao inicial de qualidade numerica por dtype em uma tarefa
 real pequena, fechando a Fase 12.
 
 ## Proximo Passo

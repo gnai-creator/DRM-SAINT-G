@@ -1,6 +1,6 @@
 # Prior Art
 
-DRM-SAINT-G is an experimental research system for structured model growth by
+SAINT-G is an experimental research system for structured model growth by
 grafting. Its current direction evolved from sparse multi-scale block-codebook
 delta training toward compact grafts of the form:
 
@@ -8,13 +8,13 @@ delta training toward compact grafts of the form:
 Delta W = A Phi B
 ```
 
-This document exists to keep novelty claims conservative. DRM-SAINT-G should be
+This document exists to keep novelty claims conservative. SAINT-G should be
 evaluated as a combination and extension of known ideas unless experiments prove
 otherwise.
 
 ## Related Areas
 
-DRM-SAINT-G overlaps with:
+SAINT-G overlaps with:
 
 - parameter-efficient fine-tuning;
 - adapters and adapter fusion;
@@ -42,7 +42,7 @@ DRM-SAINT-G overlaps with:
 
 ## Important Baselines
 
-DRM-SAINT-G experiments should compare against:
+SAINT-G experiments should compare against:
 
 - frozen base model;
 - full fine-tuning;
@@ -62,7 +62,7 @@ DRM-SAINT-G experiments should compare against:
 
 ## Known Risk
 
-Many DRM-SAINT-G ideas may be rediscovering or recombining existing techniques.
+Many SAINT-G ideas may be rediscovering or recombining existing techniques.
 The project should treat novelty as a hypothesis, not an assumption.
 
 Specific risks:
@@ -75,7 +75,7 @@ Specific risks:
 - Compact checkpoints overlap with adapter and delta-checkpoint literature.
 - Progressive grafting overlaps with modular growth and progressive networks.
 
-## Current DRM-SAINT-G Distinction
+## Current SAINT-G Distinction
 
 The working distinction is not "low-rank adaptation" alone and not merely
 "compress a matrix." The current hypothesis is:
@@ -102,24 +102,24 @@ important axis:
 
 Acceptable claims:
 
-- DRM-SAINT-G is experimental.
-- DRM-SAINT-G tests structured grafting as a model-growth method.
-- DRM-SAINT-G has internal benchmarks where specific variants beat specific
+- SAINT-G is experimental.
+- SAINT-G tests structured grafting as a model-growth method.
+- SAINT-G has internal benchmarks where specific variants beat specific
   baselines under stated budgets.
-- DRM-SAINT-G does not currently claim general superiority over LoRA/QLoRA.
+- SAINT-G does not currently claim general superiority over LoRA/QLoRA.
 - 70B support is a roadmap target for partial adaptation, not full pretraining.
 
 Avoid these claims until proven:
 
-- "DRM-SAINT-G trains 70B on a consumer GPU."
-- "DRM-SAINT-G is better than LoRA."
-- "DRM-SAINT-G replaces dense pretraining."
-- "DRM-SAINT-G is a new paradigm" without qualifying it as a research
+- "SAINT-G trains 70B on a consumer GPU."
+- "SAINT-G is better than LoRA."
+- "SAINT-G replaces dense pretraining."
+- "SAINT-G is a new paradigm" without qualifying it as a research
   hypothesis.
 - "5M grafted equals 350M full" without defining the comparison axis.
 
 ## How to Use This Document
 
 When a new experiment is added, update this file if it becomes clearly related
-to known prior work. When DRM-SAINT-G loses to an existing method, keep that
+to known prior work. When SAINT-G loses to an existing method, keep that
 result in the record.

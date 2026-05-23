@@ -1,11 +1,11 @@
-# Arquitetura DRM-SAINT-G
+# Arquitetura SAINT-G
 
-DRM-SAINT-G significa **DRM por Enxerto com DRM-SAINT-G-Phi**.
+SAINT-G significa **DRM por Enxerto com SAINT-G-Phi**.
 
-Este documento descreve a arquitetura baseada no paradigma DRM-SAINT-G:
+Este documento descreve a arquitetura baseada no paradigma SAINT-G:
 
 ```text
-DRM-SAINT-G = sparse multi-scale block-codebook delta training
+SAINT-G = sparse multi-scale block-codebook delta training
 ```
 
 Em portugues:
@@ -14,7 +14,7 @@ Em portugues:
 treino de deltas esparsos por dicionario multi-escala de blocos
 ```
 
-O objetivo do DRM-SAINT-G nao e treinar todos os parametros de uma LLM gigante ao mesmo tempo. O objetivo e adaptar ou treinar parcialmente modelos grandes usando:
+O objetivo do SAINT-G nao e treinar todos os parametros de uma LLM gigante ao mesmo tempo. O objetivo e adaptar ou treinar parcialmente modelos grandes usando:
 
 - loss global;
 - atualizacao local;
@@ -28,7 +28,7 @@ O objetivo do DRM-SAINT-G nao e treinar todos os parametros de uma LLM gigante a
 
 O treino tradicional atualiza muitos parametros simultaneamente.
 
-DRM-SAINT-G muda o eixo do problema:
+SAINT-G muda o eixo do problema:
 
 ```text
 modelo base congelado ou parcialmente congelado
@@ -50,7 +50,7 @@ Onde:
 - `DeltaW` e um delta esparso, reconstruido por blocos;
 - `W_eff` e a matriz usada no forward.
 
-O modelo inteiro participa do forward e da loss. Mas apenas as partes escolhidas pelo DRM-SAINT-G recebem gradiente.
+O modelo inteiro participa do forward e da loss. Mas apenas as partes escolhidas pelo SAINT-G recebem gradiente.
 
 ```text
 loss global
@@ -73,7 +73,7 @@ CLI
   -> Sensitivity Analyzer
   -> Block Router
   -> Memory Planner
-  -> drm-saint-g trainer
+  -> SAINT-G trainer
   -> Checkpoint Manager
   -> Merger / Recomposer
   -> Evaluator
@@ -105,13 +105,13 @@ A CLI e a entrada do usuario.
 Comandos previstos:
 
 ```bash
-drm-saint-g inspect --model ./model
-drm-saint-g reconstruct --matrix ./weights.pt
-drm-saint-g estimate --model ./model --vram-gb 12
-drm-saint-g train --config configs/exp.yaml
-drm-saint-g resume --run runs/exp001
-drm-saint-g merge --run runs/exp001 --out merged/
-DRM-SAINT-G compare --run runs/DRM-SAINT-G001 --baseline runs/lora001
+SAINT-G inspect --model ./model
+SAINT-G reconstruct --matrix ./weights.pt
+SAINT-G estimate --model ./model --vram-gb 12
+SAINT-G train --config configs/exp.yaml
+SAINT-G resume --run runs/exp001
+SAINT-G merge --run runs/exp001 --out merged/
+SAINT-G compare --run runs/SAINT-G001 --baseline runs/lora001
 ```
 
 Responsabilidades:
@@ -131,7 +131,7 @@ A configuracao define o contrato do experimento.
 Campos principais:
 
 ```yaml
-project: DRM-SAINT-G-exp
+project: SAINT-G-exp
 model:
   type: hf_causal_lm
   path: ./models/tiny
@@ -147,7 +147,7 @@ memory:
   safety_margin_gb: 0.8
   offload: cpu
 
-DRM-SAINT-G:
+SAINT-G:
   delta_mode: block_codebook
   block_sizes: [16, 8, 4, 2]
   sparsity_target: 0.01
@@ -174,7 +174,7 @@ Responsabilidades:
 - listar matrizes treinaveis;
 - expor forward;
 - congelar parametros base;
-- aplicar deltas DRM-SAINT-G;
+- aplicar deltas SAINT-G;
 - remover deltas;
 - salvar/carregar estado.
 
@@ -304,7 +304,7 @@ Observacao: determinante nao reconstrui o bloco sozinho. Ele e apenas uma estati
 
 O Codebook Manager administra dicionarios de blocos.
 
-DRM-SAINT-G usa codebooks multi-escala:
+SAINT-G usa codebooks multi-escala:
 
 ```text
 codebook_2x2
@@ -355,7 +355,7 @@ Responsabilidades:
 
 ## 10. Delta Representation
 
-O delta DRM-SAINT-G e a estrutura treinavel anexada a uma matriz base.
+O delta SAINT-G e a estrutura treinavel anexada a uma matriz base.
 
 Pode conter:
 
@@ -496,7 +496,7 @@ Status: viavel
 
 ## 14. Orcamento por Camada
 
-DRM-SAINT-G nao distribui memoria igualmente.
+SAINT-G nao distribui memoria igualmente.
 
 Cada camada e tipo de matriz recebe um orcamento.
 
@@ -524,7 +524,7 @@ mlp.down: 15%
 
 Esse orcamento pode ser fixo ou adaptativo.
 
-## 15. drm-saint-g trainer
+## 15. SAINT-G trainer
 
 O trainer executa:
 
@@ -580,7 +580,7 @@ fase 6: consolidacao
 
 Treinar partes separadas pode gerar conflito.
 
-Consolidacao e uma fase curta onde DRM-SAINT-G revisita partes importantes com os deltas ja ativos.
+Consolidacao e uma fase curta onde SAINT-G revisita partes importantes com os deltas ja ativos.
 
 Objetivos:
 
@@ -601,7 +601,7 @@ consolidacao A+B+C
 
 ## 18. Cache de Grupos
 
-Se varios blocos compartilham o mesmo prototipo, DRM-SAINT-G pode agrupar calculos.
+Se varios blocos compartilham o mesmo prototipo, SAINT-G pode agrupar calculos.
 
 Exemplo:
 
@@ -623,7 +623,7 @@ Isso so ajuda se houver repeticao real ou repeticao induzida pelo codebook.
 
 ## 19. Checkpoint Manager
 
-Checkpoint DRM-SAINT-G nao precisa salvar o modelo inteiro.
+Checkpoint SAINT-G nao precisa salvar o modelo inteiro.
 
 Pode salvar:
 
@@ -700,7 +700,7 @@ Desvantagens:
 
 ## 21. Evaluator
 
-O Evaluator compara DRM-SAINT-G contra baselines.
+O Evaluator compara SAINT-G contra baselines.
 
 Baselines:
 
@@ -761,7 +761,7 @@ Se ocorrer OOM:
 8. trocar blocos menores por representacao maior/mais compacta;
 9. abortar com relatorio se continuar inviavel.
 
-DRM-SAINT-G nao deve entrar em loop infinito tentando configuracoes aleatorias.
+SAINT-G nao deve entrar em loop infinito tentando configuracoes aleatorias.
 
 ## 24. Fluxo de Treino
 
@@ -788,7 +788,7 @@ Fluxo completo:
 
 ## 25. Fluxo de Reconstrucao de Matriz
 
-Antes de LLM, DRM-SAINT-G precisa provar reconstrucao.
+Antes de LLM, SAINT-G precisa provar reconstrucao.
 
 ```text
 W
@@ -811,7 +811,7 @@ O adapter deve:
 - carregar `DRMTransformer`;
 - listar blocos e matrizes;
 - congelar base;
-- anexar deltas DRM-SAINT-G;
+- anexar deltas SAINT-G;
 - executar forward;
 - expor loss;
 - salvar deltas;
@@ -820,16 +820,16 @@ O adapter deve:
 Arquitetura:
 
 ```text
-drm-saint-g trainer
+SAINT-G trainer
   -> DRMTransformerAdapter
       -> DRMTransformer
       -> matrizes
-      -> deltas DRM-SAINT-G
+      -> deltas SAINT-G
 ```
 
 ## 27. Escalabilidade
 
-DRM-SAINT-G deve escalar por etapas:
+SAINT-G deve escalar por etapas:
 
 ```text
 matriz isolada
@@ -859,7 +859,7 @@ Nao escalar antes de provar.
 
 ## 29. Criterios de Sucesso
 
-DRM-SAINT-G sera promissor se mostrar pelo menos uma vantagem:
+SAINT-G sera promissor se mostrar pelo menos uma vantagem:
 
 - menor memoria que LoRA em algum regime;
 - menor checkpoint;
@@ -869,7 +869,7 @@ DRM-SAINT-G sera promissor se mostrar pelo menos uma vantagem:
 - codebook reutilizavel;
 - recomposicao estavel.
 
-DRM-SAINT-G sera fraco se:
+SAINT-G sera fraco se:
 
 - nao comprimir matrizes melhor que alternativas simples;
 - nao convergir em modelos pequenos;
@@ -880,7 +880,7 @@ DRM-SAINT-G sera fraco se:
 
 ## 30. Resumo
 
-A arquitetura DRM-SAINT-G e um runtime para:
+A arquitetura SAINT-G e um runtime para:
 
 ```text
 inspecionar matrizes

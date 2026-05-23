@@ -1,4 +1,4 @@
-# Fase 16 - DRM Full 125M/350M vs DRM-SAINT-G Grafted
+# Fase 16 - DRM Full 125M/350M vs SAINT-G Grafted
 
 Status: **implementado, validado em dry-run**.
 
@@ -14,7 +14,7 @@ escala controlada.
 
 ## Hipotese
 
-Se DRM-SAINT-G e um paradigma util de crescimento por enxerto, entao ele deve
+Se SAINT-G e um paradigma util de crescimento por enxerto, entao ele deve
 mostrar sinal em uma escala onde ainda conseguimos comparar contra treino full:
 
 ```text
@@ -80,7 +80,7 @@ sem OOM e com tempo aceitavel
 DRM full 125M
 DRM full 350M, se couber
 vs
-DRM 5M + DRM-SAINT-G grafted ate 125M/350M nominal/funcional
+DRM 5M + SAINT-G grafted ate 125M/350M nominal/funcional
 ```
 
 Aqui "ate 125M/350M" nao significa necessariamente materializar todos esses
@@ -201,7 +201,7 @@ Passa se o full model melhora loss sem OOM.
 
 Objetivo:
 
-Partir de `multilingual/5m.yaml` e adicionar capacidade por DRM-SAINT-G.
+Partir de `multilingual/5m.yaml` e adicionar capacidade por SAINT-G.
 
 Entregas:
 
@@ -888,7 +888,7 @@ Criterio:
 Passa se houver recomendacao clara:
 
 ```text
-avancar para Fase 17 - Escala 70B
+avancar para Fase 17 - Prova Experimental Publicavel e Controle
 ou
 voltar para melhorar Phi/runtime
 ```
@@ -927,7 +927,7 @@ Ela cria uma pergunta testavel:
 
 ```text
 Se eu tenho hardware para treinar full 125M e talvez 350M,
-DRM-SAINT-G consegue crescer de 5M para capacidade parecida
+SAINT-G consegue crescer de 5M para capacidade parecida
 com melhor eficiencia?
 ```
 

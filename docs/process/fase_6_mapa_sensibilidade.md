@@ -104,7 +104,7 @@ Foram adicionados:
 
 - resumo separado por `repeated` e `dense`;
 - comparacao de coordenadas contra blocos `2x2`;
-- `mini_DRM-SAINT-G_gradient_norm`, usando mapa de sensibilidade para alimentar DRM-SAINT-G;
+- `mini_SAINT-G_gradient_norm`, usando mapa de sensibilidade para alimentar SAINT-G;
 - `sensitivity_accumulated_gradient`, acumulando gradientes durante warmup;
 - criterio final automatico.
 
@@ -123,8 +123,8 @@ Resultado agregado:
 
 | Metodo | Runs | Test Loss Medio | Ganho/Parametro |
 |---|---:|---:|---:|
-| mini_DRM-SAINT-G_default_for_sensitivity | 4 | 0.00029131 | 0.0000000769 |
-| mini_DRM-SAINT-G_gradient_norm | 4 | 0.00029131 | 0.0000000769 |
+| mini_SAINT-G_default_for_sensitivity | 4 | 0.00029131 | 0.0000000769 |
+| mini_SAINT-G_gradient_norm | 4 | 0.00029131 | 0.0000000769 |
 | sensitivity_accumulated_gradient | 4 | 0.00029264 | 0.0000000493 |
 | sensitivity_fisher | 4 | 0.00029264 | 0.0000000493 |
 | sensitivity_gradient_norm | 4 | 0.00029264 | 0.0000000493 |
@@ -145,7 +145,7 @@ passou: sim
 regimes aprovados: 2
 melhor bloco 2x2 venceu random: sim
 sensibilidade acumulada venceu random: sim
-DRM-SAINT-G alimentado por sensibilidade empatou/venceu DRM-SAINT-G padrao: sim
+SAINT-G alimentado por sensibilidade empatou/venceu SAINT-G padrao: sim
 ```
 
 Leitura:
@@ -154,7 +154,7 @@ Leitura:
 Gradient norm e Fisher continuam sendo os melhores mapas simples.
 Blocos 2x2 preservam boa parte do sinal, mas perdem levemente para coordenadas.
 Sensibilidade acumulada empatou com gradient_norm neste experimento pequeno.
-mini_DRM-SAINT-G_gradient_norm empatou com o DRM-SAINT-G padrao porque o DRM-SAINT-G padrao ja usava
+mini_SAINT-G_gradient_norm empatou com o SAINT-G padrao porque o SAINT-G padrao ja usava
 gradiente inicial como sinal de roteamento.
 ```
 
@@ -167,8 +167,8 @@ O proximo passo e usar esses mapas em um runtime/adapter mais realista.
 
 ## Proximos Passos
 
-1. Avancar para Fase 7 - Runtime DRM-SAINT-G.
+1. Avancar para Fase 7 - Runtime SAINT-G.
 2. Usar `gradient_norm`/`fisher` como mapas iniciais.
 3. Manter `random` como controle obrigatorio.
 4. Testar mapas acumulados quando houver autograd.
-5. Integrar mapas de sensibilidade ao roteador DRM-SAINT-G.
+5. Integrar mapas de sensibilidade ao roteador SAINT-G.

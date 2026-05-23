@@ -90,11 +90,11 @@ validation loss exactly on the tested slices.
 Use a lower learning rate and validation gating:
 
 ```powershell
-$env:PYTHONPATH="E:\dev\ai\DRM-SAINT-G"
+$env:PYTHONPATH="E:\dev\ai\SAINT-G"
 
-E:\dev\ai\DRM-SAINT-G\.venv\Scripts\python.exe `
-  E:\dev\ai\DRM-SAINT-G\scripts\benchmark_drm_g_phase16_graftblock.py `
-  --output-dir E:\dev\ai\DRM-SAINT-G\runs\phase16_marco4d_24graft_4h_best `
+E:\dev\ai\SAINT-G\.venv\Scripts\python.exe `
+  E:\dev\ai\SAINT-G\scripts\benchmark_drm_g_phase16_graftblock.py `
+  --output-dir E:\dev\ai\SAINT-G\runs\phase16_marco4d_24graft_4h_best `
   --checkpoint E:\dev\ai\drm_transformer\checkpoints\multilingual_5m\smoke_819k\final.pt `
   --data-dir E:\dev\ai\drm_transformer\data\multilingual_125m `
   --device cuda `

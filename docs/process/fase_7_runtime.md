@@ -1,4 +1,4 @@
-# Fase 7 - Runtime DRM-SAINT-G
+# Fase 7 - Runtime SAINT-G
 
 Status: **concluida**.
 
@@ -42,7 +42,7 @@ python -m saint.cli merge --run runs/runtime_smoke
 configs/runtime_smoke.json
 ```
 
-Ela executa `mini_DRM-SAINT-G_dynamic_delta` no mini-transformer com mapa
+Ela executa `mini_SAINT-G_dynamic_delta` no mini-transformer com mapa
 `gradient_norm`.
 
 ## Artefatos do Run
@@ -90,7 +90,7 @@ python -m saint.cli merge --run runs/runtime_smoke
 Resultado do treino:
 
 ```text
-method: mini_DRM-SAINT-G_dynamic_delta
+method: mini_SAINT-G_dynamic_delta
 parameter_count: 30
 test_loss: 0.00016531
 train_loss: 0.00009658
@@ -119,6 +119,6 @@ O runtime executa um experimento pequeno de ponta a ponta com logs e checkpoints
 
 1. Avancar para Fase 8 - Checkpoint e Reconstituicao.
 2. Expandir checkpoints para salvar deltas reais, nao apenas metricas.
-3. Adicionar comandos equivalentes ao entrypoint `drm-saint-g` quando houver pacote.
+3. Adicionar comandos equivalentes ao entrypoint `SAINT-G` quando houver pacote.
 4. Integrar runtime com adaptador `drm_transformer`.
 5. Trocar diferenca finita por autograd quando PyTorch entrar.

@@ -6,7 +6,7 @@ Esta fase testa aprendizado, nao apenas reconstrucao de matriz.
 
 ## Objetivo
 
-Verificar se DRM-SAINT-G consegue aproximar uma funcao linear usando deltas com menos
+Verificar se SAINT-G consegue aproximar uma funcao linear usando deltas com menos
 parametros treinaveis que treino completo da matriz.
 
 Tarefa:
@@ -47,12 +47,12 @@ Comparados no benchmark:
 - `lora_rank_1`, `lora_rank_2`, `lora_rank_4`: delta low-rank;
 - `block_scalar_2`: um escalar treinavel por bloco `2x2`;
 - `codebook_delta_2`: prototipos `2x2` compartilhados por assinatura de gradiente;
-- `DRM-SAINT-G_routed_delta`: mistura `freeze`, codebook e delta livre por sensibilidade;
+- `SAINT-G_routed_delta`: mistura `freeze`, codebook e delta livre por sensibilidade;
 - `sparse_sensitivity_delta`: treina apenas os valores mais sensiveis pelo gradiente inicial.
 
 ## Como Freeze Foi Modelado
 
-Nesta fase, `freeze` passa a ter a semantica correta para DRM-SAINT-G:
+Nesta fase, `freeze` passa a ter a semantica correta para SAINT-G:
 
 ```text
 freeze = nao aplicar delta naquela regiao
@@ -79,7 +79,7 @@ Resultado:
 |---|---:|---:|---:|---:|
 | full_delta | 0.0000003 | 0.0032 | 64 | 128 |
 | codebook_delta_2 | 0.0003089 | 0.0678 | 68 | 136 |
-| DRM-SAINT-G_routed_delta | 0.0004701 | 0.1062 | 56 | 112 |
+| SAINT-G_routed_delta | 0.0004701 | 0.1062 | 56 | 112 |
 | sparse_sensitivity_delta | 0.0010289 | 0.2188 | 16 | 32 |
 | lora_rank_2 | 0.0034705 | 0.3771 | 32 | 64 |
 | block_scalar_2 | 0.0041949 | 0.3829 | 16 | 32 |
@@ -89,7 +89,7 @@ Resultado:
 `full_delta` vence em loss, como esperado, porque treina todos os 64 valores do
 delta.
 
-`DRM-SAINT-G_routed_delta` aprende a tarefa com menos parametros:
+`SAINT-G_routed_delta` aprende a tarefa com menos parametros:
 
 ```text
 params: 56 contra 64 do full_delta
@@ -99,7 +99,7 @@ optimizer states: 112 contra 128
 E supera LoRA rank 2 neste caso sintetico:
 
 ```text
-DRM-SAINT-G_routed_delta test_loss: 0.0004701
+SAINT-G_routed_delta test_loss: 0.0004701
 lora_rank_2 test_loss: 0.0034705
 ```
 
@@ -113,10 +113,10 @@ Foi adicionado um sweep com:
 ```text
 seeds: 11, 12, 13, 14, 15
 LoRA ranks: 1, 2, 4
-DRM-SAINT-G budgets:
-  DRM-SAINT-G_routed_f25_c50
-  DRM-SAINT-G_routed_f25_c25
-  DRM-SAINT-G_routed_f50_c25
+SAINT-G budgets:
+  SAINT-G_routed_f25_c50
+  SAINT-G_routed_f25_c25
+  SAINT-G_routed_f50_c25
 ```
 
 Arquivos gerados:
@@ -134,10 +134,10 @@ Resumo medio:
 |---|---:|---:|---:|---:|---:|
 | full_delta | 5 | 0.0000002 | 0.0022 | 64.0 | 0.00007163 |
 | codebook_delta_2 | 5 | 0.0001678 | 0.0527 | 65.6 | 0.00006772 |
-| DRM-SAINT-G_routed_f25_c50 | 5 | 0.0005749 | 0.0736 | 55.2 | 0.00007290 |
-| DRM-SAINT-G_routed_f50_c25 | 5 | 0.0005749 | 0.0736 | 51.2 | 0.00007862 |
+| SAINT-G_routed_f25_c50 | 5 | 0.0005749 | 0.0736 | 55.2 | 0.00007290 |
+| SAINT-G_routed_f50_c25 | 5 | 0.0005749 | 0.0736 | 51.2 | 0.00007862 |
 | sparse_sensitivity_delta | 5 | 0.0010238 | 0.1945 | 16.0 | 0.00022256 |
-| DRM-SAINT-G_routed_f25_c25 | 5 | 0.0017572 | 0.1879 | 36.0 | 0.00007854 |
+| SAINT-G_routed_f25_c25 | 5 | 0.0017572 | 0.1879 | 36.0 | 0.00007854 |
 | lora_rank_4 | 5 | 0.0030129 | 0.3720 | 64.0 | 0.00002456 |
 | lora_rank_2 | 5 | 0.0035034 | 0.3980 | 32.0 | 0.00003379 |
 | block_scalar_2 | 5 | 0.0035227 | 0.3945 | 16.0 | 0.00006638 |
@@ -145,7 +145,7 @@ Resumo medio:
 
 ## Criterio Automatico
 
-Foi adicionado um criterio automatico para comparar uma variante DRM-SAINT-G contra
+Foi adicionado um criterio automatico para comparar uma variante SAINT-G contra
 uma baseline eficiente:
 
 ```text
@@ -156,16 +156,16 @@ gain_per_parameter_ratio >= 1.0
 
 Decisoes do sweep:
 
-| DRM-SAINT-G | Baseline | Passou? | Leitura |
+| SAINT-G | Baseline | Passou? | Leitura |
 |---|---|---|---|
-| DRM-SAINT-G_routed_f50_c25 | lora_rank_2 | sim | menor loss e maior ganho/parametro, com ate 2x parametros |
-| DRM-SAINT-G_routed_f25_c50 | lora_rank_2 | sim | menor loss e maior ganho/parametro, com ate 2x parametros |
-| DRM-SAINT-G_routed_f25_c25 | lora_rank_1 | nao | melhor loss e ganho/parametro, mas passou de 2x parametros |
+| SAINT-G_routed_f50_c25 | lora_rank_2 | sim | menor loss e maior ganho/parametro, com ate 2x parametros |
+| SAINT-G_routed_f25_c50 | lora_rank_2 | sim | menor loss e maior ganho/parametro, com ate 2x parametros |
+| SAINT-G_routed_f25_c25 | lora_rank_1 | nao | melhor loss e ganho/parametro, mas passou de 2x parametros |
 
-Melhor variante DRM-SAINT-G neste sweep:
+Melhor variante SAINT-G neste sweep:
 
 ```text
-DRM-SAINT-G_routed_f50_c25
+SAINT-G_routed_f50_c25
 test_loss medio: 0.0005749
 params medios: 51.2
 ganho/parametro: 0.00007862
@@ -174,17 +174,17 @@ ganho/parametro: 0.00007862
 Comparacao contra LoRA rank 2:
 
 ```text
-DRM-SAINT-G_routed_f50_c25 test_loss: 0.0005749
+SAINT-G_routed_f50_c25 test_loss: 0.0005749
 lora_rank_2 test_loss: 0.0035034
 
-DRM-SAINT-G_routed_f50_c25 ganho/parametro: 0.00007862
+SAINT-G_routed_f50_c25 ganho/parametro: 0.00007862
 lora_rank_2 ganho/parametro: 0.00003379
 ```
 
 Leitura:
 
 ```text
-DRM-SAINT-G passou o primeiro criterio automatico contra LoRA rank 2.
+SAINT-G passou o primeiro criterio automatico contra LoRA rank 2.
 Ainda nao bate full_delta em loss absoluta.
 ```
 
@@ -212,11 +212,11 @@ delta_target = matriz densa aleatoria
 Tambem foi adicionada a baseline:
 
 ```text
-budgeted_full_delta_for_DRM-SAINT-G_routed_f50_c25
+budgeted_full_delta_for_SAINT-G_routed_f50_c25
 ```
 
 Ela treina valores individuais do delta usando o mesmo numero de parametros da
-variante DRM-SAINT-G comparada. Isso mede se o roteador/codebook melhora ou perde para
+variante SAINT-G comparada. Isso mede se o roteador/codebook melhora ou perde para
 um full delta esparso com orcamento equivalente.
 
 Resumo agregado do sweep de regimes:
@@ -225,9 +225,9 @@ Resumo agregado do sweep de regimes:
 |---|---:|---:|---:|---:|
 | codebook_delta_2 | 12 | 0.0029864 | 501.7 | 0.00002779 |
 | full_delta | 12 | 0.0033214 | 448.0 | 0.00003320 |
-| budgeted_full_delta_for_DRM-SAINT-G_routed_f50_c25 | 12 | 0.0035874 | 364.0 | 0.00003931 |
-| DRM-SAINT-G_routed_f25_c50 | 12 | 0.0043488 | 391.3 | 0.00003197 |
-| DRM-SAINT-G_routed_f50_c25 | 12 | 0.0043511 | 364.0 | 0.00003434 |
+| budgeted_full_delta_for_SAINT-G_routed_f50_c25 | 12 | 0.0035874 | 364.0 | 0.00003931 |
+| SAINT-G_routed_f25_c50 | 12 | 0.0043488 | 391.3 | 0.00003197 |
+| SAINT-G_routed_f50_c25 | 12 | 0.0043511 | 364.0 | 0.00003434 |
 | sparse_sensitivity_delta | 12 | 0.0057709 | 112.0 | 0.00007714 |
 | lora_rank_2 | 12 | 0.0098293 | 74.7 | 0.00000073 |
 | lora_rank_4 | 12 | 0.0098339 | 149.3 | 0.00000030 |
@@ -258,11 +258,11 @@ Decisoes contra `budgeted_full_delta` com orcamento equivalente:
 Leitura do sweep de regimes:
 
 ```text
-DRM-SAINT-G manteve vantagem de loss contra LoRA rank 2,
+SAINT-G manteve vantagem de loss contra LoRA rank 2,
 mas nao manteve o limite de parametros em camadas maiores.
 
 Contra full_delta esparso com mesmo orcamento,
-DRM-SAINT-G ainda perde em todos os regimes testados.
+SAINT-G ainda perde em todos os regimes testados.
 ```
 
 Portanto, a Fase 4 ainda nao deve ser marcada como concluida.
@@ -272,10 +272,10 @@ Portanto, a Fase 4 ainda nao deve ser marcada como concluida.
 Foi adicionada a variante:
 
 ```text
-DRM-SAINT-G_global_capped
+SAINT-G_global_capped
 ```
 
-Mudancas em relacao ao `DRM-SAINT-G_routed_delta` anterior:
+Mudancas em relacao ao `SAINT-G_routed_delta` anterior:
 
 - codebook compartilhado em escala de camada;
 - limite de regioes livres;
@@ -295,13 +295,13 @@ Resultado agregado:
 
 | Metodo | Runs | Test Loss Medio | Params Medios | Ganho/Parametro |
 |---|---:|---:|---:|---:|
-| DRM-SAINT-G_global_capped | 12 | 0.0074230 | 126.7 | 0.00003540 |
+| SAINT-G_global_capped | 12 | 0.0074230 | 126.7 | 0.00003540 |
 | lora_rank_2 | 12 | 0.0098293 | 74.7 | 0.00000073 |
-| budgeted_full_delta_for_DRM-SAINT-G_global_capped | 12 | 0.0052087 | 126.7 | 0.00005526 |
+| budgeted_full_delta_for_SAINT-G_global_capped | 12 | 0.0052087 | 126.7 | 0.00005526 |
 
 Decisoes contra LoRA rank 2:
 
-| Regime | Passou? | Params DRM-SAINT-G | Params LoRA |
+| Regime | Passou? | Params SAINT-G | Params LoRA |
 |---|---|---:|---:|
 | 8x8 dense | sim | 36.0 | 32.0 |
 | 8x8 repeated | sim | 36.0 | 32.0 |
@@ -331,8 +331,8 @@ Mas a variante ainda nao vence `budgeted_full_delta` com mesmo orcamento:
 Conclusao atualizada:
 
 ```text
-Fase 4 melhorou: DRM-SAINT-G agora passa contra LoRA rank 2 em todos os regimes testados.
-Fase 4 ainda nao conclui: DRM-SAINT-G ainda perde para full delta esparso com mesmo orcamento.
+Fase 4 melhorou: SAINT-G agora passa contra LoRA rank 2 em todos os regimes testados.
+Fase 4 ainda nao conclui: SAINT-G ainda perde para full delta esparso com mesmo orcamento.
 ```
 
 ## Escala por Bloco e Residual Fino
@@ -340,7 +340,7 @@ Fase 4 ainda nao conclui: DRM-SAINT-G ainda perde para full delta esparso com me
 Foi adicionada a variante:
 
 ```text
-DRM-SAINT-G_global_scaled_residual
+SAINT-G_global_scaled_residual
 ```
 
 Mudancas:
@@ -359,7 +359,7 @@ scale = dot(bloco_target, prototype) / dot(prototype, prototype)
 - residual inicializado pelo erro real apos o warmup:
 
 ```text
-residual = delta_target - delta_DRM-SAINT-G
+residual = delta_target - delta_SAINT-G
 ```
 
 Forma do bloco:
@@ -386,24 +386,24 @@ Resultado agregado:
 
 | Metodo | Runs | Test Loss Medio | Params Medios | Ganho/Parametro |
 |---|---:|---:|---:|---:|
-| DRM-SAINT-G_global_capped | 12 | 0.0074230 | 126.7 | 0.00003540 |
-| DRM-SAINT-G_global_scaled_residual | 12 | 0.0061497 | 106.7 | 0.00004372 |
+| SAINT-G_global_capped | 12 | 0.0074230 | 126.7 | 0.00003540 |
+| SAINT-G_global_scaled_residual | 12 | 0.0061497 | 106.7 | 0.00004372 |
 | lora_rank_2 | 12 | 0.0098293 | 74.7 | 0.00000073 |
-| budgeted_full_delta_for_DRM-SAINT-G_global_scaled_residual | 12 | 0.0054662 | 106.7 | 0.00005480 |
+| budgeted_full_delta_for_SAINT-G_global_scaled_residual | 12 | 0.0054662 | 106.7 | 0.00005480 |
 
 Decisoes:
 
 ```text
-DRM-SAINT-G_global_scaled_residual passou contra LoRA rank 2 em todos os regimes.
-DRM-SAINT-G_global_scaled_residual venceu budgeted_full_delta em 1 de 6 regimes.
-DRM-SAINT-G_global_scaled_residual ainda perdeu para budgeted_full_delta na media.
+SAINT-G_global_scaled_residual passou contra LoRA rank 2 em todos os regimes.
+SAINT-G_global_scaled_residual venceu budgeted_full_delta em 1 de 6 regimes.
+SAINT-G_global_scaled_residual ainda perdeu para budgeted_full_delta na media.
 ```
 
 Leitura:
 
 ```text
 Escala inicial por minimo quadrado, residual pos-warmup e clustering real melhoraram
-a qualidade media contra DRM-SAINT-G_global_capped, usando menos parametros.
+a qualidade media contra SAINT-G_global_capped, usando menos parametros.
 
 O metodo agora e claramente melhor que LoRA rank 2 neste benchmark sintetico,
 mas ainda nao e melhor que full delta esparso com orcamento equivalente.
@@ -427,7 +427,7 @@ runs/phase4_linear_regime_kmeans_residual/linear_training_regime.md
 
 ## Criterio de Conclusao
 
-Fase 4 so deve ser marcada como concluida quando DRM-SAINT-G empatar ou superar pelo
+Fase 4 so deve ser marcada como concluida quando SAINT-G empatar ou superar pelo
 menos uma baseline eficiente em um eixo relevante, de forma reproduzivel:
 
 - menor memoria;
@@ -436,12 +436,12 @@ menos uma baseline eficiente em um eixo relevante, de forma reproduzivel:
 - melhor loss para mesmo orcamento;
 - melhor ganho por byte.
 
-## DRM-SAINT-G Dinamico
+## SAINT-G Dinamico
 
 Foi adicionada a variante:
 
 ```text
-DRM-SAINT-G_dynamic_delta
+SAINT-G_dynamic_delta
 ```
 
 Ela implementa os pontos que faltavam para comparar melhor contra baselines por
@@ -476,19 +476,19 @@ Resultado agregado:
 
 | Metodo | Runs | Test Loss Medio | Params Medios | Ganho/Parametro |
 |---|---:|---:|---:|---:|
-| DRM-SAINT-G_dynamic_delta | 12 | 0.0055666 | 111.0 | 0.00004728 |
-| budgeted_full_delta_for_DRM-SAINT-G_dynamic_delta | 12 | 0.0053768 | 111.0 | 0.00005251 |
-| block_budgeted_delta_for_DRM-SAINT-G_dynamic_delta | 12 | 0.0059000 | 108.0 | 0.00004981 |
+| SAINT-G_dynamic_delta | 12 | 0.0055666 | 111.0 | 0.00004728 |
+| budgeted_full_delta_for_SAINT-G_dynamic_delta | 12 | 0.0053768 | 111.0 | 0.00005251 |
+| block_budgeted_delta_for_SAINT-G_dynamic_delta | 12 | 0.0059000 | 108.0 | 0.00004981 |
 | lora_tuned_rank_2 | 12 | 0.0097656 | 74.7 | 0.00000217 |
 | lora_tuned_rank_4 | 12 | 0.0096352 | 149.3 | 0.00000248 |
 
 Decisoes por regime:
 
 ```text
-DRM-SAINT-G_dynamic_delta venceu lora_tuned_rank_2 em 6 de 6 regimes.
-DRM-SAINT-G_dynamic_delta venceu lora_tuned_rank_4 em 6 de 6 regimes.
-DRM-SAINT-G_dynamic_delta venceu block_budgeted_delta em 2 de 6 regimes.
-DRM-SAINT-G_dynamic_delta venceu budgeted_full_delta em 2 de 6 regimes.
+SAINT-G_dynamic_delta venceu lora_tuned_rank_2 em 6 de 6 regimes.
+SAINT-G_dynamic_delta venceu lora_tuned_rank_4 em 6 de 6 regimes.
+SAINT-G_dynamic_delta venceu block_budgeted_delta em 2 de 6 regimes.
+SAINT-G_dynamic_delta venceu budgeted_full_delta em 2 de 6 regimes.
 ```
 
 Criterio automatico de fechamento:
@@ -505,7 +505,7 @@ Veredito:
 ```text
 Fase 4 concluida pelo criterio atual.
 
-DRM-SAINT-G ainda nao domina budgeted_full_delta na media,
+SAINT-G ainda nao domina budgeted_full_delta na media,
 mas ja demonstrou vantagem reproduzivel contra LoRA tunado
 e venceu baselines por orcamento em regimes repetidos.
 ```
@@ -513,7 +513,7 @@ e venceu baselines por orcamento em regimes repetidos.
 ## Proximos Passos
 
 1. Avancar para Fase 5 com mini-transformer.
-2. Levar `DRM-SAINT-G_dynamic_delta` como baseline DRM-SAINT-G inicial.
+2. Levar `SAINT-G_dynamic_delta` como baseline SAINT-G inicial.
 3. Medir se a vantagem em deltas repetidos aparece com camadas acopladas.
 4. Manter `budgeted_full_delta` e `block_budgeted_delta` como controles.
-5. Continuar melhorando DRM-SAINT-G contra regimes densos.
+5. Continuar melhorando SAINT-G contra regimes densos.

@@ -2,7 +2,7 @@
 
 Status: **concluida**.
 
-Esta fase cria a base matematica inicial do DRM-SAINT-G para particionar, reconstruir, assinar, agrupar e analisar matrizes em blocos.
+Esta fase cria a base matematica inicial do SAINT-G para particionar, reconstruir, assinar, agrupar e analisar matrizes em blocos.
 
 ## Objetivo
 
@@ -12,22 +12,22 @@ Validar a primeira unidade do paradigma:
 W -> blocos -> grupos -> metricas -> W_recon
 ```
 
-Antes de treinar uma LLM, DRM-SAINT-G precisa manipular matrizes de forma confiavel.
+Antes de treinar uma LLM, SAINT-G precisa manipular matrizes de forma confiavel.
 
 ## Modulos
 
 ```text
-DRM-SAINT-G.blocks.partition
-DRM-SAINT-G.blocks.signatures
-DRM-SAINT-G.blocks.grouping
-DRM-SAINT-G.blocks.metrics
-DRM-SAINT-G.blocks.codebook
+SAINT-G.blocks.partition
+SAINT-G.blocks.signatures
+SAINT-G.blocks.grouping
+SAINT-G.blocks.metrics
+SAINT-G.blocks.codebook
 ```
 
 ## API Principal
 
 ```python
-from DRM-SAINT-G.blocks import (
+from SAINT-G.blocks import (
     analyze_block_reuse,
     build_fixed_codebook,
     group_blocks_by_signature,
@@ -132,7 +132,7 @@ Cobertura atual:
 
 ## Criterio de Conclusao
 
-A fase e considerada concluida porque DRM-SAINT-G ja consegue:
+A fase e considerada concluida porque SAINT-G ja consegue:
 
 ```text
 particionar matriz
