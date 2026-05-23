@@ -1,4 +1,4 @@
-# Fase 18 - DRM Growth Protocol e Online Graft Search
+# Fase 18 - SAINT-G Growth Protocol e Online Graft Search
 
 Status: **pendente**.
 
@@ -9,14 +9,14 @@ aumentar o modelo. A Fase 18 transforma o resultado em uma linha cientifica
 defensavel:
 
 ```text
-DRM-Growth Protocol
+SAINT-G Growth Protocol
 ```
 
 e prepara o salto para:
 
 ```text
 Distributed Validation-Gated Grafting
-DRM-GOS: DRM Graft Orchestration System
+SAINT-GOS: SAINT-G Graft Orchestration System
 ```
 
 ## Tese
@@ -91,7 +91,7 @@ Criterio:
 Passa se enxertos aprovados nao criarem regressao clara em exemplos antigos e
 se o checkpoint recomposto bater a validacao do runtime.
 
-## Marco 4 - DRM-Growth Protocol
+## Marco 4 - SAINT-G Growth Protocol
 
 Objetivo:
 
@@ -170,7 +170,7 @@ Criterio:
 Passa se 1.3B rodar ciclo parcial sem OOM e preservar as propriedades do
 protocolo.
 
-## Marco 7 - DRM-GOS: Cluster-Scale Online Graft Search
+## Marco 7 - SAINT-GOS: Cluster-Scale Online Graft Search
 
 Objetivo:
 
@@ -239,7 +239,7 @@ replicacao multiseed
 comparacao contra baselines fortes
 protocolo DRM-Growth documentado
 safety/control eval inicial
-plano DRM-GOS especificado
+plano SAINT-GOS especificado
 ```
 
 Sucesso forte:

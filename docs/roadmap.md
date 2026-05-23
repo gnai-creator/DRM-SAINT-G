@@ -68,7 +68,7 @@ Resumo do estado:
 | DRM-G | Primeira trilha experimental de neural grafting em DRM | Em andamento |
 | 16 | Full 125M/350M vs SAINT-G Grafted | Em andamento |
 | 17 | Prova Experimental de Controle | Pendente |
-| 18 | DRM Growth Protocol | Pendente |
+| 18 | SAINT-G Growth Protocol | Pendente |
 | 19 | Escala 70B | Pendente |
 | 20+ | Continual Growth, Registry e Governanca | Pendente |
 
@@ -3961,7 +3961,7 @@ e com sinal positivo em controle/safety toy
 docs/process/fase_17_prova_experimental_controle.md
 ```
 
-## Fase 18 - DRM Growth Protocol e Online Graft Search
+## Fase 18 - SAINT-G Growth Protocol e Online Graft Search
 
 Status: **pendente**.
 
@@ -3971,9 +3971,9 @@ Transformar um resultado positivo em 125M/350M em uma linha cientifica
 defensavel:
 
 ```text
-DRM-Growth Protocol
+SAINT-G Growth Protocol
 Distributed Validation-Gated Grafting
-DRM-GOS: DRM Graft Orchestration System
+SAINT-GOS: SAINT-G Graft Orchestration System
 ```
 
 ### Marcos
@@ -3981,12 +3981,12 @@ DRM-GOS: DRM Graft Orchestration System
 - replication run com varias seeds, outro split e outra config;
 - comparacao contra LoRA/QLoRA forte, full-module, sparse/budgeted delta e adapters;
 - retencao e regressao;
-- especificacao do DRM-Growth Protocol;
+- especificacao do SAINT-G Growth Protocol;
 - safety/control evals;
 - ponte 1.3B antes de 70B;
-- arquitetura DRM-GOS para busca online distribuida de enxertos.
+- arquitetura SAINT-GOS para busca online distribuida de enxertos.
 
-### DRM-Growth Protocol
+### SAINT-G Growth Protocol
 
 ```text
 base DRM
@@ -3998,7 +3998,7 @@ base DRM
 -> retention eval
 ```
 
-### DRM-GOS
+### SAINT-GOS
 
 ```text
 base DRM congelado
@@ -4030,7 +4030,7 @@ replicacao multiseed
 comparacao contra baselines fortes
 protocolo DRM-Growth documentado
 safety/control eval inicial
-plano DRM-GOS especificado
+plano SAINT-GOS especificado
 ```
 
 ### Documento
@@ -4526,7 +4526,7 @@ Prioridade pratica:
 12. 14B
 13. full controlado 125M/350M vs grafted
 14. prova publicavel e controle
-15. DRM-Growth Protocol / DRM-GOS
+15. SAINT-G Growth Protocol / SAINT-GOS
 16. 70B
 17. continual growth system
 18. escalabilidade em clusters de GPU
