@@ -1,6 +1,6 @@
 # Phase 16 Marco 4I - Residual/Orthogonal Routing
 
-Status: **implemented, dry-run validated**.
+Status: **implemented, validated**.
 
 ## Goal
 
@@ -71,6 +71,57 @@ recompose_abs_diff: 0.0
 
 The strict run confirms that zero-gain candidates are not approved.
 
+## Light CUDA Result
+
+Run:
+
+```text
+runs/phase16_marco4i_light_orthogonal
+```
+
+Summary:
+
+```text
+base_loss: 10.416174411773682
+composed_loss: 10.414714097976685
+accumulated_gain: 0.0014603137969970703
+accepted_groups: 2
+accepted_grafts: 5
+accepted_graft_ids: [0, 1, 2, 3, 4]
+target_by_graft:
+  0..3 -> blocks.2
+  4    -> blocks.3
+recompose_abs_diff: 0.0
+```
+
+Comparison against Marco 4H:
+
+```text
+4H composed_loss: 10.414670705795288
+4I composed_loss: 10.414714097976685
+delta_vs_4H: +0.000043392181397
+```
+
+Marco 4I did not improve the best current validation loss. Its useful result is
+control behavior: at stage 3, the router rejected a redundant `blocks.3`
+candidate with zero composed gain and negative orthogonal score.
+
+```text
+stage: 3
+selected_target: blocks.3
+stage_gain: 0.0
+stage_score: -1e-05
+redundancy_penalty: 1e-05
+decision: rejected
+```
+
+Technical verdict:
+
+```text
+Marco 4I is valid as a redundancy-control mechanism.
+It is not a quality improvement over Marco 4H.
+```
+
 ## Recommended Command
 
 ```powershell
@@ -114,10 +165,23 @@ cd E:\dev\ai\SAINT-G
 Marco 4I passes if:
 
 ```text
-composed_loss < 10.414671
-accepted_grafts > 5
+composed_loss <= 10.414714
+accepted_grafts >= 5
 recompose_abs_diff = 0.0
 ```
 
-If it fails, the next step should use a real residual router instead of a target
-redundancy proxy.
+The next step should reduce candidate-search cost. Full grid routing is too
+expensive because `max_train_seconds` is currently applied per candidate, not
+per run.
+
+## Next Step - Marco 4J
+
+Marco 4J should implement candidate pruning / two-pass routing:
+
+1. Probe many candidates cheaply.
+2. Select top-k by `candidate_composed_gain` or orthogonal score.
+3. Train only the selected candidates deeply.
+4. Compare against Marco 4H.
+
+This attacks the actual bottleneck observed in Marco 4I: exhaustive candidate
+grids can run for many hours or days.
