@@ -827,6 +827,114 @@ Documento:
 docs/reports/phase16_marco4i_residual_orthogonal_routing.md
 ```
 
+Resultado 24-graft:
+
+```text
+runs/phase16_marco4i_light_orthogonal
+base_loss: 10.416174
+composed_loss: 10.414714
+accumulated_gain: 0.001460
+accepted_groups: 2
+accepted_grafts: 5
+stage 1: blocks.2, grafts 0-3
+stage 2: blocks.3, graft 4
+stage 3: rejected with redundancy control
+recompose_abs_diff: 0.0
+```
+
+Veredito:
+
+```text
+Marco 4I passou como controle de redundancia, mas nao bateu o Marco 4H.
+```
+
+### Marco 4J - Two-Pass Candidate Pruning
+
+Status: **concluido**.
+
+Objetivo:
+
+Reduzir o custo do grid completo de candidatos. Em vez de treinar profundamente
+todos os candidatos, o Marco 4J faz uma passagem barata de probe, ranqueia os
+candidatos, mantem apenas `top-k` e treina profundamente apenas esses.
+
+Implementado:
+
+```text
+--candidate-probe-steps
+--candidate-probe-max-train-seconds
+--candidate-top-k
+```
+
+Documento:
+
+```text
+docs/reports/phase16_marco4j_two_pass_candidate_pruning.md
+```
+
+Resultado CUDA:
+
+```text
+runs/phase16_marco4j_two_pass_24graft
+base_loss: 10.416174
+composed_loss: 10.414808
+accumulated_gain: 0.001366
+accepted_groups: 1
+accepted_grafts: 4
+stage 1: blocks.2, grafts 0-3, approved
+stage 2: blocks.4, graft 4, rejected
+recompose_abs_diff: 0.0
+```
+
+Comparacao:
+
+```text
+4H composed_loss: 10.414671, accepted_grafts: 5
+4I composed_loss: 10.414714, accepted_grafts: 5
+4J composed_loss: 10.414808, accepted_grafts: 4
+```
+
+Veredito:
+
+```text
+Marco 4J passou tecnicamente, mas nao como melhor qualidade.
+```
+
+O two-pass routing funcionou e recompos exatamente, mas `candidate_top_k=4` com
+probe curto perdeu o quinto graft encontrado pelo 4H em `blocks.3`.
+
+### Marco 4K - Two-Pass Top-K 8 Probe 2K
+
+Status: **planejado**.
+
+Objetivo:
+
+Recuperar o quinto graft do Marco 4H usando a infraestrutura two-pass do Marco
+4J, mas com pruning menos agressivo.
+
+Ajustes contra 4J:
+
+```text
+candidate_targets: blocks.0..5 -> blocks.2 blocks.3 blocks.4
+candidate_probe_steps: 1000 -> 2000
+candidate_probe_max_train_seconds: 180 -> 300
+candidate_top_k: 4 -> 8
+```
+
+Documento:
+
+```text
+docs/reports/phase16_marco4k_two_pass_topk8_probe2k.md
+```
+
+Criterio:
+
+```text
+composed_loss <= 10.414670705795288
+ou
+accepted_grafts >= 5 com recompose_abs_diff = 0.0
+```
+
 ### Marco 5 - Comparacao Full vs Grafted
 
 Objetivo:

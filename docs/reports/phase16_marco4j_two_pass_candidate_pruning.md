@@ -1,6 +1,6 @@
 # Phase 16 Marco 4J - Two-Pass Candidate Pruning
 
-Status: **implemented, pending CUDA run**.
+Status: **completed, valid CUDA run**.
 
 ## Goal
 
@@ -171,15 +171,73 @@ runtime remains close to full-grid routing
 composed loss regresses against 4H
 ```
 
-## Next Step After Run
+## CUDA Result
 
-After the CUDA run, compare:
+Run:
 
 ```text
-4H best composed_loss: 10.414670705795288
-4I light composed_loss: 10.414714097976685
-4J two-pass composed_loss: pending
+/mnt/e/dev/ai/DRM-SAINT-G/runs/phase16_marco4j_two_pass_24graft
 ```
 
-If 4J improves speed without hurting quality, it becomes the default candidate
-router for the next Phase 16 experiments.
+Artifacts:
+
+```text
+summary.json
+stage_metrics.json
+candidate_metrics.json
+candidate_training_metrics.jsonl
+results.md
+composed_graft_checkpoint.pt
+```
+
+Summary:
+
+```text
+base_loss: 10.416174411773682
+composed_loss: 10.41480803489685
+accumulated_gain: 0.0013663768768310547
+accepted_groups: 1
+accepted_grafts: 4
+accepted_graft_ids: 0, 1, 2, 3
+target_by_graft: blocks.2 for all accepted grafts
+recomposed_loss: 10.41480803489685
+recompose_abs_diff: 0.0
+composed_checkpoint_bytes: 477209607
+```
+
+Stage decisions:
+
+```text
+stage 1: approved, blocks.2, grafts 0-3, gain 0.0013663768768310547
+stage 2: rejected, blocks.4, graft 4, gain 0.0
+```
+
+Comparison:
+
+```text
+4H composed_loss: 10.414670705795288
+4I composed_loss: 10.414714097976685
+4J composed_loss: 10.41480803489685
+
+4J delta vs 4H: +0.0001373291015625 loss
+4J delta vs 4I: +0.00009393692016601562 loss
+4J retained about 90.87% of the 4H gain over base
+```
+
+## Verdict
+
+Marco 4J is technically valid but does not replace Marco 4H as the best-quality
+checkpoint.
+
+```text
+passed: two-pass routing executed and recomposed exactly
+failed quality target: did not beat 4H or 4I
+main diagnosis: top-k/probe ranking missed the useful second-stage blocks.3 graft
+```
+
+The first group remains robust: `blocks.2` with four grafts. The regression is in
+stage 2: Marco 4H found a fifth graft in `blocks.3`, while Marco 4J selected
+`blocks.4` and rejected it with zero gain.
+
+Next experiment: Marco 4K should keep the two-pass infrastructure but make the
+probe less aggressive: fewer targets, longer probe, and larger `candidate_top_k`.
