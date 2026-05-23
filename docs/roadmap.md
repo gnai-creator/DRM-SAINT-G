@@ -41,8 +41,8 @@ consolidacao controlada
 ```text
 Fase atual: Fase 16 - Full 125M/350M vs SAINT-G grafted
 Fase anterior: Fase 15 concluida com ressalvas
-Marco atual: Marco 4H/4I - staged graft growth com roteamento validado
-Proximo marco: fechar comparacao 5M + grafts vs full 125M com validacao robusta
+Marco atual: Marco 4J - candidate pruning / two-pass routing
+Proximo marco: rodar 4J em CUDA e comparar contra o melhor 4H
 ```
 
 Resumo do estado:
@@ -3657,9 +3657,9 @@ destravou um enxerto incremental sem regressao composta.
 Marco 4I - residual/orthogonal routing:
 
 ```text
-status: implementado, validado em dry-run
+status: implementado, validado em CUDA light
 objetivo: penalizar candidatos redundantes com targets ja aceitos
-criterio: composed_loss < 10.414671 e accepted_grafts > 5
+resultado: mecanismo valido de controle, mas nao melhor que 4H
 ```
 
 Implementado:
@@ -3671,6 +3671,40 @@ runs/phase16_marco4i_orthogonal_strict_dryrun
 stage_gain: 0.0
 decision: rejected
 recompose_abs_diff: 0.0
+```
+
+Resultado CUDA light:
+
+```text
+runs/phase16_marco4i_light_orthogonal
+base_loss: 10.416174
+composed_loss: 10.414714
+accumulated_gain: 0.001460
+accepted_grafts: 5
+target_by_graft: blocks.2 x4, blocks.3 x1
+recompose_abs_diff: 0.0
+```
+
+Veredito: Marco 4I e util como controle de redundancia. O stage 3 rejeitou um
+candidato redundante com ganho composto zero e score negativo, mas o resultado
+nao superou o melhor Marco 4H (`10.4146707`).
+
+Marco 4J - candidate pruning / two-pass routing:
+
+```text
+status: implementado, aguardando run CUDA
+objetivo: reduzir custo do grid de candidatos
+metodo: probe barato -> top-k -> treino profundo
+criterio: igualar ou superar 4H com menor tempo de roteamento
+```
+
+Implementado:
+
+```text
+--candidate-probe-steps
+--candidate-probe-max-train-seconds
+--candidate-top-k
+docs/reports/phase16_marco4j_two_pass_candidate_pruning.md
 ```
 
 Resultado light probe:

@@ -128,15 +128,19 @@ def _candidate_grid(args) -> list[dict[str, Any]]:
     return candidates
 
 
-def _candidate_args(args, candidate: dict[str, Any]):
+def _candidate_args(args, candidate: dict[str, Any], overrides: dict[str, Any] | None = None):
     values = vars(args).copy()
     values["learning_rate"] = float(candidate["learning_rate"])
     values["init_scale"] = float(candidate["init_scale"])
     values["activation"] = str(candidate["activation"])
+    if overrides:
+        values.update(overrides)
     return SimpleNamespace(**values)
 
 
 def _marco_name(args) -> str:
+    if int(getattr(args, "candidate_top_k", 0) or 0) > 0:
+        return "4j_two_pass_candidate_pruning"
     if getattr(args, "candidate_score_mode", "composed_gain") == "composed_gain_orthogonal":
         return "4i_residual_orthogonal_routing"
     if int(getattr(args, "post_first_stage_size", 0) or 0) > 0:
@@ -239,6 +243,63 @@ def _composed_loss_for(torch, model_cls, drm_config, metadata, args, states, act
             handle.remove()
 
 
+def _evaluate_candidate(
+    torch,
+    model_cls,
+    drm_config,
+    metadata,
+    args,
+    out_dir,
+    accepted_states,
+    accepted,
+    accepted_target_map,
+    candidate,
+    indices,
+    stage,
+    pass_name,
+    use_final_state=False,
+):
+    candidate_args = _candidate_args(args, candidate)
+    target = candidate["target"]
+    model = _new_model(torch, model_cls, drm_config, metadata)
+    grafts = _new_grafts(torch, drm_config, metadata, candidate_args)
+    _copy_indices(grafts, accepted_states, accepted, str(metadata["device"]))
+    target_map = _compose_target_map(accepted_target_map, target, indices)
+    handles = _attach_target_map(model, grafts, target_map)
+    try:
+        result = _train_current(
+            torch, model, drm_config, metadata, grafts, indices, accepted,
+            candidate_args, out_dir, stage, candidate["tag"],
+        )
+    finally:
+        for handle in handles:
+            handle.remove()
+    payload_key = "final_state_payload" if use_final_state else "state_payload"
+    state_payload = result.pop(payload_key)
+    result.pop("state_payload", None)
+    result.pop("final_state_payload", None)
+    active = accepted | set(indices)
+    loss = _composed_loss_for(torch, model_cls, drm_config, metadata, candidate_args, state_payload, active, target_map)
+    result["candidate_composed_loss"] = loss
+    result["candidate_composed_gain"] = args._current_composed_loss - loss
+    score, penalty = _candidate_score(args, target, result["candidate_composed_gain"], accepted_target_map)
+    result["candidate_score"] = score
+    result["redundancy_penalty"] = penalty
+    result["previous_composed_loss"] = args._current_composed_loss
+    result["candidate_target_by_graft"] = {str(key): value for key, value in sorted(target_map.items())}
+    result.update({
+        "stage": stage,
+        "pass": pass_name,
+        "candidate_target": target,
+        "learning_rate": candidate["learning_rate"],
+        "init_scale": candidate["init_scale"],
+        "activation": candidate["activation"],
+        "candidate_tag": candidate["tag"],
+        "indices": indices,
+    })
+    return result, state_payload
+
+
 def _save_composed(torch, out_dir: Path, grafts, target_map: dict[int, str], args, row: dict[str, Any]) -> Path:
     path = out_dir / "composed_graft_checkpoint.pt"
     payload = graft_checkpoint_payload(
@@ -318,58 +379,29 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
         probes = []
         best_payload = None
         best_gain = None
-        for candidate in candidates:
-            candidate_args = _candidate_args(args, candidate)
-            target = candidate["target"]
-            model = _new_model(torch, model_cls, drm_config, metadata)
-            grafts = _new_grafts(torch, drm_config, metadata, candidate_args)
-            _copy_indices(grafts, accepted_states, accepted, str(metadata["device"]))
-            candidate_target_map = _compose_target_map(accepted_target_map, target, indices)
-            handles = _attach_target_map(model, grafts, candidate_target_map)
-            try:
-                result = _train_current(
-                    torch, model, drm_config, metadata, grafts, indices, accepted,
-                    candidate_args, out_dir, stage, candidate["tag"],
+        stage_candidates = candidates
+        args._current_composed_loss = current_composed_loss
+        if int(getattr(args, "candidate_top_k", 0) or 0) > 0:
+            probe_args = SimpleNamespace(**vars(args))
+            probe_args.steps = int(getattr(args, "candidate_probe_steps", 0) or args.eval_every_steps or 1)
+            probe_args.max_train_seconds = float(getattr(args, "candidate_probe_max_train_seconds", 0.0) or 0.0)
+            probe_args.early_stopping_patience = 0
+            probe_args._current_composed_loss = current_composed_loss
+            probe_rows = []
+            for candidate in candidates:
+                result, _payload = _evaluate_candidate(
+                    torch, model_cls, drm_config, metadata, probe_args, out_dir, accepted_states,
+                    accepted, accepted_target_map, candidate, indices, stage, "probe", use_final_state=True,
                 )
-            finally:
-                for handle in handles:
-                    handle.remove()
-            state_payload = result.pop("state_payload")
-            result.pop("final_state_payload", None)
-            candidate_active = accepted | set(indices)
-            candidate_composed_loss = _composed_loss_for(
-                torch,
-                model_cls,
-                drm_config,
-                metadata,
-                candidate_args,
-                state_payload,
-                candidate_active,
-                candidate_target_map,
+                candidate_metrics.append(result)
+                probe_rows.append((result, candidate))
+            probe_rows.sort(key=lambda item: _candidate_rank(item[0], float(args.stage_accept_min_gain)), reverse=True)
+            stage_candidates = [candidate for _row, candidate in probe_rows[: int(args.candidate_top_k)]]
+        for candidate in stage_candidates:
+            result, state_payload = _evaluate_candidate(
+                torch, model_cls, drm_config, metadata, args, out_dir, accepted_states,
+                accepted, accepted_target_map, candidate, indices, stage, "deep",
             )
-            result["candidate_composed_loss"] = candidate_composed_loss
-            result["candidate_composed_gain"] = current_composed_loss - candidate_composed_loss
-            score, penalty = _candidate_score(
-                args,
-                target,
-                result["candidate_composed_gain"],
-                accepted_target_map,
-            )
-            result["candidate_score"] = score
-            result["redundancy_penalty"] = penalty
-            result["previous_composed_loss"] = current_composed_loss
-            result["candidate_target_by_graft"] = {
-                str(key): value for key, value in sorted(candidate_target_map.items())
-            }
-            result.update({
-                "stage": stage,
-                "candidate_target": target,
-                "learning_rate": candidate["learning_rate"],
-                "init_scale": candidate["init_scale"],
-                "activation": candidate["activation"],
-                "candidate_tag": candidate["tag"],
-                "indices": indices,
-            })
             probes.append(result)
             candidate_metrics.append(result)
             rank = _candidate_rank(result, float(args.stage_accept_min_gain))
@@ -426,6 +458,9 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
         "target_by_graft": {str(key): value for key, value in sorted(accepted_target_map.items())},
         "candidate_score_mode": getattr(args, "candidate_score_mode", "composed_gain"),
         "orthogonal_penalty": float(getattr(args, "orthogonal_penalty", 0.0)),
+        "candidate_probe_steps": int(getattr(args, "candidate_probe_steps", 0) or 0),
+        "candidate_probe_max_train_seconds": float(getattr(args, "candidate_probe_max_train_seconds", 0.0) or 0.0),
+        "candidate_top_k": int(getattr(args, "candidate_top_k", 0) or 0),
         "stage_metrics": stage_metrics,
     }
     checkpoint = _save_composed(torch, out_dir, accepted_states, accepted_target_map, args, summary)
