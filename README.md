@@ -264,9 +264,23 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
+Linux equivalent:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
 Run the CLI:
 
 ```powershell
+python -m saint.cli --help
+```
+
+Linux equivalent:
+
+```bash
 python -m saint.cli --help
 ```
 
@@ -276,9 +290,21 @@ Run tests:
 python -m pytest
 ```
 
+Linux equivalent:
+
+```bash
+python -m pytest
+```
+
 Inspect a small runtime command:
 
 ```powershell
+python -m saint.cli estimate --help
+```
+
+Linux equivalent:
+
+```bash
 python -m saint.cli estimate --help
 ```
 
@@ -301,12 +327,31 @@ python scripts/prepare_multilingual_data.py `
   --langs en,pt,es,fr,de
 ```
 
+Linux equivalent:
+
+```bash
+python scripts/prepare_multilingual_data.py \
+  --output-dir data/multilingual_350m \
+  --max-tokens 7000000000 \
+  --vocab-size 50000 \
+  --langs en,pt,es,fr,de
+```
+
 Finalize and clean raw shards:
 
 ```powershell
 python scripts/prepare_multilingual_data.py `
   --output-dir data/multilingual_350m `
   --vocab-size 50000 `
+  --finalize --clean-raw
+```
+
+Linux equivalent:
+
+```bash
+python scripts/prepare_multilingual_data.py \
+  --output-dir data/multilingual_350m \
+  --vocab-size 50000 \
   --finalize --clean-raw
 ```
 
@@ -320,12 +365,31 @@ python scripts/prepare_multilingual_data.py `
   --subset-copy-mode hardlink
 ```
 
+Linux equivalent:
+
+```bash
+python scripts/prepare_multilingual_data.py \
+  --derive-subset-from data/multilingual_350m \
+  --output-dir data/multilingual_125m \
+  --max-tokens 3500000000 \
+  --subset-copy-mode hardlink
+```
+
 Smoke test the full 125M DRM:
 
 ```powershell
 python scripts/train_distributed.py `
   --config configs/scaling/multilingual/125m.yaml `
   --device cuda `
+  --override batch_size=1 gradient_accumulation_steps=8 total_tokens=819200 save_interval=100 eval_interval=100 log_interval=10 save_dir=checkpoints/multilingual_125m/smoke_100
+```
+
+Linux equivalent:
+
+```bash
+python scripts/train_distributed.py \
+  --config configs/scaling/multilingual/125m.yaml \
+  --device cuda \
   --override batch_size=1 gradient_accumulation_steps=8 total_tokens=819200 save_interval=100 eval_interval=100 log_interval=10 save_dir=checkpoints/multilingual_125m/smoke_100
 ```
 

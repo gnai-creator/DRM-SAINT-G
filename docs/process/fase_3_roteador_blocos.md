@@ -108,6 +108,12 @@ Checkpoint:
 E:\dev\ai\drm_transformer\checkpoints\topology_controls\seed_42\best.pt
 ```
 
+Linux/WSL equivalent:
+
+```text
+/mnt/e/dev/ai/drm_transformer/checkpoints/topology_controls/seed_42/best.pt
+```
+
 Matrizes:
 
 ```text

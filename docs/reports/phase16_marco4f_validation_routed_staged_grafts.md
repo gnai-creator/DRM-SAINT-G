@@ -291,6 +291,39 @@ $env:PYTHONPATH="E:\dev\ai\SAINT-G"
   --candidate-targets blocks.0 blocks.1 blocks.2 blocks.3 blocks.4 blocks.5
 ```
 
+Linux equivalent:
+
+```bash
+cd /home/rato/dev/ai/SAINT-G
+export PYTHONPATH="/home/rato/dev/ai/SAINT-G"
+
+python \
+  scripts/benchmark_drm_g_phase16_graftblock.py \
+  --output-dir runs/phase16_marco4f_fix_24graft \
+  --checkpoint /mnt/e/dev/ai/drm_transformer/checkpoints/multilingual_5m/smoke_819k/final.pt \
+  --data-dir /mnt/e/dev/ai/drm_transformer/data/multilingual_125m \
+  --device cuda \
+  --seeds 42 \
+  --graft-count 24 \
+  --hidden-size 25889 \
+  --stage-size 4 \
+  --max-stages 6 \
+  --stage-accept-min-gain 0.0 \
+  --steps 100000000 \
+  --max-train-seconds 14400 \
+  --eval-every-steps 5000 \
+  --early-stopping-patience 3 \
+  --early-stopping-min-delta 0.00001 \
+  --batch-size 2 \
+  --seq-len 128 \
+  --validation-batches 4 \
+  --train-batches 4096 \
+  --learning-rate 0.0000003 \
+  --lr-decay 0.02 \
+  --training-mode validation_routed_staged \
+  --candidate-targets blocks.0 blocks.1 blocks.2 blocks.3 blocks.4 blocks.5
+```
+
 ## Criteria
 
 Marco 4F passes if:

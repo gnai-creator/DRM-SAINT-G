@@ -117,6 +117,36 @@ E:\dev\ai\SAINT-G\.venv\Scripts\python.exe `
   --save-graft-checkpoint
 ```
 
+Linux equivalent:
+
+```bash
+export PYTHONPATH="/home/rato/dev/ai/SAINT-G"
+
+python \
+  /home/rato/dev/ai/SAINT-G/scripts/benchmark_drm_g_phase16_graftblock.py \
+  --output-dir /home/rato/dev/ai/SAINT-G/runs/phase16_marco4d_24graft_4h_best \
+  --checkpoint /mnt/e/dev/ai/drm_transformer/checkpoints/multilingual_5m/smoke_819k/final.pt \
+  --data-dir /mnt/e/dev/ai/drm_transformer/data/multilingual_125m \
+  --device cuda \
+  --seeds 42 \
+  --graft-count 24 \
+  --hidden-size 25889 \
+  --steps 100000000 \
+  --max-train-seconds 14400 \
+  --eval-every-steps 5000 \
+  --early-stopping-patience 3 \
+  --early-stopping-min-delta 0.00001 \
+  --batch-size 2 \
+  --seq-len 128 \
+  --validation-batches 4 \
+  --train-batches 4096 \
+  --learning-rate 0.0000003 \
+  --lr-decay 0.02 \
+  --training-mode simultaneous \
+  --save-best-checkpoint \
+  --save-graft-checkpoint
+```
+
 ## Next Experiment Matrix
 
 Run the same protocol for:
