@@ -1,8 +1,17 @@
 # Roadmap SAINT-G
 
-SAINT-G significa **DRM por Enxerto com SAINT-G-Phi**. Este roadmap organiza o desenvolvimento do paradigma em fases verificaveis, partindo de experimentos matematicos pequenos ate testes em modelos grandes.
+SAINT-G significa **Scalable Auditable Intelligence through Neural Grafting**.
+Este roadmap organiza a evolucao do projeto em fases verificaveis, partindo de
+experimentos matematicos pequenos ate um sistema de crescimento modular,
+auditavel, reversivel e governado.
 
-O objetivo nao e comecar pelo 70B. O objetivo e provar, passo a passo, que o paradigma funciona:
+A fase DRM-G e a primeira trilha experimental dentro do SAINT-G. Ela testa
+grafting geometrico em `drm_transformer` como primeiro backbone, mas SAINT-G e
+maior que DRM: o objetivo e construir um protocolo geral para crescimento de IA
+por enxertos neurais validados.
+
+O objetivo nao e comecar pelo 70B. O objetivo e provar, passo a passo, que o
+paradigma funciona:
 
 ```text
 matriz isolada
@@ -17,19 +26,23 @@ matriz isolada
 O principio do SAINT-G e:
 
 ```text
-loss global,
-atualizacao local,
-padroes compartilhados,
-calculo agrupado,
-recomposicao final
+modelo base congelado,
+enxertos candidatos,
+validacao do modelo composto,
+aceite/rejeicao por metricas,
+checkpoint recomponivel,
+rollback,
+auditoria,
+consolidacao controlada
 ```
 
 ## Status Atual
 
 ```text
-Fase atual: Fase DRM-G - SAINT-G
+Fase atual: Fase 16 - Full 125M/350M vs SAINT-G grafted
 Fase anterior: Fase 15 concluida com ressalvas
-Proximo marco: DRM-G Marco 3 - Consolidacao permanente do enxerto
+Marco atual: Marco 4H/4I - staged graft growth com roteamento validado
+Proximo marco: fechar comparacao 5M + grafts vs full 125M com validacao robusta
 ```
 
 Resumo do estado:
@@ -52,8 +65,12 @@ Resumo do estado:
 | 13 | Modelos Hugging Face Pequenos | Concluida com ressalvas |
 | 14 | Escala 3B | Concluida com ressalvas |
 | 15 | Escala 14B | Concluida com ressalvas |
-| DRM-G | SAINT-G | Em andamento |
-| 16+ | Modelos reais e escala maior | Pendente |
+| DRM-G | Primeira trilha experimental de neural grafting em DRM | Em andamento |
+| 16 | Full 125M/350M vs SAINT-G Grafted | Em andamento |
+| 17 | Prova Experimental de Controle | Pendente |
+| 18 | DRM Growth Protocol | Pendente |
+| 19 | Escala 70B | Pendente |
+| 20+ | Continual Growth, Registry e Governanca | Pendente |
 
 ## Fase 0 - Fundacao Conceitual
 
@@ -82,17 +99,22 @@ Consolidar o paradigma antes de escrever um runtime grande.
 
 ### Criterio de conclusao
 
-A fase termina quando o projeto tem uma definicao clara:
+A fase termina quando o projeto tem uma definicao inicial clara:
 
 ```text
-SAINT-G = sparse multi-scale block-codebook delta training
+SAINT-G = Scalable Auditable Intelligence through Neural Grafting
 ```
 
 Em portugues:
 
 ```text
-treino de deltas esparsos por dicionario multi-escala de blocos
+inteligencia escalavel e auditavel por enxertos neurais
 ```
+
+Historicamente, o projeto comecou como treino de deltas esparsos por
+dicionario multi-escala de blocos. Essa continua sendo uma tecnica util dentro
+do runtime, mas a tese atual e mais ampla: crescimento controlado por grafts
+validaveis, recomponiveis e removiveis.
 
 ### Resultado
 
