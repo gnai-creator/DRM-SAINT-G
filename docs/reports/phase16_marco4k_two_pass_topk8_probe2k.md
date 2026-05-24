@@ -1,6 +1,6 @@
 # Phase 16 Marco 4K - Two-Pass Top-K 8 Probe 2K
 
-Status: **planned / recommended next CUDA run**.
+Status: **completed / new Phase 16 best CUDA run**.
 
 ## Goal
 
@@ -156,21 +156,116 @@ composed_loss remains worse than 4H
 runtime approaches full-grid search without quality recovery
 ```
 
-## Read After Run
+## Final CUDA Result
 
-Expected artifacts:
+Run directory:
 
 ```text
-/mnt/e/dev/ai/DRM-SAINT-G/runs/phase16_marco4k_two_pass_topk8_probe2k_24graft/summary.json
-/mnt/e/dev/ai/DRM-SAINT-G/runs/phase16_marco4k_two_pass_topk8_probe2k_24graft/stage_metrics.json
-/mnt/e/dev/ai/DRM-SAINT-G/runs/phase16_marco4k_two_pass_topk8_probe2k_24graft/candidate_metrics.json
-/mnt/e/dev/ai/DRM-SAINT-G/runs/phase16_marco4k_two_pass_topk8_probe2k_24graft/results.md
+/mnt/e/dev/ai/DRM-SAINT-G/runs/phase16_marco4k_two_pass_topk8_probe2k_24graft
 ```
 
-Compare directly against:
+Artifacts produced:
+
+```text
+summary.json
+stage_metrics.json
+candidate_metrics.json
+results.md
+composed_graft_checkpoint.pt
+```
+
+Final metrics:
+
+```text
+base_loss: 10.416174411773682
+composed_loss: 10.414523839950562
+recomposed_loss: 10.414523839950562
+recompose_abs_diff: 0.0
+accumulated_gain: 0.0016505718231201172
+accepted_groups: 2
+accepted_grafts: 5
+composed_checkpoint_bytes: 477209927
+```
+
+Stage decisions:
+
+```text
+stage 1: approved, grafts 0-3 -> blocks.4
+  lr=1.00e-07, init_scale=1.00e-02, gain=0.0015499591827392578
+  candidate_composed_loss=10.414624452590942
+
+stage 2: approved, graft 4 -> blocks.2
+  lr=1.00e-07, init_scale=1.00e-02, gain=0.00010061264038085938
+  candidate_composed_loss=10.414523839950562
+
+stage 3: rejected, candidate blocks.3
+  lr=1.00e-07, init_scale=1.00e-03, gain=0.0
+  candidate_composed_loss=10.414523839950562
+```
+
+Final routing map:
+
+```text
+grafts 0-3 -> blocks.4
+graft 4    -> blocks.2
+```
+
+Note: the generated `summary.json` still reports `marco` as
+`4j_two_pass_candidate_pruning` because the current `_marco_name()` helper labels
+all `candidate_top_k > 0` runs as 4J. The output directory, command, and report
+identify this run as Marco 4K.
+
+## Comparison
 
 ```text
 4H: 10.414670705795288, 5 grafts
 4I: 10.414714097976685, 5 grafts
-4J: 10.41480803489685, 4 grafts
+4J: 10.414808034896850, 4 grafts
+4K: 10.414523839950562, 5 grafts
+```
+
+Deltas:
+
+```text
+4K vs 4H: -0.0001468658447265625
+4K vs 4I: -0.00019025802612304688
+4K vs 4J: -0.0002841949462890625
+```
+
+## Verdict
+
+```text
+Marco 4K is the new best Phase 16 grafted checkpoint so far.
+```
+
+It passes the strong technical requirements: the run accepted a fifth graft, beat
+the previous best composed loss, produced a recomposable checkpoint, and the
+recomposed loss matches exactly (`recompose_abs_diff = 0.0`).
+
+The result did not match the original intuition that the fifth graft would be in
+`blocks.3`; instead, the best two-pass route was `blocks.4` for grafts 0-3 and
+`blocks.2` for graft 4. This is still a positive outcome because the wider
+`top-k=8` and deeper probe recovered a useful fifth graft that Marco 4J missed.
+
+## Recommended Next Marco
+
+Marco 4L should verify whether 4K is robust or a seed-specific win before the
+project promotes it into the full-vs-grafted comparison.
+
+Recommended focus:
+
+```text
+Marco 4L - 4K Robustness and Seed Replication
+- run the same 4K recipe on additional seeds, e.g. 7 and 123
+- keep the exact 4K routing grid and acceptance rule
+- compare mean/std composed_loss and accepted_grafts
+- verify every checkpoint has recompose_abs_diff = 0.0
+- fix or document the `_marco_name()` label quirk for top-k runs
+```
+
+Pass condition:
+
+```text
+mean composed_loss improves over 4H or at least preserves 5 accepted grafts
+with exact recomposition on all seeds.
 ```

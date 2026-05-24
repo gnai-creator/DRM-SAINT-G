@@ -905,7 +905,7 @@ probe curto perdeu o quinto graft encontrado pelo 4H em `blocks.3`.
 
 ### Marco 4K - Two-Pass Top-K 8 Probe 2K
 
-Status: **planejado**.
+Status: **concluido / novo melhor checkpoint grafted da Fase 16**.
 
 Objetivo:
 
@@ -927,13 +927,82 @@ Documento:
 docs/reports/phase16_marco4k_two_pass_topk8_probe2k.md
 ```
 
+Resultado CUDA:
+
+```text
+runs/phase16_marco4k_two_pass_topk8_probe2k_24graft
+base_loss: 10.416174411773682
+composed_loss: 10.414523839950562
+recomposed_loss: 10.414523839950562
+recompose_abs_diff: 0.0
+accumulated_gain: 0.0016505718231201172
+accepted_groups: 2
+accepted_grafts: 5
+checkpoint: composed_graft_checkpoint.pt
+checkpoint_bytes: 477209927
+```
+
+Stage decisions:
+
+```text
+stage 1: approved, grafts 0-3 -> blocks.4, gain 0.001550
+stage 2: approved, graft 4 -> blocks.2, gain 0.000101
+stage 3: rejected, blocks.3, gain 0.0
+```
+
+Comparacao:
+
+```text
+4H composed_loss: 10.414671, accepted_grafts: 5
+4I composed_loss: 10.414714, accepted_grafts: 5
+4J composed_loss: 10.414808, accepted_grafts: 4
+4K composed_loss: 10.414524, accepted_grafts: 5
+```
+
+Veredito:
+
+```text
+Marco 4K passou e virou o novo melhor resultado grafted da Fase 16.
+```
+
+O 4K recuperou um quinto graft util e bateu o 4H, 4I e 4J. A rota final nao foi
+a hipotese original `blocks.3`; o melhor checkpoint usou `blocks.4` para os
+quatro primeiros grafts e `blocks.2` para o quinto. Ainda assim, a recomposicao
+foi exata e o resultado e o melhor checkpoint grafted ate aqui.
+
+Observacao: o `summary.json` gerado ainda rotula `marco` como
+`4j_two_pass_candidate_pruning`, porque o helper `_marco_name()` atualmente
+classifica qualquer run com `candidate_top_k > 0` como 4J. O diretorio, comando e
+relatorio identificam corretamente este experimento como Marco 4K.
+
+### Marco 4L - Robustez do 4K em Multiplas Seeds
+
+Status: **proximo recomendado**.
+
+Objetivo:
+
+Verificar se o 4K e um ganho robusto ou um resultado especifico da seed 42 antes
+de promover o checkpoint/receita para a comparacao full-vs-grafted.
+
+Plano:
+
+```text
+replicar a receita 4K em seeds adicionais, por exemplo 7 e 123
+manter candidate_targets, candidate_probe_steps, candidate_top_k e criterio de aceite
+comparar composed_loss, accepted_grafts e target_by_graft por seed
+validar recompose_abs_diff = 0.0 em todos os checkpoints
+corrigir ou documentar o label `_marco_name()` para runs top-k 4K+
+```
+
 Criterio:
 
 ```text
-composed_loss <= 10.414670705795288
-ou
-accepted_grafts >= 5 com recompose_abs_diff = 0.0
+passa se a media multi-seed continuar melhor que o 4H
+ou se todas as seeds preservarem 5 accepted_grafts com recomposicao exata.
 ```
+
+Se o 4L passar, o Marco 5 deve usar a receita 4K/4L como melhor representante
+grafted contra o baseline full controlado.
 
 ### Marco 5 - Comparacao Full vs Grafted
 
@@ -1044,9 +1113,10 @@ extrapolacao, nao apenas uma demonstracao isolada.
 
 ## Proximo Passo Imediato
 
-Implementar o Marco 1:
+Executar o Marco 4L:
 
-- memory planner para DRM full 125M/350M;
-- estimativa de parametros das configs candidatas;
-- recomendacao automatica do maior tamanho viavel na RTX 4090;
-- atualizar roadmap com o tamanho escolhido.
+- replicar a receita 4K em seeds adicionais;
+- confirmar se o ganho contra 4H e robusto;
+- validar `recompose_abs_diff = 0.0` em todos os checkpoints;
+- corrigir/documentar o label `_marco_name()` para diferenciar 4J/4K/4L;
+- se 4L passar, promover a receita 4K/4L para o Marco 5 como melhor representante grafted.
