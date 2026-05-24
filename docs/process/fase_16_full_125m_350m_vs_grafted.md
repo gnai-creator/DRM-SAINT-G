@@ -1085,7 +1085,93 @@ ou se todas as seeds preservarem 5 accepted_grafts com recomposicao exata.
 ```
 
 Se o 4L passar, o Marco 5 deve usar a receita 4K/4L como melhor representante
-grafted contra o baseline full controlado.
+grafted contra o baseline full controlado. Como o resultado observado ate agora
+indica que o quinto graft nao e robusto em todas as seeds, os Marcos 4M/4N foram
+inseridos antes do Marco 5 para diagnosticar e possivelmente melhorar o routing.
+
+### Marco 4M - NTK-Mirror-Inspired Activation Gate Probe
+
+Status: **implementado / pronto para runs diagnosticos CUDA**.
+
+Objetivo:
+
+Implementar um probe NTK-style no SAINT-G para ranquear `blocks.2`, `blocks.3` e
+`blocks.4` antes do treino deep dos graft candidates.
+
+Documento:
+
+```text
+docs/reports/phase16_marco4m_ntkmirror_activation_gate_probe.md
+```
+
+Sinal calculado:
+
+```text
+score(block) = sum(abs(grad_h * h))
+```
+
+Entregas implementadas:
+
+```text
+--ntk-activation-probe-batches N
+--ntk-activation-probe-split train|val
+ntk_activation_probe_metrics.json
+stage_metrics[*].ntk_activation_probe
+```
+
+Escopo minimo:
+
+```text
+1. adicionar captura de ativacoes + gradientes nos candidate targets
+2. calcular score por target com abs(grad_h * h)
+3. comparar ranking do score com candidates escolhidos em seeds 42, 7 e 123
+4. verificar se o score prediz stage aprovado/rejeitado, melhor target e quinto graft
+```
+
+Criterio:
+
+```text
+O score NTK-style explica ou prediz por que seed 42 encontra o quinto graft
+e seeds 7/123 nao.
+```
+
+Marco 4M e diagnostico somente; ele nao substitui o `composed_gain_orthogonal`
+ainda.
+
+### Marco 4N - NTK-Guided Candidate Pruning and Routing
+
+Status: **planejado / dependente do resultado diagnostico do Marco 4M**.
+
+Objetivo:
+
+Usar o score NTK-style como candidate pruning/routing automatico.
+
+Documento:
+
+```text
+docs/reports/phase16_marco4n_ntk_guided_candidate_routing.md
+```
+
+Hipoteses de modo:
+
+```text
+ntk_prefilter:
+  ranquear targets por score NTK
+  manter top targets
+  rodar grid lr/scale apenas nesses targets
+
+ntk_score_blend:
+  manter probe atual
+  adicionar score NTK normalizado ao candidate_score
+```
+
+Criterio:
+
+```text
+preservar/melhorar o resultado 4K com menos probes
+ou recuperar quinto graft em uma seed onde 4L rejeitou o stage 2
+ou reduzir runtime mantendo composed_loss equivalente.
+```
 
 ### Marco 5 - Comparacao Full vs Grafted
 

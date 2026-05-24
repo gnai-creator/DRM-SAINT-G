@@ -436,9 +436,9 @@ def main() -> int:
     parser.add_argument("--candidate-learning-rates", nargs="*", type=float, default=None); parser.add_argument("--candidate-init-scales", nargs="*", type=float, default=None)
     parser.add_argument("--candidate-activations", nargs="*", default=None); parser.add_argument("--candidate-score-mode", choices=["composed_gain", "composed_gain_orthogonal"], default="composed_gain")
     parser.add_argument("--orthogonal-penalty", type=float, default=0.0); parser.add_argument("--candidate-probe-steps", type=int, default=0); parser.add_argument("--candidate-probe-max-train-seconds", type=float, default=0.0); parser.add_argument("--candidate-top-k", type=int, default=0)
+    parser.add_argument("--ntk-activation-probe-batches", type=int, default=0); parser.add_argument("--ntk-activation-probe-split", choices=["train", "val"], default="train")
     parser.add_argument("--full-125m-smoke-loss", type=float, default=9.049912414550782)
-    parser.add_argument("--save-graft-checkpoint", action="store_true")
-    parser.add_argument("--save-best-checkpoint", action="store_true")
+    parser.add_argument("--save-graft-checkpoint", action="store_true"); parser.add_argument("--save-best-checkpoint", action="store_true")
     parser.add_argument(
         "--targets",
         nargs="*",

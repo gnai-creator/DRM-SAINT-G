@@ -14,6 +14,15 @@ from saint.adapters.drm_grafting_graftblock import (
     graft_checkpoint_payload,
     make_graft_blocks,
 )
+from saint.adapters.drm_grafting_graftblock_routed_utils import (
+    candidate_score as _candidate_score,
+    marco_name as _marco_name,
+    markdown as _markdown,
+)
+from saint.adapters.drm_grafting_ntk_probe import (
+    activation_gate_scores_for_loss as _activation_gate_scores_for_loss,
+    run_activation_probe_stage as _run_ntk_activation_probe_stage,
+)
 
 
 def _batch(metadata: dict[str, Any], index: int) -> dict[str, Any]:
@@ -138,29 +147,6 @@ def _candidate_args(args, candidate: dict[str, Any], overrides: dict[str, Any] |
     return SimpleNamespace(**values)
 
 
-def _marco_name(args) -> str:
-    if int(getattr(args, "candidate_top_k", 0) or 0) > 0:
-        return "4j_two_pass_candidate_pruning"
-    if getattr(args, "candidate_score_mode", "composed_gain") == "composed_gain_orthogonal":
-        return "4i_residual_orthogonal_routing"
-    if int(getattr(args, "post_first_stage_size", 0) or 0) > 0:
-        return "4h_fine_grained_second_stage"
-    grid_args = (
-        args.candidate_learning_rates,
-        args.candidate_init_scales,
-        args.candidate_activations,
-    )
-    return "4g_candidate_grid_routed_grafts" if any(grid_args) else "4f_validation_routed_staged_grafts"
-
-
-def _candidate_score(args, target: str, gain: float, accepted_target_map: dict[int, str]) -> tuple[float, float]:
-    if getattr(args, "candidate_score_mode", "composed_gain") != "composed_gain_orthogonal":
-        return float(gain), 0.0
-    overlap = sum(1 for accepted_target in accepted_target_map.values() if accepted_target == target)
-    penalty = float(getattr(args, "orthogonal_penalty", 0.0)) * float(overlap)
-    return float(gain) - penalty, penalty
-
-
 def _candidate_rank(row: dict[str, Any], min_gain: float) -> tuple[int, float]:
     positive = row["candidate_composed_gain"] > float(min_gain)
     return (1 if positive else 0, float(row["candidate_score"]))
@@ -241,6 +227,43 @@ def _composed_loss_for(torch, model_cls, drm_config, metadata, args, states, act
     finally:
         for handle in handles:
             handle.remove()
+
+
+def _ntk_activation_probe_stage(
+    torch,
+    model_cls,
+    drm_config,
+    metadata,
+    args,
+    accepted_states,
+    accepted,
+    accepted_target_map,
+    targets: list[str],
+    stage: int,
+) -> list[dict[str, Any]]:
+    if int(getattr(args, "ntk_activation_probe_batches", 0) or 0) <= 0:
+        return []
+    model = _new_model(torch, model_cls, drm_config, metadata)
+    grafts = _new_grafts(torch, drm_config, metadata, args)
+    _copy_indices(grafts, accepted_states, accepted, str(metadata["device"]))
+    return _run_ntk_activation_probe_stage(
+        torch,
+        model,
+        grafts,
+        metadata,
+        drm_config,
+        args,
+        accepted,
+        accepted_target_map,
+        targets,
+        stage,
+        copy_indices=_copy_indices,
+        set_state=_set_state,
+        attach_target_map=_attach_target_map,
+        batch_fn=_batch,
+        tokens_fn=_tokens,
+        loss_fn=_loss,
+    )
 
 
 def _evaluate_candidate(
@@ -338,28 +361,6 @@ def _recompose_loss(torch, model_cls, drm_config, metadata, artifact: Path, args
             handle.remove()
 
 
-def _markdown(summary: dict[str, Any]) -> str:
-    lines = [
-        f"# Phase 16 {summary['marco']}",
-        "",
-        f"- base_loss: {summary['base_loss']:.6f}",
-        f"- composed_loss: {summary['composed_loss']:.6f}",
-        f"- accumulated_gain: {summary['accumulated_gain']:.6f}",
-        f"- accepted_groups: {summary['accepted_groups']}",
-        f"- accepted_grafts: {summary['accepted_grafts']}",
-        "",
-        "| stage | target | lr | init_scale | activation | decision | gain | best |",
-        "|---:|---|---:|---:|---|---|---:|---:|",
-    ]
-    for row in summary["stage_metrics"]:
-        lines.append(
-            "| {stage} | {selected_target} | {learning_rate:.2e} | "
-            "{init_scale:.2e} | {activation} | {decision} | "
-            "{stage_gain:.6f} | {stage_best_loss:.6f} |".format(**row)
-        )
-    return "\n".join(lines) + "\n"
-
-
 def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metadata, args, out_dir: Path):
     base_model = _new_model(torch, model_cls, drm_config, metadata)
     base_loss = _eval(torch, base_model, drm_config, metadata)
@@ -369,6 +370,7 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
     current_composed_loss = base_loss
     stage_metrics = []
     candidate_metrics = []
+    ntk_activation_probe_metrics = []
     candidates = _candidate_grid(args)
     start = 0
     for stage in range(1, int(args.max_stages) + 1):
@@ -381,6 +383,19 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
         best_gain = None
         stage_candidates = candidates
         args._current_composed_loss = current_composed_loss
+        ntk_rows = _ntk_activation_probe_stage(
+            torch,
+            model_cls,
+            drm_config,
+            metadata,
+            args,
+            accepted_states,
+            accepted,
+            accepted_target_map,
+            list(args.candidate_targets or args.targets),
+            stage,
+        )
+        ntk_activation_probe_metrics.extend(ntk_rows)
         if int(getattr(args, "candidate_top_k", 0) or 0) > 0:
             probe_args = SimpleNamespace(**vars(args))
             probe_args.steps = int(getattr(args, "candidate_probe_steps", 0) or args.eval_every_steps or 1)
@@ -434,6 +449,7 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
             "previous_composed_loss": previous_composed_loss,
             "target_by_graft": {str(key): value for key, value in sorted(accepted_target_map.items())},
             "accepted_graft_ids": sorted(accepted),
+            "ntk_activation_probe": ntk_rows,
         })
         if decision != "approved":
             break
@@ -461,6 +477,8 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
         "candidate_probe_steps": int(getattr(args, "candidate_probe_steps", 0) or 0),
         "candidate_probe_max_train_seconds": float(getattr(args, "candidate_probe_max_train_seconds", 0.0) or 0.0),
         "candidate_top_k": int(getattr(args, "candidate_top_k", 0) or 0),
+        "ntk_activation_probe_batches": int(getattr(args, "ntk_activation_probe_batches", 0) or 0),
+        "ntk_activation_probe_split": str(getattr(args, "ntk_activation_probe_split", "train") or "train"),
         "stage_metrics": stage_metrics,
     }
     checkpoint = _save_composed(torch, out_dir, accepted_states, accepted_target_map, args, summary)
@@ -469,6 +487,10 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
     summary["recomposed_loss"] = _recompose_loss(torch, model_cls, drm_config, metadata, checkpoint, args)
     summary["recompose_abs_diff"] = abs(summary["recomposed_loss"] - composed_loss)
     (out_dir / "candidate_metrics.json").write_text(json.dumps(candidate_metrics, indent=2), encoding="utf-8")
+    (out_dir / "ntk_activation_probe_metrics.json").write_text(
+        json.dumps(ntk_activation_probe_metrics, indent=2),
+        encoding="utf-8",
+    )
     (out_dir / "stage_metrics.json").write_text(json.dumps(stage_metrics, indent=2), encoding="utf-8")
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     (out_dir / "results.md").write_text(_markdown(summary), encoding="utf-8")
