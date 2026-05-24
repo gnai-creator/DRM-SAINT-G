@@ -977,21 +977,104 @@ relatorio identificam corretamente este experimento como Marco 4K.
 
 ### Marco 4L - Robustez do 4K em Multiplas Seeds
 
-Status: **proximo recomendado**.
+Status: **planejado / proximo CUDA run recomendado**.
 
 Objetivo:
 
 Verificar se o 4K e um ganho robusto ou um resultado especifico da seed 42 antes
 de promover o checkpoint/receita para a comparacao full-vs-grafted.
 
+Documento:
+
+```text
+docs/reports/phase16_marco4l_4k_multiseed_robustness.md
+```
+
 Plano:
 
 ```text
-replicar a receita 4K em seeds adicionais, por exemplo 7 e 123
+replicar a receita 4K em seeds adicionais: 7 e 123
+rodar um comando por seed, com output-dir separado
 manter candidate_targets, candidate_probe_steps, candidate_top_k e criterio de aceite
 comparar composed_loss, accepted_grafts e target_by_graft por seed
 validar recompose_abs_diff = 0.0 em todos os checkpoints
 corrigir ou documentar o label `_marco_name()` para runs top-k 4K+
+```
+
+Comandos principais:
+
+```bash
+cd /home/rato/dev/ai/SAINT-G
+
+python \
+  scripts/benchmark_drm_g_phase16_graftblock.py \
+  --output-dir /mnt/e/dev/ai/DRM-SAINT-G/runs/phase16_marco4l_two_pass_topk8_probe2k_24graft_seed7 \
+  --checkpoint /mnt/e/dev/ai/drm_transformer/checkpoints/multilingual_5m/smoke_819k/final.pt \
+  --data-dir /mnt/e/dev/ai/drm_transformer/data/multilingual_125m \
+  --device cuda \
+  --seeds 7 \
+  --graft-count 24 \
+  --hidden-size 25889 \
+  --stage-size 4 \
+  --post-first-stage-size 1 \
+  --max-stages 8 \
+  --stage-accept-min-gain 0.0 \
+  --steps 100000000 \
+  --max-train-seconds 1800 \
+  --eval-every-steps 5000 \
+  --early-stopping-patience 3 \
+  --early-stopping-min-delta 0.00001 \
+  --batch-size 2 \
+  --seq-len 128 \
+  --validation-batches 4 \
+  --train-batches 4096 \
+  --learning-rate 0.0000003 \
+  --lr-decay 0.02 \
+  --training-mode validation_routed_staged \
+  --candidate-targets blocks.2 blocks.3 blocks.4 \
+  --candidate-learning-rates 0.00000003 0.0000001 0.0000003 \
+  --candidate-init-scales 0.001 0.005 0.01 \
+  --candidate-activations silu \
+  --candidate-score-mode composed_gain_orthogonal \
+  --orthogonal-penalty 0.00001 \
+  --candidate-probe-steps 2000 \
+  --candidate-probe-max-train-seconds 300 \
+  --candidate-top-k 8
+
+python \
+  scripts/benchmark_drm_g_phase16_graftblock.py \
+  --output-dir /mnt/e/dev/ai/DRM-SAINT-G/runs/phase16_marco4l_two_pass_topk8_probe2k_24graft_seed123 \
+  --checkpoint /mnt/e/dev/ai/drm_transformer/checkpoints/multilingual_5m/smoke_819k/final.pt \
+  --data-dir /mnt/e/dev/ai/drm_transformer/data/multilingual_125m \
+  --device cuda \
+  --seeds 123 \
+  --graft-count 24 \
+  --hidden-size 25889 \
+  --stage-size 4 \
+  --post-first-stage-size 1 \
+  --max-stages 8 \
+  --stage-accept-min-gain 0.0 \
+  --steps 100000000 \
+  --max-train-seconds 1800 \
+  --eval-every-steps 5000 \
+  --early-stopping-patience 3 \
+  --early-stopping-min-delta 0.00001 \
+  --batch-size 2 \
+  --seq-len 128 \
+  --validation-batches 4 \
+  --train-batches 4096 \
+  --learning-rate 0.0000003 \
+  --lr-decay 0.02 \
+  --training-mode validation_routed_staged \
+  --candidate-targets blocks.2 blocks.3 blocks.4 \
+  --candidate-learning-rates 0.00000003 0.0000001 0.0000003 \
+  --candidate-init-scales 0.001 0.005 0.01 \
+  --candidate-activations silu \
+  --candidate-score-mode composed_gain_orthogonal \
+  --orthogonal-penalty 0.00001 \
+  --candidate-probe-steps 2000 \
+  --candidate-probe-max-train-seconds 300 \
+  --candidate-top-k 8
 ```
 
 Criterio:
