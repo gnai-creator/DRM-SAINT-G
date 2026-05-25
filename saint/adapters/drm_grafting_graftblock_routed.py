@@ -14,15 +14,8 @@ from saint.adapters.drm_grafting_graftblock import (
     graft_checkpoint_payload,
     make_graft_blocks,
 )
-from saint.adapters.drm_grafting_graftblock_routed_utils import (
-    candidate_score as _candidate_score,
-    marco_name as _marco_name,
-    markdown as _markdown,
-)
-from saint.adapters.drm_grafting_ntk_probe import (
-    activation_gate_scores_for_loss as _activation_gate_scores_for_loss,
-    run_activation_probe_stage as _run_ntk_activation_probe_stage,
-)
+from saint.adapters.drm_grafting_graftblock_routed_utils import candidate_rank as _candidate_rank, candidate_score as _candidate_score, marco_name as _marco_name, markdown as _markdown, ntk_feature_map as _ntk_feature_map, select_stage_candidates as _select_stage_candidates
+from saint.adapters.drm_grafting_ntk_probe import run_activation_probe_stage as _run_ntk_activation_probe_stage
 
 
 def _batch(metadata: dict[str, Any], index: int) -> dict[str, Any]:
@@ -145,11 +138,6 @@ def _candidate_args(args, candidate: dict[str, Any], overrides: dict[str, Any] |
     if overrides:
         values.update(overrides)
     return SimpleNamespace(**values)
-
-
-def _candidate_rank(row: dict[str, Any], min_gain: float) -> tuple[int, float]:
-    positive = row["candidate_composed_gain"] > float(min_gain)
-    return (1 if positive else 0, float(row["candidate_score"]))
 
 
 def _stage_indices(args, start: int, stage: int) -> tuple[list[int], int]:
@@ -281,6 +269,7 @@ def _evaluate_candidate(
     stage,
     pass_name,
     use_final_state=False,
+    ntk_features=None,
 ):
     candidate_args = _candidate_args(args, candidate)
     target = candidate["target"]
@@ -305,9 +294,12 @@ def _evaluate_candidate(
     loss = _composed_loss_for(torch, model_cls, drm_config, metadata, candidate_args, state_payload, active, target_map)
     result["candidate_composed_loss"] = loss
     result["candidate_composed_gain"] = args._current_composed_loss - loss
-    score, penalty = _candidate_score(args, target, result["candidate_composed_gain"], accepted_target_map)
+    score, penalty, ntk_details = _candidate_score(
+        args, target, result["candidate_composed_gain"], accepted_target_map, ntk_features=ntk_features,
+    )
     result["candidate_score"] = score
     result["redundancy_penalty"] = penalty
+    result.update(ntk_details)
     result["previous_composed_loss"] = args._current_composed_loss
     result["candidate_target_by_graft"] = {str(key): value for key, value in sorted(target_map.items())}
     result.update({
@@ -372,6 +364,7 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
     candidate_metrics = []
     ntk_activation_probe_metrics = []
     candidates = _candidate_grid(args)
+    previous_ntk_by_target: dict[str, float] = {}
     start = 0
     for stage in range(1, int(args.max_stages) + 1):
         if start >= int(args.graft_count):
@@ -396,6 +389,7 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
             stage,
         )
         ntk_activation_probe_metrics.extend(ntk_rows)
+        ntk_features_by_target = _ntk_feature_map(ntk_rows, previous_ntk_by_target)
         if int(getattr(args, "candidate_top_k", 0) or 0) > 0:
             probe_args = SimpleNamespace(**vars(args))
             probe_args.steps = int(getattr(args, "candidate_probe_steps", 0) or args.eval_every_steps or 1)
@@ -407,15 +401,18 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
                 result, _payload = _evaluate_candidate(
                     torch, model_cls, drm_config, metadata, probe_args, out_dir, accepted_states,
                     accepted, accepted_target_map, candidate, indices, stage, "probe", use_final_state=True,
+                    ntk_features=ntk_features_by_target.get(str(candidate["target"])),
                 )
                 candidate_metrics.append(result)
                 probe_rows.append((result, candidate))
-            probe_rows.sort(key=lambda item: _candidate_rank(item[0], float(args.stage_accept_min_gain)), reverse=True)
-            stage_candidates = [candidate for _row, candidate in probe_rows[: int(args.candidate_top_k)]]
+            stage_candidates = _select_stage_candidates(
+                probe_rows, args, min_gain=float(args.stage_accept_min_gain), ntk_rows=ntk_rows,
+            )
         for candidate in stage_candidates:
             result, state_payload = _evaluate_candidate(
                 torch, model_cls, drm_config, metadata, args, out_dir, accepted_states,
                 accepted, accepted_target_map, candidate, indices, stage, "deep",
+                ntk_features=ntk_features_by_target.get(str(candidate["target"])),
             )
             probes.append(result)
             candidate_metrics.append(result)
@@ -453,6 +450,7 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
         })
         if decision != "approved":
             break
+        previous_ntk_by_target = {str(row.get("target")): float(row.get("ntk_activation_score", 0.0) or 0.0) for row in ntk_rows}
         start = end
     final_model = _new_model(torch, model_cls, drm_config, metadata)
     _set_state(accepted_states, accepted, set())
@@ -479,6 +477,10 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
         "candidate_top_k": int(getattr(args, "candidate_top_k", 0) or 0),
         "ntk_activation_probe_batches": int(getattr(args, "ntk_activation_probe_batches", 0) or 0),
         "ntk_activation_probe_split": str(getattr(args, "ntk_activation_probe_split", "train") or "train"),
+        "ntk_hybrid_saturation_weight": float(getattr(args, "ntk_hybrid_saturation_weight", 0.0) or 0.0),
+        "ntk_hybrid_residual_delta_weight": float(getattr(args, "ntk_hybrid_residual_delta_weight", 0.0) or 0.0),
+        "ntk_hybrid_anti_saturation_penalty": float(getattr(args, "ntk_hybrid_anti_saturation_penalty", 0.0) or 0.0),
+        "ntk_hybrid_keep_ranks": int(getattr(args, "ntk_hybrid_keep_ranks", 0) or 0),
         "stage_metrics": stage_metrics,
     }
     checkpoint = _save_composed(torch, out_dir, accepted_states, accepted_target_map, args, summary)

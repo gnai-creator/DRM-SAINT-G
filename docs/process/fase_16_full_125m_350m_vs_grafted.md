@@ -1173,7 +1173,7 @@ experiment only if it preserves known useful targets.
 
 ### Marco 4N - NTK Residual/Saturation Routing Plan
 
-Status: **4N-A concluido para seeds 42, 7 e 123 / 4N-B planejado como experimento conservador**.
+Status: **4N-A concluido para seeds 42, 7 e 123 / 4N-B implementado como experimento conservador**.
 
 Objetivo:
 
@@ -1185,8 +1185,9 @@ Dividir o Marco 4N em duas etapas:
   sem alterar roteamento ou treino
 
 4N-B:
-  futuro experimento de routing NTK-aware conservador
-  somente se 4N-A encontrar uma regra segura
+  experimento de routing NTK-aware conservador implementado
+  composto por saturation-adjusted NTK, residual-delta NTK e anti-saturation
+  sem descartar representantes raw NTK rank 2/rank 3
 ```
 
 Documento:
@@ -1234,31 +1235,42 @@ ntk_run_summaries.json
 ntk_routing_analysis.md
 ```
 
-Regras candidatas para 4N-B:
+Implementacao 4N-B:
 
 ```text
-saturation penalty:
-  adjusted_score = ntk_score / (1 + accepted_grafts_on_target)
-
-residual delta:
-  adjusted_score = abs(ntk_score_stage_t - ntk_score_stage_t_minus_1)
-
-anti-saturation:
-  se target ja recebeu stage_size grafts,
-  reduzir prioridade no proximo stage
-
-hybrid conservative:
-  manter composed_gain_orthogonal como decisao principal,
-  usar NTK somente para desempate, warning ou ordenacao secundaria
+saint/adapters/drm_grafting_graftblock_routed_utils.py
+saint/adapters/drm_grafting_graftblock_routed.py
+scripts/benchmark_drm_g_phase16_graftblock.py
+tests/test_ntk_hybrid_routing.py
 ```
 
-Criterio:
+Modo 4N-B:
 
 ```text
-4N-A mostrou que raw NTK nao separa de forma segura os casos uteis/rejeitados.
-4N-B so deve ser implementado se a regra preservar seed 42 stage-2 blocks.2,
-seed 123 stage-1 blocks.3, e evitar tratar raw top-1 como suficiente quando o
-ganho marginal e zero.
+--candidate-score-mode composed_gain_ntk_hybrid_conservative
+```
+
+Regra implementada:
+
+```text
+saturation_adjusted_ntk = ntk_score / (1 + accepted_grafts_on_target)
+residual_delta_ntk = abs(ntk_score_stage_t - ntk_score_stage_t_minus_1)
+anti_saturation_penalty = weight * accepted_grafts_on_target
+
+candidate_score = candidate_composed_gain
+                - orthogonal_penalty
+                - anti_saturation_penalty
+                + saturation_weight * saturation_adjusted_ntk
+                + residual_delta_weight * residual_delta_ntk
+```
+
+Seguranca implementada:
+
+```text
+candidate_top_k ainda controla os melhores candidatos por score,
+mas --ntk-hybrid-keep-ranks 3 adiciona pelo menos um representante dos raw NTK
+ranks 1, 2 e 3 quando existirem. Isso evita descartar seed 42 stage-2 blocks.2
+(rank 3) e seed 123 stage-1 blocks.3 (rank 2).
 ```
 
 ### Marco 4O - Tensor-Network Follow-ups from ITensors.jl

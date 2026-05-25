@@ -255,33 +255,123 @@ This supports 4N-B as a conservative hybrid: preserve
 `composed_gain_orthogonal` as the primary decision source, and use NTK-derived
 features only for candidate ordering, warnings, anti-saturation, or tie-breaks.
 
-## 4N-B - NTK-Guided Routing Rule
+## 4N-B - Conservative NTK-Hybrid Routing
 
-Status: **planned / gated by 4N-A analysis**.
+Status: **implemented as an explicit experiment mode**.
 
-4N-B should only be implemented after 4N-A shows a conservative routing rule that
-does not drop known useful targets.
+4N-B keeps the Marco 4M/4N-A lesson: raw NTK is not a router by itself. The new
+mode is intentionally conservative: candidate composed gain remains the primary
+signal, while NTK-derived terms only provide small bonuses/penalties and broaden
+the candidate set so useful raw-rank-2/rank-3 targets are not dropped.
 
-Candidate rules:
+Implemented files:
 
 ```text
-1. saturation penalty:
-   adjusted_score = ntk_score / (1 + accepted_grafts_on_target)
-
-2. target novelty:
-   adjusted_score = ntk_score * novelty_bonus(target)
-
-3. residual delta:
-   adjusted_score = abs(ntk_score_stage_t - ntk_score_stage_t_minus_1)
-
-4. anti-saturation:
-   if target already received stage_size grafts,
-   reduce priority in the next stage
-
-5. hybrid conservative:
-   keep composed_gain_orthogonal as the decision source,
-   use NTK features only for tie-breaks, warnings, or candidate ordering
+saint/adapters/drm_grafting_graftblock_routed_utils.py
+saint/adapters/drm_grafting_graftblock_routed.py
+scripts/benchmark_drm_g_phase16_graftblock.py
+tests/test_ntk_hybrid_routing.py
 ```
+
+New score mode:
+
+```text
+--candidate-score-mode composed_gain_ntk_hybrid_conservative
+```
+
+New knobs:
+
+```text
+--ntk-hybrid-saturation-weight       small bonus for ntk / (1 + accepted_on_target)
+--ntk-hybrid-residual-delta-weight   small bonus for abs(ntk_t - ntk_t-1)
+--ntk-hybrid-anti-saturation-penalty penalty per already accepted graft on target
+--ntk-hybrid-keep-ranks              keep at least one candidate from raw NTK ranks <= N
+```
+
+Implemented routing score:
+
+```text
+saturation_adjusted_ntk = ntk_activation_score / (1 + accepted_grafts_on_target)
+residual_delta_ntk = abs(ntk_activation_score_t - ntk_activation_score_t_minus_1)
+anti_saturation_penalty = anti_saturation_penalty_weight * accepted_grafts_on_target
+
+candidate_score =
+  candidate_composed_gain
+  - orthogonal_penalty
+  - anti_saturation_penalty
+  + saturation_weight * saturation_adjusted_ntk
+  + residual_delta_weight * residual_delta_ntk
+```
+
+Candidate-set safety rule:
+
+```text
+stage_candidates = top candidate_top_k by hybrid candidate_score
+                 + best representative for each raw NTK rank <= ntk_hybrid_keep_ranks
+```
+
+This preserves the known useful non-top-1 cases from 4N-A:
+
+```text
+seed 42 stage 2 blocks.2: raw NTK rank 3, approved fifth graft
+seed 123 stage 1 blocks.3: raw NTK rank 2, approved main gain
+```
+
+It also downweights saturated targets such as post-stage-1 `blocks.4` by using
+both `ntk / (1 + accepted_on_target)` and a direct anti-saturation penalty.
+
+### 4N-B Training Command - Seeds 42, 7, and 123
+
+Run the three seeds sequentially from the canonical SAINT-G repo with one shell
+block:
+
+```bash
+cd /home/rato/dev/ai/SAINT-G
+
+for seed in 42 7 123; do
+  python \
+    scripts/benchmark_drm_g_phase16_graftblock.py \
+    --output-dir /home/rato/dev/ai/SAINT-G/runs/phase16_marco4n_b_ntk_hybrid_topk8_probe2k_24graft_seed${seed} \
+    --checkpoint /mnt/e/dev/ai/drm_transformer/checkpoints/multilingual_5m/smoke_819k/final.pt \
+    --data-dir /mnt/e/dev/ai/drm_transformer/data/multilingual_125m \
+    --device cuda \
+    --seeds ${seed} \
+    --graft-count 24 \
+    --hidden-size 25889 \
+    --stage-size 4 \
+    --post-first-stage-size 1 \
+    --max-stages 8 \
+    --stage-accept-min-gain 0.0 \
+    --steps 100000000 \
+    --max-train-seconds 1800 \
+    --eval-every-steps 5000 \
+    --early-stopping-patience 3 \
+    --early-stopping-min-delta 0.00001 \
+    --batch-size 2 \
+    --seq-len 128 \
+    --validation-batches 4 \
+    --train-batches 4096 \
+    --learning-rate 0.0000003 \
+    --lr-decay 0.02 \
+    --training-mode validation_routed_staged \
+    --candidate-targets blocks.2 blocks.3 blocks.4 \
+    --candidate-learning-rates 0.00000003 0.0000001 0.0000003 \
+    --candidate-init-scales 0.001 0.005 0.01 \
+    --candidate-activations silu \
+    --candidate-score-mode composed_gain_ntk_hybrid_conservative \
+    --orthogonal-penalty 0.00001 \
+    --candidate-probe-steps 2000 \
+    --candidate-probe-max-train-seconds 300 \
+    --candidate-top-k 8 \
+    --ntk-activation-probe-batches 4 \
+    --ntk-activation-probe-split train \
+    --ntk-hybrid-saturation-weight 0.00002 \
+    --ntk-hybrid-residual-delta-weight 0.00001 \
+    --ntk-hybrid-anti-saturation-penalty 0.00005 \
+    --ntk-hybrid-keep-ranks 3
+done
+```
+
 
 ## 4N-B Safety Requirements
 
