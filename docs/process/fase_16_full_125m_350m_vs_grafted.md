@@ -1091,7 +1091,7 @@ inseridos antes do Marco 5 para diagnosticar e possivelmente melhorar o routing.
 
 ### Marco 4M - NTK-Mirror-Inspired Activation Gate Probe
 
-Status: **implementado / pronto para runs diagnosticos CUDA**.
+Status: **implementado / runs diagnosticos CUDA em andamento**.
 
 Objetivo:
 
@@ -1137,6 +1137,27 @@ e seeds 7/123 nao.
 
 Marco 4M e diagnostico somente; ele nao substitui o `composed_gain_orthogonal`
 ainda.
+
+Status operacional atual:
+
+```text
+seed 42: completed; reproduced 4K best result
+  composed_loss: 10.414523839950562
+  accepted_grafts: 5
+  route: grafts 0-3 -> blocks.4, graft 4 -> blocks.2
+  NTK raw ranking: blocks.4 > blocks.3 > blocks.2 in stages 1, 2 and 3
+
+seed 7: running
+  run_dir: /mnt/e/dev/ai/DRM-SAINT-G/runs/phase16_marco4m_ntk_probe_topk8_probe2k_24graft_seed7
+
+seed 123: pending after seed 7
+```
+
+Interim interpretation: raw NTK score explains the first accepted group in seed
+42, but not the fifth graft, because stage 2 selected `blocks.2` while raw NTK
+still ranked `blocks.2` last among the three candidate targets. Marco 4N should
+therefore prefer residual/novelty/saturation-normalized NTK variants over a raw
+`ntk_prefilter` unless seeds 7/123 show different evidence.
 
 ### Marco 4N - NTK-Guided Candidate Pruning and Routing
 

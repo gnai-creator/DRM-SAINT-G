@@ -1,6 +1,6 @@
 # Phase 16 Marco 4M - NTK-Mirror-Inspired Activation Gate Probe
 
-Status: **implemented / ready for CUDA diagnostic runs**.
+Status: **implemented / CUDA diagnostic runs in progress**.
 
 ## Goal
 
@@ -238,6 +238,65 @@ for seed in (42, 7, 123):
         )
 PY
 ```
+
+## Current Run Status
+
+Seed 42 completed successfully and reproduced the Marco 4K best known result:
+
+```text
+run_dir: /mnt/e/dev/ai/DRM-SAINT-G/runs/phase16_marco4m_ntk_probe_topk8_probe2k_24graft_seed42
+base_loss: 10.416174411773682
+composed_loss: 10.414523839950562
+accumulated_gain: 0.0016505718231201172
+accepted_groups: 2
+accepted_grafts: 5
+route: grafts 0-3 -> blocks.4, graft 4 -> blocks.2
+recomposed_loss: 10.414523839950562
+recompose_abs_diff: 0.0
+ntk_activation_probe_batches: 4
+ntk_activation_probe_split: train
+```
+
+The seed-42 NTK probe ranking was stable across stages:
+
+```text
+stage 1 NTK rank: blocks.4 > blocks.3 > blocks.2
+stage 2 NTK rank: blocks.4 > blocks.3 > blocks.2
+stage 3 NTK rank: blocks.4 > blocks.3 > blocks.2
+```
+
+Interpretation for seed 42:
+
+```text
+- The diagnostic reproduces the 4K quality result.
+- The raw NTK score correctly identifies blocks.4 for stage 1.
+- The raw NTK score does not explain the stage-2 fifth graft, because the router
+  selected blocks.2 while NTK still ranked blocks.4 first and blocks.2 third.
+- Therefore, Marco 4N should not promote raw NTK score directly into routing
+  without residual, novelty, or saturation normalization.
+```
+
+Seed 7 is currently running as the next diagnostic replication:
+
+```text
+run_dir: /mnt/e/dev/ai/DRM-SAINT-G/runs/phase16_marco4m_ntk_probe_topk8_probe2k_24graft_seed7
+seed: 7
+status: running as of documentation update
+observed command: python scripts/benchmark_drm_g_phase16_graftblock.py ... --seeds 7 ... --ntk-activation-probe-batches 4 --ntk-activation-probe-split train
+```
+
+The key question for seed 7 is whether the raw NTK ranking remains:
+
+```text
+blocks.4 > blocks.3 > blocks.2
+```
+
+If seed 7 keeps the same ranking but rejects the second-stage graft again, raw
+NTK is likely measuring global activation sensitivity rather than marginal
+post-graft utility. If seed 7 changes the NTK ranking, then NTK may still be a
+useful feature for explaining seed sensitivity.
+
+Seed 123 remains pending after seed 7.
 
 ## Success Criteria
 
