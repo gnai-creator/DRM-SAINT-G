@@ -1,6 +1,6 @@
 # Phase 16 Marco 4N - NTK Residual/Saturation Routing Plan
 
-Status: **4N-A completed for seeds 42, 7, and 123; 4N-B planned as conservative routing experiment**.
+Status: **4N-A completed; 4N-B completed for seeds 42, 7, and 123; 4N-C offline score ablation completed**.
 
 ## Decision From Marco 4M
 
@@ -388,6 +388,37 @@ Before 4N-B routes automatically, the rule should pass these checks offline:
 - it does not over-prioritize blocks.4 after blocks.4 already has 4 grafts;
 - it does not treat raw NTK top-1 as sufficient when the candidate gain is zero;
 - it explains why seed 7 blocks.2 had near-zero candidate gain.
+```
+
+## 4N-B / 4N-C Completed Result
+
+The completed 4N-B run and 4N-C offline score ablation are documented in:
+
+```text
+docs/reports/phase16_marco4n_b_c_results.md
+```
+
+Short verdict:
+
+```text
+4N-B passed technically and found a diversified 6-graft seed-42 route, but it did
+not solve multi-seed robustness. Seeds 7 and 123 still stop at 4 grafts. 4N-C
+shows that the current NTK-hybrid bonus can assign positive score to zero-gain
+candidates, so future routing should gate NTK bonus behind positive composed gain
+or an epsilon.
+```
+
+4N-C command:
+
+```bash
+cd /home/rato/dev/ai/SAINT-G
+
+python \
+  scripts/analyze_phase16_ntk_hybrid_score_ablation.py \
+  --run-dir /home/rato/dev/ai/SAINT-G/runs/phase16_marco4n_b_ntk_hybrid_topk8_probe2k_24graft_seed42 \
+  --run-dir /home/rato/dev/ai/SAINT-G/runs/phase16_marco4n_b_ntk_hybrid_topk8_probe2k_24graft_seed7 \
+  --run-dir /home/rato/dev/ai/SAINT-G/runs/phase16_marco4n_b_ntk_hybrid_topk8_probe2k_24graft_seed123 \
+  --output-dir /home/rato/dev/ai/SAINT-G/runs/phase16_marco4n_c_offline_score_ablation_seed42_seed7_seed123
 ```
 
 ## Relationship to NTK-Mirror

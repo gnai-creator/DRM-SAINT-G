@@ -1,0 +1,287 @@
+{
+  "exact_recompose_runs": 3,
+  "marco": "4n_c_offline_score_ablation",
+  "mean_accepted_grafts": 4.666666666666667,
+  "mean_accumulated_gain": 0.001275777816772461,
+  "phase": "16",
+  "policy_summaries": [
+    {
+      "accept_threshold": 0.0,
+      "actual_target_match_rate": 0.875,
+      "mean_winner_gain": 0.0004807710647583008,
+      "policy": "composed_gain",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 5
+    },
+    {
+      "accept_threshold": 2e-05,
+      "actual_target_match_rate": 0.875,
+      "mean_winner_gain": 0.0004807710647583008,
+      "policy": "composed_gain",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 4
+    },
+    {
+      "accept_threshold": 5e-05,
+      "actual_target_match_rate": 0.875,
+      "mean_winner_gain": 0.0004807710647583008,
+      "policy": "composed_gain",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 4
+    },
+    {
+      "accept_threshold": 0.0,
+      "actual_target_match_rate": 0.875,
+      "mean_winner_gain": 0.0004807710647583008,
+      "policy": "composed_gain_orthogonal",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 5
+    },
+    {
+      "accept_threshold": 2e-05,
+      "actual_target_match_rate": 0.875,
+      "mean_winner_gain": 0.0004807710647583008,
+      "policy": "composed_gain_orthogonal",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 4
+    },
+    {
+      "accept_threshold": 5e-05,
+      "actual_target_match_rate": 0.875,
+      "mean_winner_gain": 0.0004807710647583008,
+      "policy": "composed_gain_orthogonal",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 4
+    },
+    {
+      "accept_threshold": 0.0,
+      "actual_target_match_rate": 1.0,
+      "mean_winner_gain": 0.00047841668128967285,
+      "policy": "ntk_hybrid_current",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 5
+    },
+    {
+      "accept_threshold": 2e-05,
+      "actual_target_match_rate": 1.0,
+      "mean_winner_gain": 0.00047841668128967285,
+      "policy": "ntk_hybrid_current",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 4
+    },
+    {
+      "accept_threshold": 5e-05,
+      "actual_target_match_rate": 1.0,
+      "mean_winner_gain": 0.00047841668128967285,
+      "policy": "ntk_hybrid_current",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 4
+    },
+    {
+      "accept_threshold": 0.0,
+      "actual_target_match_rate": 1.0,
+      "mean_winner_gain": 0.00047841668128967285,
+      "policy": "ntk_hybrid_double_anti_saturation",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 5
+    },
+    {
+      "accept_threshold": 2e-05,
+      "actual_target_match_rate": 1.0,
+      "mean_winner_gain": 0.00047841668128967285,
+      "policy": "ntk_hybrid_double_anti_saturation",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 4
+    },
+    {
+      "accept_threshold": 5e-05,
+      "actual_target_match_rate": 1.0,
+      "mean_winner_gain": 0.00047841668128967285,
+      "policy": "ntk_hybrid_double_anti_saturation",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 4
+    },
+    {
+      "accept_threshold": 0.0,
+      "actual_target_match_rate": 1.0,
+      "mean_winner_gain": 0.00047841668128967285,
+      "policy": "ntk_hybrid_gain_gated_bonus",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 5
+    },
+    {
+      "accept_threshold": 2e-05,
+      "actual_target_match_rate": 1.0,
+      "mean_winner_gain": 0.00047841668128967285,
+      "policy": "ntk_hybrid_gain_gated_bonus",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 4
+    },
+    {
+      "accept_threshold": 5e-05,
+      "actual_target_match_rate": 1.0,
+      "mean_winner_gain": 0.00047841668128967285,
+      "policy": "ntk_hybrid_gain_gated_bonus",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 4
+    },
+    {
+      "accept_threshold": 0.0,
+      "actual_target_match_rate": 0.875,
+      "mean_winner_gain": 0.0004807710647583008,
+      "policy": "ntk_hybrid_half_bonus",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 5
+    },
+    {
+      "accept_threshold": 2e-05,
+      "actual_target_match_rate": 0.875,
+      "mean_winner_gain": 0.0004807710647583008,
+      "policy": "ntk_hybrid_half_bonus",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 4
+    },
+    {
+      "accept_threshold": 5e-05,
+      "actual_target_match_rate": 0.875,
+      "mean_winner_gain": 0.0004807710647583008,
+      "policy": "ntk_hybrid_half_bonus",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 4
+    },
+    {
+      "accept_threshold": 0.0,
+      "actual_target_match_rate": 0.875,
+      "mean_winner_gain": 0.0004807710647583008,
+      "policy": "ntk_hybrid_no_bonus",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 5
+    },
+    {
+      "accept_threshold": 2e-05,
+      "actual_target_match_rate": 0.875,
+      "mean_winner_gain": 0.0004807710647583008,
+      "policy": "ntk_hybrid_no_bonus",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 4
+    },
+    {
+      "accept_threshold": 5e-05,
+      "actual_target_match_rate": 0.875,
+      "mean_winner_gain": 0.0004807710647583008,
+      "policy": "ntk_hybrid_no_bonus",
+      "stage_decisions": 8,
+      "winner_zero_gain_count": 3,
+      "would_approve_count": 4
+    }
+  ],
+  "positive_runs": 3,
+  "recommendations": [
+    "keep_4k_as_best_loss_checkpoint_for_seed42",
+    "treat_4n_b_as_structural_routing_improvement_not_robust_quality_win",
+    "gate_ntk_bonus_when_candidate_composed_gain_is_zero_or_below_epsilon",
+    "test_accept_min_gain_epsilon_2e-5_before_more_cuda",
+    "prefer_offline_ablation_or_4o_svd_before_new_large_routing_sweep"
+  ],
+  "run_count": 3,
+  "run_summaries": [
+    {
+      "accepted_grafts": 6,
+      "accepted_groups": 3,
+      "accumulated_gain": 0.001645803451538086,
+      "approved_stage_count": 3,
+      "base_loss": 10.416174411773682,
+      "composed_loss": 10.414528608322144,
+      "recompose_abs_diff": 0.0,
+      "run_dir": "/home/rato/dev/ai/SAINT-G/runs/phase16_marco4n_b_ntk_hybrid_topk8_probe2k_24graft_seed42",
+      "seed": "42",
+      "stage_count": 4,
+      "target_by_graft": {
+        "0": "blocks.4",
+        "1": "blocks.4",
+        "2": "blocks.4",
+        "3": "blocks.4",
+        "4": "blocks.3",
+        "5": "blocks.2"
+      },
+      "zero_gain_positive_current_score_count": 4,
+      "zero_gain_positive_current_score_stages": [
+        3
+      ]
+    },
+    {
+      "accepted_grafts": 4,
+      "accepted_groups": 1,
+      "accumulated_gain": 0.0005276203155517578,
+      "approved_stage_count": 1,
+      "base_loss": 10.386841535568237,
+      "composed_loss": 10.386313915252686,
+      "recompose_abs_diff": 0.0,
+      "run_dir": "/home/rato/dev/ai/SAINT-G/runs/phase16_marco4n_b_ntk_hybrid_topk8_probe2k_24graft_seed7",
+      "seed": "7",
+      "stage_count": 2,
+      "target_by_graft": {
+        "0": "blocks.4",
+        "1": "blocks.4",
+        "2": "blocks.4",
+        "3": "blocks.4"
+      },
+      "zero_gain_positive_current_score_count": 10,
+      "zero_gain_positive_current_score_stages": [
+        1,
+        2
+      ]
+    },
+    {
+      "accepted_grafts": 4,
+      "accepted_groups": 1,
+      "accumulated_gain": 0.001653909683227539,
+      "approved_stage_count": 1,
+      "base_loss": 10.417015075683594,
+      "composed_loss": 10.415361166000366,
+      "recompose_abs_diff": 0.0,
+      "run_dir": "/home/rato/dev/ai/SAINT-G/runs/phase16_marco4n_b_ntk_hybrid_topk8_probe2k_24graft_seed123",
+      "seed": "123",
+      "stage_count": 2,
+      "target_by_graft": {
+        "0": "blocks.3",
+        "1": "blocks.3",
+        "2": "blocks.3",
+        "3": "blocks.3"
+      },
+      "zero_gain_positive_current_score_count": 9,
+      "zero_gain_positive_current_score_stages": [
+        2
+      ]
+    }
+  ],
+  "seeds": [
+    "42",
+    "7",
+    "123"
+  ],
+  "seeds_with_five_or_more_grafts": [
+    "42"
+  ],
+  "zero_gain_positive_current_score_total": 23
+}
