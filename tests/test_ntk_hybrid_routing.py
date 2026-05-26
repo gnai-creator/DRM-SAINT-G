@@ -3,6 +3,19 @@ from types import SimpleNamespace
 
 
 class NTKHybridRoutingTests(unittest.TestCase):
+    def test_marco_name_identifies_4p_b_cost_aware_routing(self):
+        from saint.adapters.drm_grafting_graftblock_routed_utils import marco_name
+
+        args = SimpleNamespace(
+            adapter_type="dense_graftblock",
+            ntk_activation_probe_batches=4,
+            candidate_top_k=8,
+            candidate_score_mode="composed_gain_cost_aware",
+            marco_label="",
+        )
+
+        self.assertEqual(marco_name(args), "4p_b_cost_aware_dense_routing")
+
     def test_marco_name_identifies_4n_b_hybrid_routing(self):
         from saint.adapters.drm_grafting_graftblock_routed_utils import marco_name
 
@@ -44,6 +57,38 @@ class NTKHybridRoutingTests(unittest.TestCase):
         self.assertLess(saturated_score, fresh_score)
         self.assertGreater(saturated_penalty, fresh_penalty)
         self.assertLess(saturated_details["saturation_adjusted_ntk"], fresh_details["saturation_adjusted_ntk"])
+
+    def test_cost_aware_score_requires_positive_gain_and_positive_efficiency(self):
+        from saint.adapters.drm_grafting_graftblock_routed_utils import candidate_rank, candidate_score
+
+        args = SimpleNamespace(
+            candidate_score_mode="composed_gain_cost_aware",
+            orthogonal_penalty=0.01,
+            cost_aware_lambda_params=0.001,
+            cost_aware_lambda_bytes=0.002,
+            cost_aware_lambda_time=0.003,
+            cost_aware_lambda_ntk_risk=1.0,
+            cost_aware_params_per_graft=99,
+            cost_aware_checkpoint_bytes_delta=999,
+        )
+
+        score, penalty, details = candidate_score(
+            args,
+            "blocks.4",
+            0.25,
+            {0: "blocks.4"},
+            ntk_features={"ntk_hybrid_penalty": 0.02},
+            elapsed_s=4.0,
+        )
+
+        self.assertAlmostEqual(
+            score,
+            0.25 - 0.01 - 0.02 - 0.001 * __import__("math").log1p(99) - 0.002 * __import__("math").log1p(999) - 0.003 * 4.0,
+        )
+        self.assertAlmostEqual(penalty, 0.01 + 0.02)
+        self.assertTrue(details["cost_aware_accept"])
+        rejected = dict(details, candidate_composed_gain=0.25, candidate_score=-0.001)
+        self.assertEqual(candidate_rank(rejected, 0.0)[0], 0)
 
     def test_select_stage_candidates_preserves_rank_three_target_representative(self):
         from saint.adapters.drm_grafting_graftblock_routed_utils import select_stage_candidates

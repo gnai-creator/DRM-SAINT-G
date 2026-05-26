@@ -1513,3 +1513,26 @@ Proximo passo recomendado:
 Marco 4P-B - CUDA curto com dense GraftBlock e candidate-score-mode cost-aware,
 comparando primeiro seed 42 contra 4N-B antes de replicar seed 7/123.
 ```
+
+O Marco 4P-B ja foi implementado e executado em CUDA curto para seed 42:
+
+```text
+docs/reports/phase16_marco4p_b_cost_aware_dense_routing.md
+runs/phase16_marco4p_b_cost_aware_short_seed42/
+```
+
+Veredito 4P-B seed42 curto:
+
+```text
+candidate-score-mode composed_gain_cost_aware aceitou o stage 1 em blocks.4,
+rejeitou o stage 2 com efficiency_score negativo, preservou quase todo o ganho
+4N-B seed42 com menos grafts aceitos: composed_loss 10.4145958424 vs
+10.4145286083 do 4N-B, accepted_grafts 4 vs 6, recompose_abs_diff 0.0.
+```
+
+Proximo passo recomendado:
+
+```text
+Replicar o 4P-B curto em seeds 7 e 123 antes de gastar budget no protocolo
+full probe2k/max_train_seconds=1800.
+```

@@ -1,0 +1,182 @@
+{
+  "phase": "16",
+  "marco": "4p_b_cost_aware_dense_routing",
+  "base_loss": 10.416174411773682,
+  "composed_loss": 10.41459584236145,
+  "accumulated_gain": 0.0015785694122314453,
+  "accepted_groups": 1,
+  "accepted_grafts": 4,
+  "accepted_graft_ids": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "target_by_graft": {
+    "0": "blocks.4",
+    "1": "blocks.4",
+    "2": "blocks.4",
+    "3": "blocks.4"
+  },
+  "candidate_score_mode": "composed_gain_cost_aware",
+  "adapter_type": "dense_graftblock",
+  "tt_adapter_width": 128,
+  "tt_bond_dim": 4,
+  "trainable_parameters_per_graft": 4970689,
+  "orthogonal_penalty": 1e-05,
+  "candidate_probe_steps": 200,
+  "candidate_probe_max_train_seconds": 90.0,
+  "candidate_top_k": 8,
+  "cost_aware_lambda_params": 1e-06,
+  "cost_aware_lambda_bytes": 5e-07,
+  "cost_aware_lambda_time": 1e-07,
+  "cost_aware_lambda_ntk_risk": 1.0,
+  "cost_aware_params_per_graft": 4970689,
+  "cost_aware_checkpoint_bytes_delta": 19882756,
+  "ntk_activation_probe_batches": 4,
+  "ntk_activation_probe_split": "train",
+  "ntk_hybrid_saturation_weight": 2e-05,
+  "ntk_hybrid_residual_delta_weight": 1e-05,
+  "ntk_hybrid_anti_saturation_penalty": 5e-05,
+  "ntk_hybrid_keep_ranks": 3,
+  "stage_metrics": [
+    {
+      "stage": 1,
+      "selected_target": "blocks.4",
+      "decision": "approved",
+      "graft_start": 0,
+      "graft_end": 4,
+      "stage_best_loss": 10.41459584236145,
+      "stage_gain": 0.0015785694122314453,
+      "stage_score": 0.0015427074257609776,
+      "redundancy_penalty": 0.0,
+      "learning_rate": 3e-07,
+      "init_scale": 0.01,
+      "activation": "silu",
+      "candidate_tag": "blocks.4|lr=3.00e-07|scale=1.00e-02|act=silu",
+      "candidate_composed_loss": 10.41459584236145,
+      "previous_composed_loss": 10.416174411773682,
+      "target_by_graft": {
+        "0": "blocks.4",
+        "1": "blocks.4",
+        "2": "blocks.4",
+        "3": "blocks.4"
+      },
+      "accepted_graft_ids": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "ntk_activation_probe": [
+        {
+          "stage": 1,
+          "target": "blocks.4",
+          "ntk_activation_score": 4.098039150238037,
+          "probe_batches": 4,
+          "channel_count": 96,
+          "top_channel": 67,
+          "top_channel_score": 0.0245804525911808,
+          "split": "train",
+          "mean_ntk_activation_score": 1.0245097875595093,
+          "ntk_rank": 1
+        },
+        {
+          "stage": 1,
+          "target": "blocks.3",
+          "ntk_activation_score": 3.025976538658142,
+          "probe_batches": 4,
+          "channel_count": 96,
+          "top_channel": 67,
+          "top_channel_score": 0.021363263949751854,
+          "split": "train",
+          "mean_ntk_activation_score": 0.7564941346645355,
+          "ntk_rank": 2
+        },
+        {
+          "stage": 1,
+          "target": "blocks.2",
+          "ntk_activation_score": 2.012280225753784,
+          "probe_batches": 4,
+          "channel_count": 96,
+          "top_channel": 9,
+          "top_channel_score": 0.016328148543834686,
+          "split": "train",
+          "mean_ntk_activation_score": 0.503070056438446,
+          "ntk_rank": 3
+        }
+      ]
+    },
+    {
+      "stage": 2,
+      "selected_target": "blocks.3",
+      "decision": "rejected",
+      "graft_start": 4,
+      "graft_end": 5,
+      "stage_best_loss": 10.41459584236145,
+      "stage_gain": 0.0,
+      "stage_score": -2.519668093727178e-05,
+      "redundancy_penalty": 0.0,
+      "learning_rate": 3e-07,
+      "init_scale": 0.01,
+      "activation": "silu",
+      "candidate_tag": "blocks.3|lr=3.00e-07|scale=1.00e-02|act=silu",
+      "candidate_composed_loss": 10.41459584236145,
+      "previous_composed_loss": 10.41459584236145,
+      "target_by_graft": {
+        "0": "blocks.4",
+        "1": "blocks.4",
+        "2": "blocks.4",
+        "3": "blocks.4"
+      },
+      "accepted_graft_ids": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "ntk_activation_probe": [
+        {
+          "stage": 2,
+          "target": "blocks.4",
+          "ntk_activation_score": 4.115554928779602,
+          "probe_batches": 4,
+          "channel_count": 96,
+          "top_channel": 73,
+          "top_channel_score": 0.026017721742391586,
+          "split": "train",
+          "mean_ntk_activation_score": 1.0288887321949005,
+          "ntk_rank": 1
+        },
+        {
+          "stage": 2,
+          "target": "blocks.3",
+          "ntk_activation_score": 3.049430727958679,
+          "probe_batches": 4,
+          "channel_count": 96,
+          "top_channel": 9,
+          "top_channel_score": 0.021035291254520416,
+          "split": "train",
+          "mean_ntk_activation_score": 0.7623576819896698,
+          "ntk_rank": 2
+        },
+        {
+          "stage": 2,
+          "target": "blocks.2",
+          "ntk_activation_score": 2.0370187759399414,
+          "probe_batches": 4,
+          "channel_count": 96,
+          "top_channel": 9,
+          "top_channel_score": 0.016498971730470657,
+          "split": "train",
+          "mean_ntk_activation_score": 0.5092546939849854,
+          "ntk_rank": 3
+        }
+      ]
+    }
+  ],
+  "composed_checkpoint": "/home/rato/dev/ai/SAINT-G/runs/phase16_marco4p_b_cost_aware_short_seed42/composed_graft_checkpoint.pt",
+  "composed_checkpoint_bytes": 477210951,
+  "recomposed_loss": 10.41459584236145,
+  "recompose_abs_diff": 0.0
+}

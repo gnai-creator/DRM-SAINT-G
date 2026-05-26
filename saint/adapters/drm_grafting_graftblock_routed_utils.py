@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 
@@ -11,6 +12,8 @@ def marco_name(args) -> str:
         return explicit
     if str(getattr(args, "adapter_type", "dense_graftblock")) == "tt_mps":
         return "4o_tt_mps_adapter_baseline"
+    if getattr(args, "candidate_score_mode", "composed_gain") == "composed_gain_cost_aware":
+        return "4p_b_cost_aware_dense_routing"
     if getattr(args, "candidate_score_mode", "composed_gain") == "composed_gain_ntk_hybrid_conservative":
         return "4n_b_ntk_hybrid_conservative_routing"
     if int(getattr(args, "ntk_activation_probe_batches", 0) or 0) > 0:
@@ -27,6 +30,8 @@ def marco_name(args) -> str:
 
 def candidate_rank(row: dict[str, Any], min_gain: float) -> tuple[int, float]:
     positive = row["candidate_composed_gain"] > float(min_gain)
+    if "cost_aware_accept" in row:
+        positive = positive and bool(row.get("cost_aware_accept")) and float(row.get("candidate_score", 0.0) or 0.0) > 0.0
     return (1 if positive else 0, float(row["candidate_score"]))
 
 
@@ -55,6 +60,7 @@ def candidate_score(
     accepted_target_map: dict[int, str],
     *,
     ntk_features: dict[str, Any] | None = None,
+    elapsed_s: float = 0.0,
 ) -> tuple[float, float, dict[str, Any]]:
     mode = getattr(args, "candidate_score_mode", "composed_gain")
     overlap = sum(1 for accepted_target in accepted_target_map.values() if accepted_target == target)
@@ -63,6 +69,31 @@ def candidate_score(
         return float(gain), 0.0, {}
     if mode == "composed_gain_orthogonal":
         return float(gain) - orthogonal_penalty, orthogonal_penalty, {}
+    if mode == "composed_gain_cost_aware":
+        features = dict(ntk_features or {})
+        params_per_graft = int(getattr(args, "cost_aware_params_per_graft", 0) or 0)
+        checkpoint_bytes_delta = int(getattr(args, "cost_aware_checkpoint_bytes_delta", 0) or 0)
+        ntk_risk = float(features.get("ntk_hybrid_penalty", features.get("ntk_risk_penalty", 0.0)) or 0.0)
+        probe_seconds = max(0.0, float(elapsed_s or 0.0))
+        params_term = float(getattr(args, "cost_aware_lambda_params", 0.0) or 0.0) * math.log1p(max(0, params_per_graft))
+        bytes_term = float(getattr(args, "cost_aware_lambda_bytes", 0.0) or 0.0) * math.log1p(max(0, checkpoint_bytes_delta))
+        time_term = float(getattr(args, "cost_aware_lambda_time", 0.0) or 0.0) * probe_seconds
+        ntk_term = float(getattr(args, "cost_aware_lambda_ntk_risk", 1.0) or 0.0) * ntk_risk
+        score = float(gain) - orthogonal_penalty - ntk_term - params_term - bytes_term - time_term
+        details = {
+            **features,
+            "accepted_grafts_on_target_before_stage": overlap,
+            "params_per_graft": params_per_graft,
+            "checkpoint_bytes_delta": checkpoint_bytes_delta,
+            "probe_seconds": probe_seconds,
+            "ntk_risk_penalty": ntk_risk,
+            "cost_aware_params_penalty": params_term,
+            "cost_aware_bytes_penalty": bytes_term,
+            "cost_aware_time_penalty": time_term,
+            "cost_aware_ntk_risk_penalty": ntk_term,
+            "cost_aware_accept": float(gain) > 0.0 and score > 0.0,
+        }
+        return score, orthogonal_penalty + ntk_term, details
     if mode != "composed_gain_ntk_hybrid_conservative":
         return float(gain), 0.0, {}
     features = dict(ntk_features or {})
@@ -95,7 +126,7 @@ def select_stage_candidates(
     ranked = sorted(probe_rows, key=lambda item: candidate_rank(item[0], min_gain), reverse=True)
     selected = [candidate for _row, candidate in ranked[: int(getattr(args, "candidate_top_k", 0) or 0)]]
     selected_tags = {str(candidate.get("tag")) for candidate in selected}
-    if getattr(args, "candidate_score_mode", "composed_gain") != "composed_gain_ntk_hybrid_conservative":
+    if getattr(args, "candidate_score_mode", "composed_gain") not in {"composed_gain_ntk_hybrid_conservative", "composed_gain_cost_aware"}:
         return selected
     keep_ranks = int(getattr(args, "ntk_hybrid_keep_ranks", 0) or 0)
     keep_targets = {str(row.get("target")) for row in ntk_rows or [] if int(row.get("ntk_rank", 999)) <= keep_ranks}

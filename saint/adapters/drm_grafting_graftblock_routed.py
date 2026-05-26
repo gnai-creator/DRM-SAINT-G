@@ -307,8 +307,18 @@ def _evaluate_candidate(
     loss = _composed_loss_for(torch, model_cls, drm_config, metadata, candidate_args, state_payload, active, target_map)
     result["candidate_composed_loss"] = loss
     result["candidate_composed_gain"] = args._current_composed_loss - loss
+    if str(getattr(args, "candidate_score_mode", "")) == "composed_gain_cost_aware":
+        if int(getattr(args, "cost_aware_params_per_graft", 0) or 0) <= 0 and grafts:
+            args.cost_aware_params_per_graft = int(grafts[0].parameter_count())
+        if int(getattr(args, "cost_aware_checkpoint_bytes_delta", 0) or 0) <= 0:
+            args.cost_aware_checkpoint_bytes_delta = int(getattr(args, "cost_aware_params_per_graft", 0) or 0) * 4
     score, penalty, ntk_details = _candidate_score(
-        args, target, result["candidate_composed_gain"], accepted_target_map, ntk_features=ntk_features,
+        args,
+        target,
+        result["candidate_composed_gain"],
+        accepted_target_map,
+        ntk_features=ntk_features,
+        elapsed_s=float(result.get("elapsed_s", 0.0) or 0.0),
     )
     result["candidate_score"] = score
     result["redundancy_penalty"] = penalty
@@ -434,7 +444,7 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
                 best_payload = state_payload
                 best_gain = rank
         best = max(probes, key=lambda row: _candidate_rank(row, float(args.stage_accept_min_gain)))
-        decision = "approved" if best["candidate_composed_gain"] > float(args.stage_accept_min_gain) else "rejected"
+        decision = "approved" if _candidate_rank(best, float(args.stage_accept_min_gain))[0] > 0 else "rejected"
         if decision == "approved":
             _load_payload(accepted_states, best_payload, str(metadata["device"]))
             for index in indices:
@@ -492,6 +502,12 @@ def run_validation_routed_staged(torch, config_cls, model_cls, drm_config, metad
         "candidate_probe_steps": int(getattr(args, "candidate_probe_steps", 0) or 0),
         "candidate_probe_max_train_seconds": float(getattr(args, "candidate_probe_max_train_seconds", 0.0) or 0.0),
         "candidate_top_k": int(getattr(args, "candidate_top_k", 0) or 0),
+        "cost_aware_lambda_params": float(getattr(args, "cost_aware_lambda_params", 0.0) or 0.0),
+        "cost_aware_lambda_bytes": float(getattr(args, "cost_aware_lambda_bytes", 0.0) or 0.0),
+        "cost_aware_lambda_time": float(getattr(args, "cost_aware_lambda_time", 0.0) or 0.0),
+        "cost_aware_lambda_ntk_risk": float(getattr(args, "cost_aware_lambda_ntk_risk", 1.0) or 0.0),
+        "cost_aware_params_per_graft": int(getattr(args, "cost_aware_params_per_graft", 0) or int(accepted_states[0].parameter_count()) if accepted_states else 0),
+        "cost_aware_checkpoint_bytes_delta": int(getattr(args, "cost_aware_checkpoint_bytes_delta", 0) or ((int(getattr(args, "cost_aware_params_per_graft", 0) or int(accepted_states[0].parameter_count())) * 4) if accepted_states else 0)),
         "ntk_activation_probe_batches": int(getattr(args, "ntk_activation_probe_batches", 0) or 0),
         "ntk_activation_probe_split": str(getattr(args, "ntk_activation_probe_split", "train") or "train"),
         "ntk_hybrid_saturation_weight": float(getattr(args, "ntk_hybrid_saturation_weight", 0.0) or 0.0),
