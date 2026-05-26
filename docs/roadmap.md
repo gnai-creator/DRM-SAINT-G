@@ -41,8 +41,8 @@ consolidacao controlada
 ```text
 Fase atual: Fase 16 - Full 125M/350M vs SAINT-G grafted
 Fase anterior: Fase 15 concluida com ressalvas
-Marco atual: Marco 4J - candidate pruning / two-pass routing
-Proximo marco: rodar 4J em CUDA e comparar contra o melhor 4H
+Marco atual: Marco 4O-lite - Graft SVD Anatomy concluido
+Proximo marco: Marco 4O - Tensor-Train / MPS Adapter Baseline
 ```
 
 Resumo do estado:
@@ -3505,7 +3505,7 @@ baseline obrigatorio e sem declarar vitoria absoluta de qualidade.
 
 ## Fase 16 - DRM Full 125M/350M vs SAINT-G Grafted
 
-Status: **pendente**.
+Status: **em andamento; Marco 4O-lite concluido; proximo marco recomendado: Marco 4O - Tensor-Train / MPS Adapter Baseline**.
 
 ### Objetivo
 
@@ -3556,9 +3556,10 @@ perplexity, nao como prova direta.
 6. Comparacao externa contra GPT/OPT pequenos.
 7. Decisao de entrada para 70B.
 
-Marco 4 inicial:
+Marco 4 - 5M Phi graft inicial:
 
 ```text
+status: concluido
 script: scripts/benchmark_drm_g_phase16_5m_graft.py
 relatorio: docs/reports/phase16_marco4_5m_graft.md
 melhor alvo: blocks.5.ffn.down_proj
@@ -3569,12 +3570,13 @@ params Phi: 9.216
 controle full_module_linear: 36.864 params, ganho medio negativo
 ```
 
-Veredito: o caminho grafted 5M esta operacional e tem sinal positivo inicial,
-mas o ganho ainda e pequeno frente ao gap para o full 125M.
+Veredito: o caminho grafted 5M ficou operacional e teve sinal positivo inicial,
+mas pequeno frente ao gap para o full 125M.
 
 Marco 4B - `5M + 5M graft * 24`:
 
 ```text
+status: concluido
 script: scripts/benchmark_drm_g_phase16_graftblock.py
 relatorio: docs/reports/phase16_marco4b_graftblock_5m.md
 base params: 5.699.059
@@ -3584,15 +3586,13 @@ pico CUDA smoke: 3.43 GB
 ganho validacao smoke: 0.000261
 ```
 
-Veredito: a forma correta do experimento `5M + enxertos ate 125M` agora existe
-e roda. O sinal inicial e positivo, mas pequeno. O caso com 4 grafts teve maior
-ganho no smoke curto, entao o proximo marco deve treinar 24 grafts de forma
-progressiva e comparar 4/8/16/24 com o mesmo budget de tokens.
+Veredito: a forma correta do experimento `5M + enxertos ate 125M` passou a
+existir e rodar. O sinal inicial foi positivo, mas pequeno.
 
 Marco 4C - treinabilidade 24-graft:
 
 ```text
-script: scripts/benchmark_drm_g_phase16_graftblock.py
+status: concluido em infraestrutura, qualidade insuficiente
 relatorio: docs/reports/phase16_marco4c_graftblock_training.md
 full 125M smoke loss: 9.049912
 melhor 4-graft loss: 10.415268
@@ -3601,32 +3601,14 @@ melhor 4-graft loss: 10.415268
 checkpoint recomponivel: recompose_abs_diff 0.0
 ```
 
-Veredito: infraestrutura aprovada, qualidade ainda nao. O 24-graft cabe em CUDA
-e gera checkpoint recomponivel, mas mais steps com progressivo ingenuo pioraram
-a validacao. Proximo passo: selecao/aceite de enxertos por ganho de validacao,
-congelando grupos aceitos antes de adicionar novos.
+Veredito: o 24-graft cabe em CUDA e gera checkpoint recomponivel, mas treino
+progressivo ingenuo piorou validacao. A fase passou a exigir aceite por ganho de
+validacao e congelamento dos grupos aceitos.
 
-Nota de eficiencia:
-
-Mesmo sem vencer o full 125M em loss absoluta, o resultado ja e uma vitoria de
-eficiencia operacional. O full 125M smoke levou horas para 100 steps, enquanto o
-caminho `DRM 5M + 24 grafts ~= 125M` executa o smoke em poucos minutos ou menos,
-com pico CUDA de aproximadamente `3.43 GB`, checkpoint recomponivel e perda de
-validacao controlada em testes curtos. O gap contra o full 125M ainda existe,
-mas a diferenca de custo justifica um teste longo de mesmo tempo de parede:
+Marco 4D - early stopping e melhor checkpoint:
 
 ```text
-comparar full 125M 100 steps em ~4h
-vs
-DRM 5M + 24 grafts treinado por ~4h
-```
-
-Esse teste deve medir se a vantagem de velocidade transforma o grafted em uma
-alternativa competitiva quando ambos recebem o mesmo tempo real de treino.
-
-Marco 4D - early stopping e best checkpoint:
-
-```text
+status: concluido
 relatorio: docs/reports/phase16_marco4d_early_stopping.md
 problema: treino 24-graft por 4h sem controle piorou loss
 4h final_loss: 10.683245
@@ -3636,46 +3618,87 @@ problema: treino 24-graft por 4h sem controle piorou loss
 recompose_abs_diff: 0.0
 ```
 
-Resultado 24-graft:
+Veredito: os testes longos devem comparar `best_eval_loss`, nao apenas
+`final_loss`; checkpoint final sem validacao nao e criterio suficiente.
+
+Marco 4E - staged graft growth:
 
 ```text
+status: concluido
+relatorio: docs/reports/phase16_marco4e_staged_graft_growth.md
+runs/phase16_marco4e_staged_24graft
+base_loss: 10.416174
+composed_loss: 10.414818
+accumulated_gain: 0.001357
+accepted_stages: 1
+accepted_grafts: 4
+recompose_abs_diff: 0.0
+```
+
+Veredito: crescimento por estagios preservou ganho e rejeitou grupos
+improdutivos; o proximo gargalo virou escolher melhores grupos candidatos.
+
+Marco 4F - validation-routed staged grafts:
+
+```text
+status: concluido
+relatorio: docs/reports/phase16_marco4f_validation_routed_staged_grafts.md
+modo: --training-mode validation_routed_staged
+runs/phase16_marco4f_best_payload_24graft
+base_loss: 10.416174
+composed_loss: 10.414808
+accumulated_gain: 0.001366
+accepted_groups: 1
+accepted_grafts: 4
+selected_target: blocks.2
+recompose_abs_diff: 0.0
+```
+
+Veredito: o roteador escolhe alvo automaticamente e so aceita ganho composto
+real. A limitacao restante era diversidade depois do primeiro grupo aceito.
+
+Marco 4G - candidate-grid routed growth:
+
+```text
+status: concluido
+relatorio: docs/reports/phase16_marco4g_candidate_grid_routed_grafts.md
+implementado: candidate target x learning_rate x init_scale x activation
+runs/phase16_marco4g_light_probe_24graft
+base_loss: 10.416174
+composed_loss: 10.414729
+accumulated_gain: 0.001446
+accepted_groups: 1
+accepted_grafts: 4
+selected_target: blocks.2
+```
+
+Veredito: melhoria incremental sobre o 4F, mas ainda sem destravar G2.
+
+Marco 4H - fine-grained second stage:
+
+```text
+status: concluido
+relatorio: docs/reports/phase16_marco4h_fine_grained_second_stage.md
 runs/phase16_marco4h_fine_g2_24graft
 base_loss: 10.416174
 composed_loss: 10.414671
 accumulated_gain: 0.001504
 accepted_groups: 2
 accepted_grafts: 5
-stage 1: blocks.2, grafts 0-3, gain 0.001450
-stage 2: blocks.3, graft 4, gain 0.000054
-stage 3: rejected
+stage 1: blocks.2, grafts 0-3
+stage 2: blocks.3, graft 4
 recompose_abs_diff: 0.0
 ```
 
-Veredito: Marco 4H passou. O gargalo de G2 era granularidade; `stage_size=1`
-destravou um enxerto incremental sem regressao composta.
+Veredito: `stage_size=1` depois de G1 destravou o quinto enxerto incremental sem
+regressao composta.
 
 Marco 4I - residual/orthogonal routing:
 
 ```text
-status: implementado, validado em CUDA light
-objetivo: penalizar candidatos redundantes com targets ja aceitos
-resultado: mecanismo valido de controle, mas nao melhor que 4H
-```
-
-Implementado:
-
-```text
---candidate-score-mode composed_gain_orthogonal
---orthogonal-penalty
-runs/phase16_marco4i_orthogonal_strict_dryrun
-stage_gain: 0.0
-decision: rejected
-recompose_abs_diff: 0.0
-```
-
-Resultado CUDA light:
-
-```text
+status: concluido
+relatorio: docs/reports/phase16_marco4i_residual_orthogonal_routing.md
+modo: --candidate-score-mode composed_gain_orthogonal
 runs/phase16_marco4i_light_orthogonal
 base_loss: 10.416174
 composed_loss: 10.414714
@@ -3685,230 +3708,112 @@ target_by_graft: blocks.2 x4, blocks.3 x1
 recompose_abs_diff: 0.0
 ```
 
-Veredito: Marco 4I e util como controle de redundancia. O stage 3 rejeitou um
-candidato redundante com ganho composto zero e score negativo, mas o resultado
-nao superou o melhor Marco 4H (`10.4146707`).
+Veredito: util como controle de redundancia, mas nao superou o melhor 4H
+(`10.4146707`).
 
 Marco 4J - candidate pruning / two-pass routing:
 
 ```text
-status: implementado, aguardando run CUDA
-objetivo: reduzir custo do grid de candidatos
-metodo: probe barato -> top-k -> treino profundo
-criterio: igualar ou superar 4H com menor tempo de roteamento
-```
-
-Implementado:
-
-```text
---candidate-probe-steps
---candidate-probe-max-train-seconds
---candidate-top-k
-docs/reports/phase16_marco4j_two_pass_candidate_pruning.md
-```
-
-Resultado light probe:
-
-```text
-runs/phase16_marco4g_light_probe_24graft
-base_loss: 10.416174
-composed_loss: 10.414729
-accumulated_gain: 0.001446
-accepted_groups: 1
-accepted_grafts: 4
-selected_target: blocks.2
-learning_rate: 1e-7
-```
-
-Veredito: Marco 4G passou como melhoria incremental sobre o 4F, mas ainda nao
-destravou G2.
-
-Marco 4H - fine-grained second stage:
-
-```text
-status: implementado, validado em dry-run
-objetivo: testar stage_size menor depois de G1
-criterio: composed_loss < 10.414729 e accepted_grafts > 4
-```
-
-Implementado:
-
-```text
---post-first-stage-size
-runs/phase16_marco4h_adaptive_stage_dryrun
-marco: 4h_fine_grained_second_stage
-recompose_abs_diff: 0.0
-```
-
-Correcao implementada:
-
-```text
---eval-every-steps
---save-best-checkpoint
---early-stopping-patience
---early-stopping-min-delta
-training_metrics.jsonl
-```
-
-Dry-run Marco 4D:
-
-```text
-lr: 3e-7
-trained_steps: 652
-final_loss: 10.415352
-best_eval_loss: 10.415417
-best_recompose_abs_diff: 0.0
-```
-
-Veredito: os proximos testes longos devem comparar `best_eval_loss`, nao apenas
-`final_loss`. O treino longo provou eficiencia, mas tambem mostrou que
-checkpoint final sem validacao nao e criterio suficiente.
-
-Resultado adicional 4-graft com Marco 4D:
-
-```text
-graft_count: 4
-best_eval_loss: 10.414828
-best_eval_gain: 0.001346
-best_eval_step: 5.000
-cuda_peak: 746 MB
-best_checkpoint: 79.5 MB
-best_recompose_abs_diff: 0.0
-```
-
-Veredito: grupos pequenos funcionam melhor que 24 enxertos simultaneos. Isso
-cria o Marco 4E.
-
-Marco 4E - staged graft growth:
-
-```text
-status: implementado, validado em dry-run
-objetivo: treinar 4 grafts por estagio
-criterio de aceite: best_eval_gain > 0
-politica: aceitar, congelar, adicionar proximo grupo
-alvo: repetir ate 24 grafts
-```
-
-Implementado no benchmark:
-
-```text
---training-mode staged
---stage-size
---max-stages
---freeze-accepted-stages
---stage-accept-min-gain
-```
-
-Dry-run:
-
-```text
-runs/phase16_marco4e_staged_dryrun
-artefatos: stage_metrics.json, composed_graft_checkpoint.pt, results.md
-recompose_abs_diff: 0.0
-```
-
-Resultado 24-graft staged:
-
-```text
-runs/phase16_marco4e_staged_24graft
-base_loss: 10.416174
-composed_loss: 10.414818
-accumulated_gain: 0.001357
-accepted_stages: 1
-accepted_grafts: 4
-stage 1: approved, gain 0.001357
-stage 2: rejected, gain 0.000000
-recompose_abs_diff: 0.0
-```
-
-Veredito: Marco 4E confirma que crescimento por estagios preserva ganho e
-rejeita grupos improdutivos. O ganho acumulado supera ligeiramente o melhor
-4-graft isolado. O proximo gargalo e escolher melhores grupos candidatos.
-
-Marco 4F - validation-routed staged grafts:
-
-```text
-status: implementado, regra de aceite corrigida, validado em dry-run
-objetivo: selecionar grupos por composed validation gain
-metodo: testar candidatos em blocks.0..5, rankear pelo checkpoint composto
-criterio: ganho acumulado > Marco 4E
-```
-
-Implementado:
-
-```text
---training-mode validation_routed_staged
---candidate-targets
-candidate_metrics.json
-composed_graft_checkpoint.pt
-```
-
-Marco 4F-fix:
-
-```text
-motivo: primeiro run 24-graft aceitou grupos por ganho local e piorou composed_loss
-correcao: aceitar apenas se candidate_composed_loss melhora previous_composed_loss
-estado: candidate_composed_loss usa best_state_payload, nao o estado final
-candidate_metrics.json: inclui candidate_composed_loss e candidate_composed_gain
-checkpoint: salva target_by_graft para recomposicao fiel por bloco
-dry-run: runs/phase16_marco4f_fix_dryrun
-recompose_abs_diff: 0.0
-```
-
-Resultado 24-graft corrigido:
-
-```text
-runs/phase16_marco4f_best_payload_24graft
+status: concluido tecnicamente, nao melhor em qualidade
+relatorio: docs/reports/phase16_marco4j_two_pass_candidate_pruning.md
+modo: probe barato -> top-k -> treino profundo
+runs/phase16_marco4j_two_pass_24graft
 base_loss: 10.416174
 composed_loss: 10.414808
 accumulated_gain: 0.001366
 accepted_groups: 1
 accepted_grafts: 4
-selected_target: blocks.2
-stage 2: rejected
 recompose_abs_diff: 0.0
 ```
 
-Veredito: Marco 4F passou. O roteador escolhe alvo automaticamente e so aceita
-ganho composto real. O proximo limite e diversidade de candidatos depois do
-primeiro grupo aceito.
+Veredito: two-pass funcionou e recompôs exatamente, mas `candidate_top_k=4`
+perdeu o quinto graft encontrado pelo 4H.
 
-Marco 4G - candidate-grid routed growth:
-
-```text
-status: implementado, validado em dry-run
-objetivo: testar target x learning_rate x init_scale x activation
-criterio: aceitar mais de um grupo ou superar o ganho do Marco 4F
-```
-
-Implementado:
+Marco 4K - Two-Pass Top-K 8 Probe 2K:
 
 ```text
---candidate-learning-rates
---candidate-init-scales
---candidate-activations
-runs/phase16_marco4g_grid_dryrun
-candidates: 4
+status: concluido / novo melhor checkpoint grafted na seed 42
+relatorio: docs/reports/phase16_marco4k_two_pass_topk8_probe2k.md
+runs/phase16_marco4k_two_pass_topk8_probe2k_24graft
+base_loss: 10.416174411773682
+composed_loss: 10.414523839950562
+accumulated_gain: 0.0016505718231201172
+accepted_groups: 2
+accepted_grafts: 5
 recompose_abs_diff: 0.0
 ```
 
-Dry-run:
+Veredito: recuperou um quinto graft util e bateu 4H/4I/4J na seed 42.
+
+Marco 4L - robustez multiseed do 4K:
 
 ```text
-runs/phase16_marco4f_routed_dryrun
-candidates: blocks.1, blocks.2
-accepted_groups: 0
-accumulated_gain: 0.0
+status: concluido para seeds 42, 7 e 123
+relatorio: docs/reports/phase16_marco4l_4k_multiseed_robustness.md
+seed 42: composed_loss 10.414523839950562, accepted_grafts 5
+seed 7: composed_loss 10.386313915252686, accepted_grafts 4
+seed 123: composed_loss 10.415361166000366, accepted_grafts 4
+recompose_abs_diff: 0.0 em todos os checkpoints
 ```
 
-Criterio:
+Veredito: a receita 4K e valida, mas o quinto graft nao foi robusto em todas as
+seeds. Isso motivou diagnosticos NTK antes de promover a receita ao Marco 5.
+
+Marco 4M - NTK-Mirror activation gate probe:
 
 ```text
-G1 melhora validacao
-G1+G2 nao destroi G1
-checkpoint composto recompoe
-ganho acumulado > melhor 4-graft isolado
+status: concluido como diagnostico
+relatorio: docs/reports/phase16_marco4m_ntkmirror_activation_gate_probe.md
+implementado: --ntk-activation-probe-batches, --ntk-activation-probe-split
+sinal: score(block) = sum(abs(grad_h * h))
 ```
+
+Veredito: o raw NTK score e util como diagnostico global de sensibilidade, mas
+nao e seguro como sinal direto de roteamento.
+
+Marco 4N - NTK residual/saturation routing:
+
+```text
+status: 4N-A, 4N-B e 4N-C concluidos
+relatorios: docs/reports/phase16_marco4n_ntk_guided_candidate_routing.md
+            docs/reports/phase16_marco4n_b_c_results.md
+4N-A: analise offline residual/saturation em seeds 42/7/123
+4N-B: routing composed_gain_ntk_hybrid_conservative
+4N-C: ablation offline dos termos de score
+```
+
+Veredito: 4N-B foi seguro, mas nao trouxe ganho multi-seed robusto de qualidade;
+a recomendacao passou a ser calibrar bonus NTK de forma mais controlada ou
+explorar capacidade estruturada dos grafts aceitos.
+
+Marco 4O-lite - Graft SVD Anatomy:
+
+```text
+status: concluido
+relatorio: docs/reports/phase16_marco4o_lite_graft_svd_anatomy.md
+runs/phase16_marco4o_lite_graft_svd_seed42_seed7_seed123_effective
+accepted up rank@99% medio: 95/96
+accepted down rank@99% medio: ~19.8
+linearized up @ down rank@99% medio: ~2.8
+```
+
+Veredito: os `up` dos grafts aceitos continuam quase full-rank; os `down` e o
+produto linearizado sao mais compressiveis. 4O-lite apoia um baseline low-rank /
+Tensor-Train controlado, mas nao truncamento cego dos graft blocks atuais.
+
+Marco 4O - Tensor-Train / MPS Adapter Baseline:
+
+```text
+status: proximo marco recomendado
+relatorio de design: docs/reports/phase16_marco4o_tensor_network_followups.md
+objetivo: implementar TTLinear ou TTGraftBlock em PyTorch
+sweep inicial: bond_dim chi = 2/4/8/16, adapter_width = 64/128/256
+comparar: loss, parametros, bytes, runtime, memoria, robustez e quinto graft
+```
+
+Veredito esperado: 4O deve testar se a capacidade efetiva observada no 4O-lite
+pode ser representada com Tensor Train / MPS melhor que graft blocks densos.
+
 
 ### Criterio de sucesso
 

@@ -1,6 +1,6 @@
 # Fase 16 - DRM Full 125M/350M vs SAINT-G Grafted
 
-Status: **implementado, validado em dry-run**.
+Status: **em andamento; Marco 4O-lite concluido; proximo marco recomendado: Marco 4O - Tensor-Train / MPS Adapter Baseline**.
 
 ## Objetivo
 
@@ -519,7 +519,7 @@ ganho acumulado > melhor 4-graft isolado
 
 ### Marco 4F - Validation-Routed Staged Grafts
 
-Status: **pendente**.
+Status: **concluido**.
 
 Objetivo:
 
@@ -977,7 +977,7 @@ relatorio identificam corretamente este experimento como Marco 4K.
 
 ### Marco 4L - Robustez do 4K em Multiplas Seeds
 
-Status: **planejado / proximo CUDA run recomendado**.
+Status: **concluido para seeds 42, 7 e 123**.
 
 Objetivo:
 
@@ -1091,7 +1091,7 @@ inseridos antes do Marco 5 para diagnosticar e possivelmente melhorar o routing.
 
 ### Marco 4M - NTK-Mirror-Inspired Activation Gate Probe
 
-Status: **implementado / runs diagnosticos CUDA em andamento**.
+Status: **concluido como diagnostico**.
 
 Objetivo:
 
@@ -1173,7 +1173,7 @@ experiment only if it preserves known useful targets.
 
 ### Marco 4N - NTK Residual/Saturation Routing Plan
 
-Status: **4N-A concluido para seeds 42, 7 e 123 / 4N-B implementado como experimento conservador**.
+Status: **4N-A, 4N-B e 4N-C concluidos**.
 
 Objetivo:
 
@@ -1275,7 +1275,7 @@ ranks 1, 2 e 3 quando existirem. Isso evita descartar seed 42 stage-2 blocks.2
 
 ### Marco 4O - Tensor-Network Follow-ups from ITensors.jl
 
-Status: **planejado / design documentado**.
+Status: **4O-lite concluido; 4O Tensor-Train / MPS Adapter Baseline e o proximo marco recomendado**.
 
 Objetivo:
 
@@ -1300,16 +1300,21 @@ ITensors.jl sugere disciplina de tensor networks:
 - block-sparse/QN como analogia para setores de canais.
 ```
 
-Submarcos recomendados:
+Submarcos:
 
 ```text
 4O-lite - Graft SVD Anatomy:
-  carregar composed_graft_checkpoint.pt,
-  extrair matrizes dos grafts aceitos,
-  medir espectro singular, rank efetivo e erro de truncamento,
-  comparar seeds 42/7/123 e targets blocks.2/3/4.
+  status: concluido
+  relatorio: docs/reports/phase16_marco4o_lite_graft_svd_anatomy.md
+  artifact: runs/phase16_marco4o_lite_graft_svd_seed42_seed7_seed123_effective
+  resultado: accepted up quase full-rank (rank@99% medio 95/96), accepted down
+             moderadamente compressivel (rank@99% medio ~19.8), produto
+             linearizado up @ down fortemente low-rank-looking (rank@99% medio ~2.8)
+  veredito: suporta baseline low-rank / Tensor-Train controlado, nao truncamento
+            cego dos graft blocks atuais.
 
 4O - Tensor-Train / MPS Adapter Baseline:
+  status: proximo marco recomendado
   implementar TTLinear ou TTGraftBlock em PyTorch,
   varrer bond_dim chi = 2/4/8/16,
   comparar contra graft blocks em loss, parametros, bytes, runtime e robustez.
@@ -1322,9 +1327,13 @@ DRM Marco A - Manifold Attention Tensor Anatomy:
 Criterio:
 
 ```text
-passa se 4O-lite mostrar se os grafts aceitos usam capacidade real ou sao
-compressiveis para low-rank / Tensor Train pequeno. Se compressiveis, implementar
-4O completo; se nao, manter graft blocks e usar SVD apenas como diagnostico.
+4O-lite passou por produzir um veredito acionavel: os grafts aceitos nao devem
+ser truncados cegamente, mas ha sinal suficiente em down/up@down para testar
+um baseline low-rank / Tensor-Train controlado.
+
+4O passa se o adapter TT/MPS PyTorch-native for comparado contra graft blocks
+em composed_loss, parametros, bytes de checkpoint, runtime, memoria, robustez
+multi-seed e recuperacao do quinto graft.
 ```
 
 Relacao com 4M/4N:
@@ -1444,10 +1453,12 @@ extrapolacao, nao apenas uma demonstracao isolada.
 
 ## Proximo Passo Imediato
 
-Executar o Marco 4L:
+Executar o Marco 4O:
 
-- replicar a receita 4K em seeds adicionais;
-- confirmar se o ganho contra 4H e robusto;
-- validar `recompose_abs_diff = 0.0` em todos os checkpoints;
-- corrigir/documentar o label `_marco_name()` para diferenciar 4J/4K/4L;
-- se 4L passar, promover a receita 4K/4L para o Marco 5 como melhor representante grafted.
+- implementar um baseline PyTorch-native `TTLinear` ou `TTGraftBlock`;
+- iniciar sweep pequeno com `bond_dim`/`chi` 2, 4, 8 e 16;
+- usar o mesmo protocolo routed/staged dos graft blocks para comparacao honesta;
+- comparar contra 4K/4L/4N-B em loss, parametros, bytes de checkpoint, runtime,
+  pico CUDA, robustez multi-seed e capacidade de recuperar o quinto graft;
+- manter o resultado do 4O-lite como restricao: testar baseline estruturado, nao
+  truncar cegamente os graft blocks densos ja treinados.
