@@ -1,0 +1,74 @@
+[
+  {
+    "stage": 1,
+    "target": "blocks.4",
+    "ntk_activation_score": 4.147187113761902,
+    "probe_batches": 4,
+    "channel_count": 96,
+    "top_channel": 14,
+    "top_channel_score": 0.028234999626874924,
+    "split": "train",
+    "mean_ntk_activation_score": 1.0367967784404755,
+    "ntk_rank": 1
+  },
+  {
+    "stage": 1,
+    "target": "blocks.3",
+    "ntk_activation_score": 3.0944424867630005,
+    "probe_batches": 4,
+    "channel_count": 96,
+    "top_channel": 14,
+    "top_channel_score": 0.02329595945775509,
+    "split": "train",
+    "mean_ntk_activation_score": 0.7736106216907501,
+    "ntk_rank": 2
+  },
+  {
+    "stage": 1,
+    "target": "blocks.2",
+    "ntk_activation_score": 2.065170407295227,
+    "probe_batches": 4,
+    "channel_count": 96,
+    "top_channel": 22,
+    "top_channel_score": 0.015066556632518768,
+    "split": "train",
+    "mean_ntk_activation_score": 0.5162926018238068,
+    "ntk_rank": 3
+  },
+  {
+    "stage": 2,
+    "target": "blocks.4",
+    "ntk_activation_score": 4.179199457168579,
+    "probe_batches": 4,
+    "channel_count": 96,
+    "top_channel": 14,
+    "top_channel_score": 0.02909262292087078,
+    "split": "train",
+    "mean_ntk_activation_score": 1.0447998642921448,
+    "ntk_rank": 1
+  },
+  {
+    "stage": 2,
+    "target": "blocks.3",
+    "ntk_activation_score": 3.118271768093109,
+    "probe_batches": 4,
+    "channel_count": 96,
+    "top_channel": 67,
+    "top_channel_score": 0.024180136620998383,
+    "split": "train",
+    "mean_ntk_activation_score": 0.7795679420232773,
+    "ntk_rank": 2
+  },
+  {
+    "stage": 2,
+    "target": "blocks.2",
+    "ntk_activation_score": 2.012587755918503,
+    "probe_batches": 4,
+    "channel_count": 96,
+    "top_channel": 22,
+    "top_channel_score": 0.015185266733169556,
+    "split": "train",
+    "mean_ntk_activation_score": 0.5031469389796257,
+    "ntk_rank": 3
+  }
+]

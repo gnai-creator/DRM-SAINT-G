@@ -1507,32 +1507,64 @@ ranking cost-aware com gate conservador: candidate_composed_gain > 0 e
 efficiency_score > 0.
 ```
 
-Proximo passo recomendado:
+Marco 4P-B - Cost-Aware Dense Graft Routing
 
 ```text
-Marco 4P-B - CUDA curto com dense GraftBlock e candidate-score-mode cost-aware,
-comparando primeiro seed 42 contra 4N-B antes de replicar seed 7/123.
+Status: completo no protocolo CUDA curto para seeds 42, 7 e 123.
+Relatorio: docs/reports/phase16_marco4p_b_cost_aware_dense_routing.md
+Artefatos:
+  runs/phase16_marco4p_b_cost_aware_short_seed42/
+  runs/phase16_marco4p_b_cost_aware_short_seed7/
+  runs/phase16_marco4p_b_cost_aware_short_seed123/
 ```
 
-O Marco 4P-B ja foi implementado e executado em CUDA curto para seed 42:
+Resultado multiseed:
+
+| seed | base_loss | composed_loss | gain | accepted_grafts | route | stage 2 | recompose_abs_diff |
+|---:|---:|---:|---:|---:|---|---|---:|
+| 42 | 10.4161744118 | 10.4145958424 | 0.0015785694 | 4 | blocks.4 x4 | rejected, gain 0.0, score -0.0000251967 | 0.0 |
+| 7 | 10.3868415356 | 10.3862791061 | 0.0005624294 | 4 | blocks.4 x4 | rejected, gain 0.0, score -0.0000250908 | 0.0 |
+| 123 | 10.4170150757 | 10.4153037071 | 0.0017113686 | 4 | blocks.3 x4 | rejected, gain 0.0, score -0.0000249720 | 0.0 |
+
+Agregado:
 
 ```text
-docs/reports/phase16_marco4p_b_cost_aware_dense_routing.md
-runs/phase16_marco4p_b_cost_aware_short_seed42/
+positive_runs: 3/3
+exact_recomposition: 3/3
+mean_composed_loss: 10.4053928852
+mean_accumulated_gain: 0.0012841225
+mean_accepted_grafts: 4.0000
+total_accepted_grafts: 12
+stage2_rejected: 3/3
 ```
 
-Veredito 4P-B seed42 curto:
+Comparacao contra 4N-B:
 
 ```text
-candidate-score-mode composed_gain_cost_aware aceitou o stage 1 em blocks.4,
-rejeitou o stage 2 com efficiency_score negativo, preservou quase todo o ganho
-4N-B seed42 com menos grafts aceitos: composed_loss 10.4145958424 vs
-10.4145286083 do 4N-B, accepted_grafts 4 vs 6, recompose_abs_diff 0.0.
+4N-B mean composed_loss: 10.4054012299
+4P-B mean composed_loss: 10.4053928852
+mean_loss_delta_4P_minus_4N: -0.0000083447
+
+4N-B mean gain: 0.0012757778
+4P-B mean gain: 0.0012841225
+mean_gain_delta_4P_minus_4N: +0.0000083446
+
+4N-B total accepted_grafts: 14
+4P-B total accepted_grafts: 12
 ```
 
-Proximo passo recomendado:
+Veredito:
 
 ```text
-Replicar o 4P-B curto em seeds 7 e 123 antes de gastar budget no protocolo
-full probe2k/max_train_seconds=1800.
+Marco 4P-B passou como gate cost-aware conservador: preserva desempenho medio
+contra 4N-B, reduz accepted_grafts no agregado e rejeita em 3/3 seeds o segundo
+stage de zero gain / efficiency_score negativo.
+```
+
+Proximo marco recomendado:
+
+```text
+Marco 4P-C - Cost-Aware Calibration Sweep.
+Antes do full probe2k/max_train_seconds=1800, rodar uma varredura curta de
+lambdas para verificar se a politica 4P-B e robusta ao peso de custo/tempo/NTK.
 ```
