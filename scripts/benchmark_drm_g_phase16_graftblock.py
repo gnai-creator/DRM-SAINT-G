@@ -417,6 +417,7 @@ def main() -> int:
     parser.add_argument("--weight-decay", type=float, default=0.0)
     parser.add_argument("--target-total-parameters", type=int, default=125_000_000)
     parser.add_argument("--graft-count", type=int, default=1)
+    parser.add_argument("--marco-label", default="")
     parser.add_argument("--adapter-type", choices=["dense_graftblock", "tt_mps"], default="dense_graftblock")
     parser.add_argument("--tt-adapter-width", type=int, default=128)
     parser.add_argument("--tt-bond-dim", type=int, default=4)

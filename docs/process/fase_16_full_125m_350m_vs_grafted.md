@@ -1470,16 +1470,22 @@ chi 2/4/8/16, adapter_width 128, zero ganho composto e zero grafts aceitos.
 Proximo passo recomendado:
 
 ```text
-Marco 4O-B - TT/MPS Capacity Sanity Sweep
+cost-aware dense graft routing / efficiency-aware candidate scoring
 ```
 
-Executar 4O-B somente se quisermos dar uma ultima chance controlada ao baseline estruturado:
+O Marco 4O-B tambem foi executado e documentado em:
 
-- testar `adapter_width` 256 e 512;
-- manter `chi` 4, 8 e 16;
-- aumentar `candidate_probe_steps` para 200-500;
-- isolar `max_stages=1` primeiro para medir aprendibilidade do primeiro grupo;
-- comparar contra graft block denso com parametros treinaveis aproximadamente pareados;
-- so rodar multiseed se aparecer ganho positivo no stage 1.
+```text
+docs/reports/phase16_marco4o_b_tt_mps_capacity_sanity.md
+runs/phase16_marco4o_b_tt_mps_capacity_seed42_w{256,512}_chi{4,8,16}/
+runs/phase16_marco4o_b_dense_matched_seed42_h{300,620}_match_w{256,512}/
+```
 
-Se 4O-B continuar com ganho zero, encerrar a trilha TT/MPS por enquanto e voltar para roteamento denso cost-aware.
+Veredito 4O-B:
+
+```text
+width 256/512, chi 4/8/16 e controles densos pareados aceitaram zero grafts,
+composed_loss permaneceu 10.416174 e recompose_abs_diff ficou 0.0.
+```
+
+Com isso, a trilha TT/MPS deve ficar depriorizada por enquanto. A rota mais util agora e voltar aos graft blocks densos que ja demonstraram ganhos em 4K/4L/4N-B, mas adicionar custo/eficiencia ao score de roteamento.

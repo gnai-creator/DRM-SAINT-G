@@ -1,6 +1,6 @@
 # Phase 16 Marco 4O - Tensor-Network Follow-ups from ITensors.jl and NTK-Mirror
 
-Status: **4O-lite SVD anatomy completed; 4O TT/MPS adapter baseline implemented and smoke-executed for seed 42 chi 2/4/8/16**.
+Status: **4O-lite SVD anatomy completed; 4O TT/MPS adapter baseline implemented; 4O-B capacity sanity follow-up completed and negative**.
 
 This document records the technical ideas extracted from two external projects and maps them to concrete SAINT-G and DRM Transformer follow-up work:
 
@@ -586,12 +586,12 @@ Completed through first 4O smoke execution:
 Current recommended next step:
 
 ```text
-4. Run Marco 4O-B TT/MPS Capacity Sanity Sweep if we want one more structured-adapter check:
+4. Marco 4O-B TT/MPS Capacity Sanity Sweep completed:
    - adapter_width 256/512;
    - chi 4/8/16;
    - longer stage-1 candidate probes;
    - dense parameter-matched baseline.
-5. If 4O-B remains zero-gain, deprioritize TT/MPS and move to cost-aware dense graft routing.
+5. Since 4O-B remained zero-gain, deprioritize TT/MPS and move to cost-aware dense graft routing.
 6. In parallel or later, run DRM Marco A tensor anatomy on drm_transformer.
 ```
 

@@ -1,0 +1,22 @@
+[
+  {
+    "stage": 1,
+    "selected_target": "blocks.3",
+    "decision": "rejected",
+    "graft_start": 0,
+    "graft_end": 4,
+    "stage_best_loss": 10.416174411773682,
+    "stage_gain": 0.0,
+    "stage_score": 0.0,
+    "redundancy_penalty": 0.0,
+    "learning_rate": 3e-07,
+    "init_scale": 0.005,
+    "activation": "silu",
+    "candidate_tag": "blocks.3|lr=3.00e-07|scale=5.00e-03|act=silu",
+    "candidate_composed_loss": 10.416174411773682,
+    "previous_composed_loss": 10.416174411773682,
+    "target_by_graft": {},
+    "accepted_graft_ids": [],
+    "ntk_activation_probe": []
+  }
+]

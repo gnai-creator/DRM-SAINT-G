@@ -1,6 +1,6 @@
 # Phase 16 Marco 4O - TT/MPS Adapter Baseline
 
-Status: **implemented and smoke-executed on CUDA for seed 42, chi 2/4/8/16**.
+Status: **implemented and smoke-executed on CUDA for seed 42, chi 2/4/8/16; 4O-B capacity sanity follow-up also completed and negative**.
 
 ## Objective
 
@@ -155,21 +155,20 @@ TT/MPS adapters are now a runnable baseline family, but chi 2/4/8/16 at width 12
 
 ## Recommended Next Marco
 
-Run a capacity-check follow-up before discarding TT/MPS adapters:
+4O-B has now been run and documented:
 
 ```text
-Marco 4O-B - TT/MPS Capacity Sanity Sweep
+docs/reports/phase16_marco4o_b_tt_mps_capacity_sanity.md
+runs/phase16_marco4o_b_tt_mps_capacity_seed42_w{256,512}_chi{4,8,16}/
+runs/phase16_marco4o_b_dense_matched_seed42_h{300,620}_match_w{256,512}/
 ```
 
-Recommended changes:
+4O-B was also negative: width 256/512, chi 4/8/16, and parameter-matched dense controls all accepted zero grafts and kept `composed_loss=10.416174` with exact recomposition.
+
+Current next direction:
 
 ```text
-- test adapter_width 256 and 512;
-- keep chi 4/8/16;
-- increase candidate_probe_steps from 40 to at least 200-500;
-- use max_stages 1 first to isolate stage-1 learnability;
-- compare against a dense graftblock with approximately matched trainable parameters;
-- only run multiseed if stage-1 gain becomes positive.
+cost-aware dense graft routing / efficiency-aware candidate scoring
 ```
 
-If 4O-B also gives zero gain, move on to cost-aware dense graft routing rather than deeper TT/MPS work.
+Do not keep increasing TT/MPS capacity under the same protocol unless a future optimizer/routing change gives a new reason to revisit it.

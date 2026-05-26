@@ -6,6 +6,9 @@ from typing import Any
 
 
 def marco_name(args) -> str:
+    explicit = str(getattr(args, "marco_label", "") or "").strip()
+    if explicit:
+        return explicit
     if str(getattr(args, "adapter_type", "dense_graftblock")) == "tt_mps":
         return "4o_tt_mps_adapter_baseline"
     if getattr(args, "candidate_score_mode", "composed_gain") == "composed_gain_ntk_hybrid_conservative":
