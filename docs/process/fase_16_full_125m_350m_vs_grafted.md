@@ -1467,7 +1467,7 @@ TT/MPS adapter baseline implementado e recomponivel, mas negativo no smoke seed 
 chi 2/4/8/16, adapter_width 128, zero ganho composto e zero grafts aceitos.
 ```
 
-Proximo passo recomendado:
+Proximo passo recomendado depois de 4O/4O-B:
 
 ```text
 cost-aware dense graft routing / efficiency-aware candidate scoring
@@ -1489,3 +1489,27 @@ composed_loss permaneceu 10.416174 e recompose_abs_diff ficou 0.0.
 ```
 
 Com isso, a trilha TT/MPS deve ficar depriorizada por enquanto. A rota mais util agora e voltar aos graft blocks densos que ja demonstraram ganhos em 4K/4L/4N-B, mas adicionar custo/eficiencia ao score de roteamento.
+
+O Marco 4P-A ja implementou o primeiro passo dessa rota como reranking offline dos candidatos densos 4N-B:
+
+```text
+docs/reports/phase16_marco4p_a_offline_candidate_efficiency.md
+runs/phase16_marco4p_a_offline_candidate_efficiency_seed42_seed7_seed123/
+```
+
+Veredito 4P-A:
+
+```text
+O score cost-aware preservou 7/8 escolhas de target dos stages 4N-B, com
+recompose_abs_diff 0.0 nos 3 seeds analisados. Apenas 3/8 winners ficaram com
+efficiency_score positivo depois de custo fixo/probe-time, entao 4P-B deve usar
+ranking cost-aware com gate conservador: candidate_composed_gain > 0 e
+efficiency_score > 0.
+```
+
+Proximo passo recomendado:
+
+```text
+Marco 4P-B - CUDA curto com dense GraftBlock e candidate-score-mode cost-aware,
+comparando primeiro seed 42 contra 4N-B antes de replicar seed 7/123.
+```
